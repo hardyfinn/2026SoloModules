@@ -1,0 +1,23 @@
+{
+  "slug": "Hangover",
+  "name": "Hangover",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Hangover",
+      "name": "Hangover",
+      "description": "Handpan (hang drum) by modal synthesis, with the real instrument's dirt left in: detuned and beating partials, rattles, bleeding fields, breath through the gu, skin noise, sloppy hands and a small room. Nine scales, trigger per field, poly gate + V/OCT",
+      "tags": ["Drum", "Physical modeling", "Synth voice", "Polyphonic"]
+    }
+  ]
+}
