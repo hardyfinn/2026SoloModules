@@ -1,0 +1,887 @@
+#include "start_tempo_settings.h"
+#ifdef INCLUDE_ECTOCORE
+#include "startup_playback_settings.h"
+#endif
+#ifdef INCLUDE_ECTOCORE
+#include "sample_cv_settings.h"
+#endif
+
+#ifdef INCLUDE_ZEPTOCORE
+#include "midi_receive.h"
+#include "midi_channel_settings.h"
+void printStringWithDelay2(char *str) {
+  int len = strlen(str);
+  for (int i = 0; i < len; i++) {
+    char currentChar = str[i];
+    for (int j = 0; j < sizeof(led_text_5x4) / sizeof(led_text_5x4[0]); j++) {
+      if (led_text_5x4[j].character == currentChar) {
+        int led = 0;
+        for (int row = 0; row < 5; row++) {
+          for (int col = 0; col < 4; col++) {
+            bool is_one = (led_text_5x4[j].dots[row] >> (3 - col)) & 1;
+            if (is_one) {
+              LEDS_set(leds, led, LED_BRIGHT);
+            } else {
+              LEDS_set(leds, led, 0);
+            }
+            led++;
+          }
+          printf("\n");
+        }
+        printf("\n");
+        LEDS_render(leds);
+        if (currentChar == '.') {
+          sleep_ms(50);
+        } else {
+          sleep_ms(200);
+        }
+        break;
+      }
+    }
+  }
+}
+#endif
+
+void flash_no_sdcard() {
+  bool started = false;
+#ifdef INCLUDE_ECTOCORE
+  WS2812 *ws2812;
+  ws2812 = WS2812_new(GPIO_WS2812, pio0, 2);
+  WS2812_set_brightness(ws2812, 50);
+#endif
+  while (true) {
+#ifdef INCLUDE_ECTOCORE
+    for (uint8_t i = 0; i < 18; i++) {
+      WS2812_fill(ws2812, i, 255, 0, 0);
+    }
+    WS2812_show(ws2812);
+#endif
+#ifdef INCLUDE_ZEPTOCORE
+    LEDS_clear(leds);
+    printStringWithDelay2("NO SDCARD");
+#endif
+    sleep_ms(500);
+    started = run_mount();
+    if (started) {
+      // reset
+      watchdog_reboot(0, SRAM_END, 0);
+    }
+
+#ifdef INCLUDE_ECTOCORE
+    for (uint8_t i = 0; i < 18; i++) {
+      WS2812_fill(ws2812, i, 0, 0, 0);
+    }
+    WS2812_show(ws2812);
+#endif
+#ifdef INCLUDE_ZEPTOCORE
+    LEDS_clear(leds);
+    printStringWithDelay2("NO SDCARD");
+#endif
+    sleep_ms(500);
+    started = run_mount();
+    if (started) {
+      // reset
+      watchdog_reboot(0, SRAM_END, 0);
+    }
+  }
+}
+
+int extractNumber(const char *str) {
+  // Pointer to traverse the string
+  const char *p = str;
+
+  // Move the pointer to the end of the string
+  while (*p != '\0') {
+    p++;
+  }
+
+  // Move backwards until we find the first digit
+  while (p >= str && !isdigit((unsigned char)*p)) {
+    p--;
+  }
+
+  // Move backwards to get the entire number
+  const char *numStart = p;
+  while (numStart >= str && isdigit((unsigned char)*numStart)) {
+    numStart--;
+  }
+  numStart++;  // Move one step forward to the first digit
+
+  // Convert the substring to an integer
+  return atoi(numStart);
+}
+
+void load_settings(const char *dir_name) {
+  global_start_tempo = start_tempo_load(dir_name, global_start_tempo);
+#ifdef INCLUDE_ZEPTOCORE
+  midi_receive_channel = midi_channel_load(dir_name, midi_receive_channel);
+#endif
+#ifdef INCLUDE_ECTOCORE
+  global_startup_wait = startup_playback_load(dir_name, global_startup_wait);
+  global_sample_cv_mapping =
+      sample_cv_load_mapping(dir_name, global_sample_cv_mapping);
+#endif
+  DIR dj;      /* Directory object */
+  FILINFO fno; /* File information */
+  FRESULT fr;  /* File result error */
+  memset(&dj, 0, sizeof dj);
+  memset(&fno, 0, sizeof fno);
+  fr = f_findfirst(&dj, &fno, dir_name, "*");
+  if (FR_OK != fr) {
+    return;
+  }
+  while (fr == FR_OK && fno.fname[0]) { /* Repeat while an item is found */
+    // check for the clock_start_stop_sync
+    if (strcmp(fno.fname, "clock_stop_sync-off") == 0) {
+      clock_start_stop_sync = false;
+    } else if (strcmp(fno.fname, "clock_stop_sync-on") == 0) {
+      clock_start_stop_sync = true;
+    }
+
+    // check for the mash_mode_momentary
+    if (strcmp(fno.fname, "mash_mode_momentary-on") == 0) {
+      mode_toggle_momentary = true;
+    } else if (strcmp(fno.fname, "mash_mode_momentary-off") == 0) {
+      mode_toggle_momentary = false;
+    }
+
+    // check for clock output trig/gate
+    if (strcmp(fno.fname, "clock_output_trig-on") == 0) {
+      clock_output_trig = true;
+    } else if (strcmp(fno.fname, "clock_output_trig-off") == 0) {
+      clock_output_trig = false;
+    }
+
+// switch data.SettingsOverrideWithReset {
+//   case "none":
+//     os.Create(path.Join(settingsFolder, "override_with_reset-none"))
+//   case "sample":
+//     os.Create(path.Join(settingsFolder, "override_with_reset-sample"))
+//   case "break":
+//     os.Create(path.Join(settingsFolder, "override_with_reset-break"))
+//   case "amen":
+//     os.Create(path.Join(settingsFolder, "override_with_reset-amen"))
+//   case "clk":
+//     os.Create(path.Join(settingsFolder, "override_with_reset-clk"))
+//   }
+// check for cv reset override
+#ifdef INCLUDE_ECTOCORE
+    if (strcmp(fno.fname, "override_with_reset-none") == 0) {
+      cv_reset_override = CV_RESET_NONE;
+    } else if (strcmp(fno.fname, "override_with_reset-sample") == 0) {
+      cv_reset_override = CV_SAMPLE;
+    } else if (strcmp(fno.fname, "override_with_reset-break") == 0) {
+      cv_reset_override = CV_BREAK;
+    } else if (strcmp(fno.fname, "override_with_reset-amen") == 0) {
+      cv_reset_override = CV_AMEN;
+    } else if (strcmp(fno.fname, "override_with_reset-clk") == 0) {
+      cv_reset_override = CV_CLOCK;
+    }
+#endif
+
+    // check for clock output behavior (sync with tempo or sync with slice)
+    if (strcmp(fno.fname, "clock_behavior_sync_slice-on") == 0) {
+      clock_behavior_sync_slice = true;
+    } else if (strcmp(fno.fname, "clock_behavior_sync_slice-off") == 0) {
+      clock_behavior_sync_slice = false;
+    }
+
+    // check for amen cv polarity
+    if (strcmp(fno.fname, "amen_cv-unipolar") == 0) {
+      global_amen_cv_bipolar = false;
+    } else if (strcmp(fno.fname, "amen_cv-bipolar") == 0) {
+      global_amen_cv_bipolar = true;
+    }
+
+    // check for amen cv behavior
+    if (strcmp(fno.fname, "amen_behavior-jump") == 0) {
+      global_amen_cv_behavior = AMEN_CV_BEHAVIOR_JUMP;
+    } else if (strcmp(fno.fname, "amen_behavior-repeat") == 0) {
+      global_amen_cv_behavior = AMEN_CV_BEHAVIOR_REPEAT;
+    } else if (strcmp(fno.fname, "amen_behavior-split") == 0) {
+      global_amen_cv_behavior = AMEN_CV_BEHAVIOR_SPLIT;
+    }
+
+    // check for break cv polarity
+    if (strcmp(fno.fname, "break_cv-unipolar") == 0) {
+      global_break_cv_bipolar = false;
+    } else if (strcmp(fno.fname, "break_cv-bipolar") == 0) {
+      global_break_cv_bipolar = true;
+    }
+
+    // check for sample cv polarity
+    if (strcmp(fno.fname, "sample_cv-unipolar") == 0) {
+      global_sample_cv_bipolar = false;
+    } else if (strcmp(fno.fname, "sample_cv-bipolar") == 0) {
+      global_sample_cv_bipolar = true;
+    }
+
+    // check if a file has the prefix "brightness"
+    if (strncmp(fno.fname, "brightness-", 11) == 0) {
+      global_brightness = extractNumber(fno.fname);
+      if (global_brightness > 100) {
+        global_brightness = 100;
+      }
+      printf("[sdcard_startup] '%s' brightness: %d\n", fno.fname,
+             global_brightness);
+    }
+
+    // check if a file has the prefix "brightness"
+    if (strncmp(fno.fname, "negativelatency-", 16) == 0) {
+      float negativeLatencyNumber = (float)extractNumber(fno.fname);
+      latency_factor = latency_factor * negativeLatencyNumber / 20.0f;
+      printf("[sdcard_startup] '%s' negative latency: %d (%3.2f)\n", fno.fname,
+             negativeLatencyNumber, latency_factor);
+    }
+
+    // check for the clock_start_stop_sync
+    if (strcmp(fno.fname, "knobx_select_sample-on") == 0) {
+      global_knobx_sample_selector = true;
+    } else if (strcmp(fno.fname, "knobx_select_sample-off") == 0) {
+      global_knobx_sample_selector = false;
+    }
+
+    fr = f_findnext(&dj, &fno); /* Search for next item */
+  }
+  f_closedir(&dj);
+
+  // go through directory grimoire/rune1/*
+  // go through runes[1-7]
+  for (uint8_t rune = 1; rune <= 7; rune++) {
+    for (uint8_t effect = 0; effect < 16; effect++) {
+      grimoire_rune_effect[rune - 1][effect] = false;
+    }
+    char dirname[32];
+    if (strlen(dir_name) == 0) {
+      sprintf(dirname, "grimoire/rune%d", rune);
+    } else {
+      sprintf(dirname, "%s/grimoire/rune%d", dir_name, rune);
+    }
+    printf("[sdcard_startup] checking %s\n", dirname);
+    fr = f_findfirst(&dj, &fno, dirname, "*");
+    if (FR_OK != fr) {
+      // folder not found, create random effects
+      for (uint8_t effect = 0; effect < 16; effect++) {
+        grimoire_rune_effect[rune - 1][effect] = random_integer_in_range(0, 1);
+      }
+      continue;
+    }
+    // printf("[sdcard_startup] found %s\n", dirname);
+    while (fr == FR_OK && fno.fname[0]) { /* Repeat while an item is found */
+      // printf("[sdcard_startup] %s", fno.fname);
+      // set to true if effect%d-on is found
+      for (uint8_t effect = 1; effect <= 16; effect++) {
+        char effect_name_on[100];
+        char effect_name_off[100];
+        sprintf(effect_name_on, "effect%d-on", effect);
+        sprintf(effect_name_off, "effect%d-off", effect);
+        if (strcmp(fno.fname, effect_name_on) == 0) {
+          grimoire_rune_effect[rune - 1][effect - 1] = true;
+          // printf("[%d][%d]=%d\n", rune - 1, effect - 1,
+          //        grimoire_rune_effect[rune - 1][effect - 1]);
+          break;
+        } else if (strcmp(fno.fname, effect_name_off) == 0) {
+          grimoire_rune_effect[rune - 1][effect - 1] = false;
+          // printf("[%d][%d]=%d\n", rune - 1, effect - 1,
+          //        grimoire_rune_effect[rune - 1][effect - 1]);
+          break;
+        }
+      }
+      // move to next file
+      fr = f_findnext(&dj, &fno); /* Search for next item */
+    }
+  }
+  f_closedir(&dj);
+}
+
+void check_setup_files() {
+  DIR dj;      /* Directory object */
+  FILINFO fno; /* File information */
+  FRESULT fr;  /* File result error */
+
+  // initialize save file
+  for (uint8_t i = 0; i < 16; i++) {
+    savefile_has_data[i] = false;
+  }
+
+  memset(&dj, 0, sizeof dj);
+  memset(&fno, 0, sizeof fno);
+  fr = f_findfirst(&dj, &fno, "", "*");
+  if (FR_OK != fr) {
+    return;
+  }
+  while (fr == FR_OK && fno.fname[0]) { /* Repeat while an item is found */
+    // create savefile name
+    for (uint8_t i = 0; i < 16; i++) {
+      char savefile_name[100];
+      sprintf(savefile_name, "savefile%d", i);
+      if (strcmp(fno.fname, savefile_name) == 0) {
+        printf("[sdcard_startup] found savefile%d\n", i);
+        savefile_has_data[i] = true;
+      }
+    }
+    fr = f_findnext(&dj, &fno); /* Search for next item */
+  }
+  f_closedir(&dj);
+
+  // load settings
+  // sleep_ms(3000);
+  // load from base of card (backwards compatibility)
+  load_settings("");
+  // loading from settings folder (if exists)
+  load_settings("settings");
+}
+
+void update_reverb() {
+  if (freeverb == NULL) {
+    return;
+  }
+  uint8_t val = sf->fx_param[FX_EXPAND][0];
+  if (val < 85) {
+    FV_Reverb_set_roomsize(freeverb, val * Q16_16_1 / 85);
+    FV_Reverb_set_damp(freeverb, Q16_16_1 - (val * Q16_16_1 / 85));
+  } else if (val < 170) {
+    val = val - 85;
+    FV_Reverb_set_roomsize(freeverb, Q16_16_1 - (val * Q16_16_1 / 85));
+    FV_Reverb_set_damp(freeverb, val * Q16_16_1 / 85);
+  } else {
+    val = val - 170;
+    FV_Reverb_set_roomsize(freeverb, val * Q16_16_1 / 85);
+    FV_Reverb_set_damp(freeverb, val * Q16_16_1 / 85);
+  }
+  FV_Reverb_set_wet(freeverb, sf->fx_param[FX_EXPAND][1] * Q16_16_1 / 255);
+}
+
+bool filter_was_activated = false;
+void update_fx(uint8_t fx_num) {
+  switch (fx_num) {
+    case FX_REVERSE:
+      phase_forward = !sf->fx_active[fx_num];
+      break;
+    case FX_SATURATE:
+      Saturation_setActive(saturation, sf->fx_active[fx_num]);
+      break;
+    case FX_COMB:
+      // printf("[update_fx] comb: %d\n", sf->fx_active[fx_num]);
+    Comb_setActive(combfilter, sf->fx_active[fx_num], sf->fx_param[FX_COMB][0],
+                   sf->fx_param[FX_COMB][1]);
+      break;
+    case FX_BEATREPEAT:
+      if (sf->fx_active[fx_num]) {
+#ifdef INCLUDE_ECTOCORE
+        uint16_t samples = 30 * 44100 / sf->bpm_tempo;
+        if (random_integer_in_range(1, 100) < 50) {
+          samples = samples * 3 / 2;
+        }
+        if (random_integer_in_range(1, 100) < 50) {
+          samples = samples * 3 / 4;
+        }
+        if (random_integer_in_range(1, 100) < 50) {
+          samples = samples * 2;
+        }
+        BeatRepeat_repeat(beatrepeat, samples);
+#else
+        BeatRepeat_repeat(beatrepeat,
+                          sf->fx_param[FX_BEATREPEAT][0] * 19000 / 255 + 100);
+#endif
+      } else {
+        BeatRepeat_repeat(beatrepeat, 0);
+      }
+      break;
+    case FX_DELAY:
+#ifdef INCLUDE_ZEPTOCORE
+      if (sf->fx_active[fx_num]) {
+        uint32_t duration = 1000;
+        uint8_t faster = 1;
+        if (random_integer_in_range(0, 100) < 25) {
+          faster = 2;
+        } else if (random_integer_in_range(0, 100) < 25) {
+          faster = 4;
+        }
+        if (sf->bpm_tempo > 140) {
+          duration = 30 * 44100 / sf->bpm_tempo / faster;
+        }
+        for (uint8_t i = 0; i < 4; i++) {
+          if (duration > 10000) {
+            duration = duration / 2;
+          } else {
+            break;
+          }
+        }
+        Delay_setDuration(delay, duration);
+        Delay_setFeedbackf(delay,
+                           (float)random_integer_in_range(500, 900) / 1000.0f);
+      }
+#endif
+      Delay_setActive(delay, sf->fx_active[fx_num]);
+      break;
+    case FX_EXPAND:
+      if (sf->fx_active[fx_num]) {
+        update_reverb();
+      }
+      break;
+    case FX_TIGHTEN:
+      if (sf->fx_active[fx_num]) {
+        Gate_set_amount(audio_gate, sf->fx_param[FX_TIGHTEN][0]);
+      } else {
+        Gate_set_amount(audio_gate, 255);
+      }
+      break;
+    case FX_REPITCH:
+      if (sf->fx_active[fx_num]) {
+        Envelope2_reset(
+            envelope_pitch, BLOCKS_PER_SECOND, Envelope2_update(envelope_pitch),
+            linlin((float)sf->fx_param[FX_REPITCH][0], 0.0, 255.0, 0.5, 2.0),
+            linlin((float)sf->fx_param[FX_REPITCH][1], 0.0, 255.0, 0.25, 4.0));
+      } else {
+        Envelope2_reset(
+            envelope_pitch, BLOCKS_PER_SECOND, Envelope2_update(envelope_pitch),
+            1.0,
+            linlin((float)sf->fx_param[FX_REPITCH][1], 0.0, 255.0, 0.25, 4.0));
+      }
+      break;
+    // case FX_SPEEDUP:
+    //   if (sf->fx_active[fx_num]) {
+    //     Envelope2_reset(envelope_pitch, BLOCKS_PER_SECOND,
+    //                     Envelope2_update(envelope_pitch), 2.0, 1);
+    //   } else {
+    //     Envelope2_reset(envelope_pitch, BLOCKS_PER_SECOND,
+    //                     Envelope2_update(envelope_pitch), 1.0, 1);
+    //   }
+    //   break;
+    case FX_TAPE_STOP:
+      if (sf->fx_active[FX_TAPE_STOP]) {
+      Envelope2_reset(
+          envelope_pitch, BLOCKS_PER_SECOND, Envelope2_update(envelope_pitch),
+                        ENVELOPE_PITCH_THRESHOLD / 2,
+          linlin((float)sf->fx_param[FX_TAPE_STOP][0], 0.0, 255.0, 0.15, 6.0));
+      } else {
+        if (sf->fx_active[FX_REPITCH]) {
+          Envelope2_reset(
+            envelope_pitch, BLOCKS_PER_SECOND, Envelope2_update(envelope_pitch),
+              linlin((float)sf->fx_param[FX_REPITCH][0], 0.0, 255.0, 0.5, 2.0),
+              linlin((float)sf->fx_param[FX_TAPE_STOP][1], 0.0, 255.0, 0.15,
+                     6.0));
+        } else {
+          Envelope2_reset(envelope_pitch, BLOCKS_PER_SECOND,
+                          Envelope2_update(envelope_pitch), 1.0,
+                        linlin((float)sf->fx_param[FX_TAPE_STOP][1], 0.0, 255.0,
+                               0.15, 6.0));
+        }
+      }
+      break;
+    case FX_FUZZ:
+      break;
+    case FX_FILTER:
+      if (sf->fx_active[FX_FILTER] && !filter_was_activated) {
+        // turn on filter
+        filter_was_activated = true;
+        // filter activated
+        EnvelopeLinearInteger_reset(
+            envelope_filter, BLOCKS_PER_SECOND,
+            EnvelopeLinearInteger_update(envelope_filter, NULL),
+          linlin(sf->fx_param[FX_FILTER][0], 0, 255, 5, resonantfilter_fc_max),
+            linlin(sf->fx_param[FX_FILTER][1], 0, 255, 0.5, 5));
+      } else if (filter_was_activated) {
+        // turn off filter
+        // filter deactivated
+        filter_was_activated = false;
+        EnvelopeLinearInteger_reset(
+            envelope_filter, BLOCKS_PER_SECOND,
+            EnvelopeLinearInteger_update(envelope_filter, NULL),
+            global_filter_index,
+            linlin(sf->fx_param[FX_FILTER][1], 0, 255, 0.5, 5));
+      }
+      break;
+    // case FX_VOLUME_RAMP:
+    //   if (sf->fx_active[FX_VOLUME_RAMP]) {
+    //     Envelope2_reset(envelope_volume, BLOCKS_PER_SECOND,
+    //                     Envelope2_update(envelope_volume), 0, 1.618 / 2);
+    //   } else {
+    //     Envelope2_reset(envelope_volume, BLOCKS_PER_SECOND,
+    //                     Envelope2_update(envelope_volume), 1, 1.618 / 2);
+    //   }
+    //   break;
+    case FX_SCRATCH:
+      scratch_lfo_val = 0;
+      scratch_lfo_hz = sf->fx_param[FX_SCRATCH][0] / 255.0 * 4.0 + 0.1;
+      scratch_lfo_inc = round(SCRATCH_LFO_1_HZ * scratch_lfo_hz);
+      break;
+    case FX_TIMESTRETCH:
+      Gate_set_active(audio_gate, !sf->fx_active[FX_TIMESTRETCH]);
+      // The audio worker derives the effective granular ratio from this flag.
+      break;
+    default:
+      break;
+  }
+}
+
+void fx_sequencer_emit(uint8_t key) {
+#if defined(INCLUDE_MIDI) && defined(INCLUDE_ZEPTOCORE)
+  // midi out
+  MidiOut_on(midiout[4], key, 127);
+#endif
+  if (key < 16) {
+    sf->fx_active[key] = true;
+    update_fx(key);
+  } else if (key < 32) {
+    sf->fx_active[key - 16] = false;
+    update_fx(key - 16);
+  }
+}
+
+void fx_sequencer_stop() {}
+
+void bass_sequencer_emit(uint8_t key) {
+#if defined(INCLUDE_MIDI) && defined(INCLUDE_ZEPTOCORE)
+  // midi out
+  MidiOut_on(midiout[5], key, 127);
+#endif
+#ifdef INCLUDE_SINEBASS
+  if (key < 16) {
+    WaveBass_note_on(wavebass, key);
+  } else if (key < 32) {
+    WaveBass_release(wavebass);
+  }
+#endif
+}
+
+void bass_sequencer_stop() {}
+
+static int deferred_preset_load=-1, deferred_preset_save=-1;
+static bool savefile_load_state(bool reopen) {
+  if(bank_transition_busy()) {deferred_preset_load=savefile_current;return false;}
+  if (savefile_has_data[savefile_current]) {
+    if(!audio_media_acquire())return false;
+    if(!SaveFile_load(sf, savefile_current)) {
+      audio_media_release();return false;
+    }
+    // Boot overrides saved tempo before tempo-dependent effects initialize.
+    // Runtime preset recall keeps its ordinary saved tempo.
+    if (!reopen)
+      sf->bpm_tempo = start_tempo_resolve(global_start_tempo, sf->bpm_tempo);
+    if(reopen)audio_file_open(fil_current_name);
+    // update all the fx
+    for (uint8_t i = 0; i < 16; i++) {
+      update_fx(i);
+    }
+    // update the sequencer callbacks
+    for (uint8_t j = 0; j < 16; j++) {
+      Sequencer_set_callbacks(sf->sequencers[0][j], step_sequencer_emit,
+                              step_sequencer_stop);
+    }
+    for (uint8_t j = 0; j < 16; j++) {
+      Sequencer_set_callbacks(sf->sequencers[1][j], fx_sequencer_emit,
+                              fx_sequencer_stop);
+    }
+    for (uint8_t j = 0; j < 16; j++) {
+      Sequencer_set_callbacks(sf->sequencers[2][j], bass_sequencer_emit,
+                              bass_sequencer_stop);
+    }
+
+    // load new bank and sample
+    if(sf->bank<16 && banks[sf->bank] && banks[sf->bank]->num_samples) {
+      sel_bank_next = sf->bank;
+      int ordinal=metadata_ordinal(sf->bank,sf->sample);
+      sel_sample_next = ordinal<0?0:ordinal;
+    }
+    fil_current_change = true;
+    audio_media_release();
+    return true;
+  }
+  return false;
+}
+void savefile_do_load(void) {
+  savefile_load_state(true);
+}
+
+bool savefile_do_save(void) {
+  if(bank_transition_busy()) {deferred_preset_save=savefile_current;return false;}
+  if(!metadata_ready(sel_bank_cur)||!audio_media_acquire())return false;
+  sf->bank=sel_bank_cur;
+  sf->sample=metadata_filename_index(sel_bank_cur,sel_sample_cur);
+  bool saved=SaveFile_save(sf,savefile_current);
+  audio_file_open(fil_current_name);
+  audio_media_release();
+  if(saved)savefile_has_data[savefile_current]=true;
+  return saved;
+}
+
+void sdcard_startup() {
+  uint32_t diag_startup_us = ZD_TIME();
+  ZD_CALL(zeptocore_diag.header[21] = 2);
+  for (uint8_t i = SDCARD_CMD_GPIO - 1; i < SDCARD_D0_GPIO + 5; i++) {
+    gpio_pull_up(i);
+  }
+
+  if (sdcard_startup_is_starting) {
+    return;
+  }
+  sdcard_startup_is_starting = true;
+  if(!audio_media_acquire()) {sdcard_startup_is_starting=false;return;}
+  fil_is_open = false;
+  bool started = false;
+  for (uint8_t i = 0; i < 10; i++) {
+    started = run_mount();
+    if (started) {
+      break;
+    }
+    sleep_ms(10);
+  }
+  if (!started) {
+    printf("[sdcard_startup] could not mount\n");
+    flash_no_sdcard();
+    sleep_ms(1000000);
+  }
+  envelope_volume = Envelope2_create(BLOCKS_PER_SECOND, 0, 1, 4);
+  envelope_pitch = Envelope2_create(BLOCKS_PER_SECOND, 0.5, 1.0, 1.5);
+  envelope_filter = EnvelopeLinearInteger_create(BLOCKS_PER_SECOND, 1,
+                                                 resonantfilter_fc_max, 0.3);
+  noise_wobble = Noise_create(time_us_64(), BLOCKS_PER_SECOND);
+  noise_feedback = Noise_create(time_us_64(), BLOCKS_PER_SECOND);
+  noise_duration = Noise_create(time_us_64(), BLOCKS_PER_SECOND);
+  audio_gate = Gate_create(BLOCKS_PER_SECOND, 165);
+#ifdef INCLUDE_BASS
+  bass = Bass_create();
+#endif
+
+  // sleep_ms(2000);
+  check_setup_files();
+  // sleep_ms(2000);
+
+  // load save file
+  // load new save file
+  sf = SaveFile_malloc();
+  sf->bpm_tempo = start_tempo_resolve(global_start_tempo, sf->bpm_tempo);
+
+  // initialize sequencers
+  for (uint8_t j = 0; j < 16; j++) {
+    Sequencer_set_callbacks(sf->sequencers[0][j], step_sequencer_emit,
+                            step_sequencer_stop);
+  }
+  for (uint8_t j = 0; j < 16; j++) {
+    Sequencer_set_callbacks(sf->sequencers[1][j], fx_sequencer_emit,
+                            fx_sequencer_stop);
+  }
+  for (uint8_t j = 0; j < 16; j++) {
+    Sequencer_set_callbacks(sf->sequencers[2][j], bass_sequencer_emit,
+                            bass_sequencer_stop);
+  }
+  // sync_using_sdcard = false;
+  // SaveFile_save(sf, &sync_using_sdcard);
+  // SaveFile_test_sequencer(sf);
+  // SaveFile_load(sf);
+  // SaveFile_test_sequencer(sf);
+  // sleep_ms(3000);
+
+
+  metadata_catalogue_scan();
+  banks_with_samples_num=0;total_number_samples=0;
+  for (unsigned bi=0;bi<16;++bi) {
+    if(banks[bi]->num_samples) {
+      banks_with_samples[banks_with_samples_num++]=bi;
+      total_number_samples+=banks[bi]->num_samples;
+      printf("[metadata] bank %u: %u samples, %u detail bytes, slots %04x\n",
+          bi+1,banks[bi]->num_samples,(unsigned)banks[bi]->detail_bytes,banks[bi]->valid_slots);
+    }
+  }
+  if(banks_with_samples_num)sel_bank_cur=sel_bank_next=banks_with_samples[0];
+
+#ifdef INCLUDE_ECTOCORE
+  // Try to restore last used bank and sample from flash
+  uint8_t restored_bank = 0;
+  uint8_t restored_sample = 0;
+  if (PersistentState_load(&restored_bank, &restored_sample, 16, 
+                           banks_with_samples, banks_with_samples_num, banks)) {
+    // Successfully restored from flash
+    sel_bank_cur = restored_bank;
+    sel_sample_cur = restored_sample;
+    // Also set _next values to keep them in sync
+    sel_bank_next = restored_bank;
+    sel_sample_next = restored_sample;
+    printf("[sdcard_startup] Restored to bank %d, sample %d from flash\n", 
+           sel_bank_cur, sel_sample_cur);
+  } else {
+    printf("[sdcard_startup] Using default bank 0, sample 0\n");
+  }
+#endif
+
+#if SEEK_TEST_AUDIO_FIXTURE
+  // Explicit test build only: stage a guarded physical variant before the
+  // normal detector and map preparation. Requests cannot initiate this work.
+  sd_card_t *fixture_card=sd_get_by_num(0);
+  FRESULT fixture_result=seek_audio_fixture_run(SEEK_TEST_AUDIO_FIXTURE,fixture_card->state.CID);
+  if(fixture_result==FR_DISK_ERR||fixture_result==FR_NOT_READY) {
+    f_unmount(fixture_card->pcName);
+    if(!run_mount())audio_media_io_failed(FR_NOT_READY);
+  }
+#endif
+  // Audio filenames use one-based bank directories, as playback and the map
+  // manifest do. Probe the initial selection using that same convention.
+  // if it does, then we are in audio variant mode
+  audio_variant_num=0;
+  for (uint8_t i = 2; i < 16; i += 2) {
+    char filename[100];
+    format_sample_filename(filename,sel_bank_cur,sel_sample_cur,i);
+    FILINFO fno;
+    FRESULT fr = f_stat(filename, &fno);
+    if (fr == FR_OK) {
+      audio_variant_num = i;
+      printf("[sdcard_startup] audio variant: %s\n", filename);
+    }
+  }
+  if (audio_variant_num > 0) {
+    audio_variant_num /= 2;
+  }
+
+  // // print transients
+  // sleep_ms(2000);
+  // printf("transient_num_1: %d\n",
+  // banks[0]->sample[0].snd[0]->transient_num_1); for (uint8_t i = 0; i <
+  // banks[0]->sample[0].snd[0]->transient_num_1; i++) {
+  //   printf("transients[0][%d]: %d\n", i,
+  //          banks[0]->sample[0].snd[0]->transients[0][i]);
+  // }
+
+#ifdef INCLUDE_ZEPTOCORE
+  sample_selection = (SampleSelection *)calloc(255,sizeof(SampleSelection));
+  for (uint8_t bi = 0; bi < 16; bi++) {
+    for (uint8_t si = 0; si < banks[bi]->num_samples; si++) {
+      // add to sample_selection list if not one-shot
+      if (banks[bi]->sample[si].snd[0]->play_mode == PLAY_NORMAL &&
+          sample_selection && sample_selection_num < 255) {
+        // append to sample_selection
+        sample_selection[sample_selection_num] =
+            (SampleSelection){.bank = bi, .sample = si};
+        sample_selection_num++;
+      }
+    }
+  }
+#endif
+
+  uint32_t total_heap = getTotalHeap();
+  uint32_t used_heap = total_heap - getFreeHeap();
+  printf("memory usage: %2.1f%% (%ld/%ld)\n",
+         (float)(used_heap) / (float)(total_heap) * 100.0, used_heap,
+         total_heap);
+
+  // Resolve the saved selection before prioritizing maps or opening playback.
+  // Runtime loads retain the normal reopen/fade path through savefile_do_load.
+  sf->vol = 180;
+  sf->pitch_val_index = PITCH_VAL_MID;
+  if(savefile_load_state(false)) {
+    sel_bank_cur=sel_bank_next;
+    sel_sample_cur=sel_sample_next;
+  }
+  FRESULT fr;
+  format_sample_filename(fil_current_name,sel_bank_cur,sel_sample_cur,
+                         audio_variant * 2);
+  // Keep room for remaining control/filter startup allocations. Optional
+  // reverb is constructed only once those allocations have completed.
+  bool details_loaded=false;
+  void *startup_reserve=malloc(16384);
+  bool reserved=startup_reserve && metadata_reserve();
+  free(startup_reserve);
+  if(reserved && metadata_load_begin(sel_bank_cur,time_us_32())) {
+    int result;
+    do {
+      result=metadata_load_step(time_us_32());
+#ifdef INCLUDE_MIDI
+      if(tud_inited())tud_task();
+#endif
+      ZD_CALL(zd_service(ZD_CONTROL));
+    } while(result==0);
+    if(result>0) {metadata_publish();details_loaded=true;}
+    else metadata_load_cancel();
+  }
+
+
+  // Media preparation runs under the boot guard while the audio core services
+  // silence. The firmware-owned index is the only new data written to the card.
+#ifdef INCLUDE_ZEPTOCORE
+  LEDText_display(ledtext,"M");
+  LEDText_update(ledtext,leds);
+#endif
+  sd_card_t *map_card=sd_get_by_num(0);
+  fr=details_loaded?seek_maps_prepare(&map_card->state.fatfs,map_card->state.CID,
+                      map_card->state.sectors,fil_current_name):FR_NOT_READY;
+  if(fr==FR_DISK_ERR) {
+    // Discard a potentially dirty FatFs window after an index I/O failure.
+    // This boot uses ordinary seeking; a future boot can resume checkpoints.
+    seek_maps_unmount();f_unmount(map_card->pcName);
+    if(!run_mount())audio_media_io_failed(FR_NOT_READY);
+  }
+  fr = details_loaded?audio_file_open(fil_current_name):FR_NOT_READY;
+  if (fr != FR_OK) {
+    printf("[sdcard_startup] could not open %s: %s\n", fil_current_name,
+           FRESULT_str(fr));
+  }
+  phase_new = 0;
+  phase_change = true;
+  sdcard_startup_is_starting = false;
+
+#ifdef INCLUDE_ECTOCORE
+  // If no savefile was loaded, restore bank/sample from flash by triggering
+  // file change This happens after savefile_do_load so that savefiles take
+  // precedence
+  if (!savefile_has_data[savefile_current]) {
+    // Use the restored values from flash
+    sel_bank_next = sel_bank_cur;
+    sel_sample_next = sel_sample_cur;
+    fil_current_change = true;
+    printf("[sdcard_startup] No savefile loaded, applying flash-restored "
+           "bank/sample\n");
+  }
+#endif
+
+#ifdef INCLUDE_ECTOCORE
+  // Establish silence before the audio core leaves the boot media guard.
+  startup_playback_apply();
+#endif
+  audio_media_release();
+  time_of_initialization = time_us_64();
+  ZD_CALL(zd_metric_record(&zd_control.metrics[ZD_STARTUP],
+      time_us_32() - diag_startup_us, 0, 0, false, &zd_control.counters[9]));
+  ZD_CALL(zd_control.context[0] = getTotalHeap());
+  ZD_CALL(zd_control.context[1] = getFreeHeap());
+  ZD_CALL({
+    sd_card_t *card = sd_get_by_num(0);
+    if (card) {
+      memcpy(&zd_control.context[4], card->state.CID, 16);
+      zd_control.context[8] = card->state.sectors;
+      zd_control.context[9] = card->state.fatfs.fs_type;
+      zd_control.context[10] = card->state.fatfs.csize;
+      zd_control.context[11] = card->state.fatfs.volbase;
+      zd_control.context[12] = card->state.fatfs.fatbase;
+      zd_control.context[13] = card->state.fatfs.database;
+      zd_control.context[14] = card->state.fatfs.n_fatent;
+    }
+  });
+  ZD_CALL(zeptocore_diag.header[21] = 3);
+  ZD_CALL(zd_service(ZD_CONTROL));
+}
+
+// Called after all device controls and required startup allocations exist.
+static void metadata_optional_reverb(void) {
+  void *headroom=malloc(8192);
+  if(headroom && metadata_status.arena_capacity) {
+    freeverb=FV_Reverb_malloc(FV_INITIALROOM,FV_INITIALDAMP,FV_INITIALWET,FV_INITIALDRY);
+    update_reverb();
+  }
+  free(headroom);
+  metadata_status.minimum_free_heap=getFreeHeap();
+  audio_media_boot_complete();
+}
+
+static void metadata_deferred_presets(void) {
+  if(bank_transition_busy())return;
+  uint8_t current=savefile_current;
+  if(deferred_preset_load>=0) {
+    savefile_current=deferred_preset_load;deferred_preset_load=-1;
+    savefile_do_load();
+  } else if(deferred_preset_save>=0) {
+    savefile_current=deferred_preset_save;deferred_preset_save=-1;
+    savefile_do_save();
+  }
+  savefile_current=current;
+}
