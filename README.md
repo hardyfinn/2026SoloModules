@@ -6,6 +6,7 @@ without stepping on each other.
 
 | Folder | Module | What it is |
 |---|---|---|
+| [Paddock](Paddock/) | Swerve, Gallop, Tumble | Blasser-style coupled circuits: a bounce oscillator, four bounce oscillators bounding each other, five touch-coupled rhythm cores with gongs |
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
