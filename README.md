@@ -7,6 +7,7 @@ without stepping on each other.
 | Folder | Module | What it is |
 |---|---|---|
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
+| [Panorama](Panorama/) | Panorama | Steel pan (tenor, double second, triple cello) with sympathetic neighbours and imperfect, editable tuning |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
