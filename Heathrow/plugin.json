@@ -1,0 +1,23 @@
+{
+  "slug": "Heathrow",
+  "name": "Heathrow",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Heathrow",
+      "name": "Heathrow",
+      "description": "Stereo phaser / flanger: morph between them, 2-24 stages, bipolar feedback, through-zero, stepped or clocked sweeps up to audio rate, envelope follower, CV over everything; a second switchable engine (series, parallel or split) and 6 memory slots that glide between settings",
+      "tags": ["Phaser", "Flanger", "Effect", "Visual"]
+    }
+  ]
+}
