@@ -1,0 +1,10 @@
+build/
+build-host/
+dist/
+demos/
+test/hktest
+*.o
+plugin.dylib
+plugin.so
+plugin.dll
+.DS_Store
