@@ -1,14 +1,17 @@
 # Panorama
 
 Steel pan voice for VCV Rack (Hær). Tenor, double second or triple cello.
-Every note area is a set of tuned modes (fundamental, octave, fifth above the
-octave, plus untuned pings) that rings into the areas around it. Patch a poly
-GATE + V/OCT (Peal works), or click a note on the screen.
+Patch a poly GATE + V/OCT (Peal works), or click a note on the screen.
 
-The stick is physical (2.1): a rubber tip on a stiffening spring lands on the
-moving note and is pushed back off it, so harder hits are shorter and
-brighter and light top notes give way under it. BLOOM is the note's own conservative 1:2:3 shell nonlinearity,
-and NEIGHBOURS an energy-correct spring through the steel.
+The engine (2.2) is fitted to recordings of a real Trinidad tenor pan. Every
+note area has eight harmonics (1 2 3 4 5 6 8 10). The stick mostly excites the
+fundamental; the upper harmonics are fed through the note's own shell
+nonlinearity (fifteen sum resonances, each note voiced differently), so soft
+hits are pure, hard hits are bright, and the brightness swells in after the
+hit. Hard hits start sharp and settle (GLIDE), every note rings about 1.3 s,
+and part of each hit goes into the neighbouring notes through the steel
+(NEIGHBOURS). The stick is a rubber tip on a stiffening spring landing on the
+moving note.
 
 Real pans are never perfectly in tune: DETUNE and PARTIALS scale each note's
 own fixed random error, RE-ROLL gives a different pan, and FUND / OCT / 5TH

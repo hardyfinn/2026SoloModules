@@ -76,12 +76,12 @@ struct Panorama : Module {
 	Panorama() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 		configParam(STICK_PARAM, 0.f, 1.f, 0.5f, "Stick", "%", 0.f, 100.f)->description = "Soft rubber (dark) to hard (bright, more click)";
-		configParam(POSITION_PARAM, 0.f, 1.f, 0.25f, "Strike position", "%", 0.f, 100.f)->description = "Middle of the note area (pure) to its edge (more octave and fifth, knocks the neighbours)";
+		configParam(POSITION_PARAM, 0.f, 1.f, 0.08f, "Strike position", "%", 0.f, 100.f)->description = "Sweet spot in the middle of the note (round, the way a pan is normally played) to its edge (thinner and brighter, knocks the neighbours)";
 		configParam(FORCE_PARAM, 0.f, 1.f, 0.7f, "Force", "%", 0.f, 100.f)->description = "How hard each strike is. With VEL patched, 7 V plays at this level";
 		configParam(DECAY_PARAM, 0.f, 1.f, 0.45f, "Decay", "x", 0.f, 1.f)->description = "Ring time of every note";
 		configParam(NEIGHBOURS_PARAM, 0.f, 1.f, 0.35f, "Neighbours", "%", 0.f, 100.f)->description = "How much the note areas around the struck one sing along";
-		configParam(BLOOM_PARAM, 0.f, 1.f, 0.5f, "Bloom", "%", 0.f, 100.f)->description = "The fundamental feeding the octave and fifth after the hit: the octave swells, as on a real pan";
-		configParam(GLIDE_PARAM, -30.f, 30.f, -6.f, "Onset glide", " cents")->description = "Hard hits start this far off pitch and settle (negative: starts flat)";
+		configParam(BLOOM_PARAM, 0.f, 1.f, 0.5f, "Bloom", "%", 0.f, 100.f)->description = "How strongly a hard hit drives the upper harmonics through the steel: the brightness that swells in just after the stick lands. Soft notes stay pure either way";
+		configParam(GLIDE_PARAM, -30.f, 30.f, 15.f, "Onset glide", " cents")->description = "Hard hits start this far off pitch and settle. Real pans start sharp (positive)";
 		configParam(DAMP_PARAM, 0.f, 1.f, 0.f, "Damp", "%", 0.f, 100.f)->description = "Hand resting on the pan: shorter, duller notes";
 		configParam(DETUNE_PARAM, 0.f, 30.f, 4.f, "Detune (fundamentals)", " cents")->description = "Scale of each note's own random tuning error. 0 = mathematically exact";
 		configParam(PARTIALS_PARAM, 0.f, 50.f, 8.f, "Partials (octave + fifth)", " cents")->description = "Scale of each note's random octave and fifth error. 0 = exactly harmonic";

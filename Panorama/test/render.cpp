@@ -70,14 +70,14 @@ int main(int argc, char** argv) {
 	Wav w;
 	PanEngine e;
 	e.setSampleRate(FS);
-	e.outGain = 6.5f;
+	e.outGain = 5.2f;
 	Controls c;
 
 	// single hits for level calibration
 	{
 		PanEngine t;
 		t.setSampleRate(FS);
-		t.outGain = 6.5f;
+		t.outGain = 5.2f;
 		Wav tmp;
 		for (int ty = 0; ty < NUM_TYPES; ty++) {
 			Controls cc;
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
 	for (int ty = 0; ty < NUM_TYPES; ty++) {
 		PanEngine s;
 		s.setSampleRate(44100.f);
-		s.outGain = 6.5f;
+		s.outGain = 5.2f;
 		Controls cc;
 		cc.type = ty;
 		cc.neighbours = 1.f;

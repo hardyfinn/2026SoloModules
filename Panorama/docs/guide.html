@@ -21,7 +21,7 @@ td{vertical-align:top;padding:2px 8px 2px 0} td:first-child{font-weight:700;whit
 <p>Notes outside the range fold in by octaves (right-click to ignore them instead). The layouts follow the usual patterns but are simplified, since each maker's pans differ a bit.</p>
 <h2>Striking</h2><table>
 <tr><td>STICK</td><td>Soft rubber (dark, round) to hard (bright, more stick click). Harder hits also get a shorter contact, so they come out brighter too.</td></tr>
-<tr><td>POSITION</td><td>Middle of the note area (mostly the note itself) to the edge (more octave and 12th, and the stick knocks the neighbouring areas too).</td></tr>
+<tr><td>POSITION</td><td>Where the stick lands. Low settings are the sweet spot in the middle of the note, where players aim: round and full. Towards the edge the fundamental thins out, the upper harmonics come forward and more of the hit leaks into the neighbouring notes. Default 8%.</td></tr>
 <tr><td>FORCE</td><td>How hard each hit is. With <b>VEL</b> patched (0 to 10 V, poly), 7 V plays at the knob's level.</td></tr>
 <tr><td>ROLL</td><td>Pan players hold long notes by rolling: rapid alternate-stick hits. At OFF, a gate is one hit. Turn it up and held gates roll, from 6 to 28 hits a second, with the two sticks slightly uneven. The <b>ROLL</b> input is a gate: while it is high, held notes roll (at the knob's speed, or 14 a second if the knob is off). Once patched, rolls only happen while it is high. ROLL SPD CV changes the speed.</td></tr>
 <tr><td>MUTE</td><td>Gate input: a palm on the pan. While high, everything chokes fast.</td></tr>
@@ -30,8 +30,8 @@ td{vertical-align:top;padding:2px 8px 2px 0} td:first-child{font-weight:700;whit
 <tr><td>DECAY</td><td>Ring time of every note, from a quarter to 2.5 times normal. Low notes always ring longer than high ones.</td></tr>
 <tr><td>DAMP</td><td>A hand resting on the pan: shorter and duller, but not choked.</td></tr>
 <tr><td>NEIGHBOURS</td><td>How much the areas around the struck one sing along. 0 is a clean single note. Around a third sounds like a real pan. At the top the whole face shimmers. Because the sympathy depends on partials lining up, it also reacts to the tuning: a well-tuned pan rings along more.</td></tr>
-<tr><td>BLOOM</td><td>On a real pan the octave swells just after the hit, because the fundamental's motion pushes energy into it. BLOOM sets how much. With high BLOOM the octave and 12th grow for the first 50 to 100 ms. The octave blooms most when it is in tune with the fundamental, so PARTIALS changes the bloom too.</td></tr>
-<tr><td>GLIDE</td><td>Hard hits start slightly off pitch and settle as the note dies away. Negative starts flat (the default, -6 cents), positive starts sharp. Softer hits glide less.</td></tr>
+<tr><td>BLOOM</td><td>How strongly a hard hit drives the upper harmonics through the steel. This is what makes a pan sound like a pan: a soft hit is nearly a pure tone, and the harder you hit the more the octave, double octave and higher harmonics swell in over the first 50 to 200 ms. At 0 the note stays plain at any force. How bright a note gets also depends on how well its partials are tuned (PARTIALS).</td></tr>
+<tr><td>GLIDE</td><td>Hard hits start off pitch and settle within the first tenth of a second or so. Real pans start sharp, so the default is +15 cents; negative starts flat. Softer hits glide less.</td></tr>
 <tr><td>WIDTH</td><td>Spreads the notes across the stereo field by where they sit on the drum. Unpatch R for mono on L.</td></tr>
 </table>
 <h2>Tuning: deliberately imperfect</h2>
@@ -46,16 +46,19 @@ td{vertical-align:top;padding:2px 8px 2px 0} td:first-child{font-weight:700;whit
 <h2>CV inputs</h2>
 <p>STICK, POSITION, DECAY, NEIGHBOURS, BLOOM, DAMP: ±5 V sweeps the full range. GLIDE: 6 cents per volt. DETUNE: 3 cents per volt. PARTIALS: 5 cents per volt. All add to the knob.</p>
 <h2>Starting points</h2><table>
-<tr><td>Calypso lead</td><td>TENOR, STICK 60%, POSITION 25%, NEIGHBOURS 35%, BLOOM 50%, ROLL OFF. Sequence 8th and 16th note lines around D5.</td></tr>
+<tr><td>Calypso lead</td><td>TENOR, STICK 60%, POSITION 8%, NEIGHBOURS 35%, BLOOM 50%, ROLL OFF. Sequence 8th and 16th note lines around D5.</td></tr>
 <tr><td>Strummed chords</td><td>2ND, poly chord from Peal or The Changes, ROLL at 40% so held chords roll, VEL from a random source for uneven hands.</td></tr>
-<tr><td>Bass</td><td>CELLO, STICK 25%, POSITION 50%, DECAY 70%.</td></tr>
+<tr><td>Bass</td><td>CELLO, STICK 25%, POSITION 15%, DECAY 70%.</td></tr>
 <tr><td>Old yard pan</td><td>DETUNE 14, PARTIALS 30, NEIGHBOURS 60%: out of tune, clangy, ringing everywhere.</td></tr>
-<tr><td>Techno use</td><td>TENOR, DECAY low, DAMP 40%, hard STICK, edge POSITION, a short Detroit-style chord stab line. Push GLIDE positive for a "pinged" synthetic edge.</td></tr>
+<tr><td>Techno use</td><td>TENOR, DECAY low, DAMP 40%, hard STICK, edge POSITION, a short Detroit-style chord stab line. Push GLIDE to +30 for a "pinged" synthetic edge.</td></tr>
 </table>
 <h2>Under the hood</h2>
-<p>Each note area has six modes: fundamental, octave, 12th, a quiet double octave, and two short untuned "pings" for the rim and skirt.</p>
-<p><b>The stick is physical.</b> A strike is the rubber tip (a small mass on a stiffening rubber spring, with a little loss) landing on the moving steel and being pushed back off it. The note decides how long the hit lasts: a harder hit squashes the rubber more and comes out shorter and brighter, a soft tip stays on longer and rounds the sound off, and the small light top notes give way under the stick. Contact runs from about 0.2 ms (hard stick) to 3 ms (soft stick on a cello note), the range measured on real pans. STICK sets how hard and springy the rubber is.</p>
-<p><b>Where you hit.</b> The octave's nodal line crosses the middle of the note and the 12th's runs along its length, so a dead-centre hit (POSITION 0) is nearly a pure tone and moving out brings the octave and 12th in. Each hit lands at a slightly different angle.</p>
-<p><b>BLOOM is the shell's own nonlinearity.</b> The hammered note is a shallow dome, so its fundamental, octave and 12th are coupled (the 1:2:3 relation the tuner builds in). Energy flows up from the fundamental after the hit and back again: the octave swells in, more for hard hits, less when the octave is out of tune (PARTIALS). It only moves energy around, so it can never run away.</p>
-<p><b>NEIGHBOURS</b> is a symmetric spring through the steel between nearby note areas (weighted by distance on the drum face), so notes that share a partial swap energy the way a real pan's do. It is energy-correct, so it is stable however far you turn it. A shared skirt resonance and a short stick click complete it. Untested in Rack so far.</p>
+<p>Version 2.2 was redesigned against recordings of a real Trinidad tenor pan (24 notes, four hit strengths each). Each note's harmonics, ring times, starting pitch and the ringing of its neighbours were measured, and the model was adjusted until it gave the same numbers.</p>
+<p><b>Eight harmonics per note, fed by the steel itself.</b> Each note area has modes at 1, 2, 3, 4, 5, 6, 8 and 10 times its pitch. The stick mostly excites the fundamental. The upper harmonics get their energy from the note's own nonlinearity: a hammered note is a shallow dome, and when it swings far, pairs of harmonics push the ones at their sum (1+1 feeds 2, 2+2 feeds 4, 2+4 feeds 6, and so on, fifteen such paths). That is why a soft hit is almost a pure tone and a hard hit is bright and brassy, with the brightness arriving just after the hit instead of at it. On the recordings the octave runs from about 20 dB below the fundamental on soft hits to level with it on the hardest, and the model follows the same curve. The coupling only moves energy between harmonics, it never creates any.</p>
+<p><b>Every note is voiced differently.</b> On the real pan no two notes have the same recipe: one has a strong double octave, the next a strong sixth harmonic. Each note here gets its own fixed strengths for the fifteen paths and its own slightly stretched upper harmonics (scaled by PARTIALS). RE-ROLL gives a different pan. The small inner notes are tuned octave and double octave, as tuners do it, so they stay purer.</p>
+<p><b>Low notes are rich, high notes are pure.</b> Steel throws high frequencies into the air more efficiently up to a point, so the harmonics of the big outer notes come out strong while the small inner notes are mostly fundamental.</p>
+<p><b>Ring time.</b> The measured notes all ring for about 1.2 to 1.4 seconds regardless of pitch, far more even than the earlier version assumed. DECAY at its default gives that.</p>
+<p><b>The stick is physical.</b> A strike is the rubber tip (a small mass on a stiffening rubber spring, with a little loss) landing on the moving steel and being pushed back off it. Harder hits are shorter and brighter, a soft tip stays on longer, and the stick stays on low notes longer than on high ones.</p>
+<p><b>Neighbours.</b> Part of every hit goes straight into the surrounding note areas through the steel (more so near the edge), and after that the notes keep exchanging energy through a symmetric spring wherever their partials line up. On the real pan the neighbours sit 13 to 21 dB below the struck note, and the default NEIGHBOURS setting lands there. A shared skirt resonance and a short stick click complete it.</p>
+<p>The redesign costs roughly three times the CPU of version 2.0 while notes are ringing. Not yet tested in Rack.</p>
 </body></html>

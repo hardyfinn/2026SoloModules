@@ -74,16 +74,26 @@ static const HgScale HG_SCALES[NUM_SCALES] = {
 static const char* HG_NOTE_NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 // partial layout of one tone field
+// Measured on a real D Kurd hang (see docs): a tone field is three partials
+// and almost nothing else (the next modes sit 40 dB down). The ding's dome
+// has more: partials near 4, 6 and 8 times its note are part of its voice.
 static const float HG_RATIO[NP] = {1.f, 2.f, 3.f, 4.1f, 5.43f, 6.8f};
+static const float HG_RATIO_DING[NP] = {1.f, 2.f, 2.98f, 3.97f, 5.9f, 7.83f};
 // how strongly each mode radiates (the fundamental is a monopole and pumps
 // the most air; the octave and fifth are dipoles; the upper shell modes less)
 static const float HG_AMP[NP] = {1.f, 0.6f, 0.38f, 0.12f, 0.08f, 0.05f};
-static const float HG_RAD[NP] = {1.f, 0.55f, 0.42f, 0.2f, 0.14f, 0.1f};
+// how well the upper shell modes radiate (the three tuned partials follow a
+// frequency law instead, see updateCoefs)
+static const float HG_RAD[NP] = {1.f, 0.7f, 0.45f, 0.06f, 0.05f, 0.04f};
+static const float HG_RAD_DING[NP] = {0.3f, 1.f, 0.42f, 0.35f, 0.08f, 1.0f};
 // how strongly each mode is tied to the rest of the shell (sympathetic bleed)
 static const float HG_CPL[NP] = {1.f, 0.8f, 0.6f, 0.3f, 0.2f, 0.15f};
 static const float HG_FINGER_MASS = 0.6f;   // relative to a 220 Hz field
-static const float HG_NL = 0.012f;          // strength of the 1:2:3 shell coupling
-static const float HG_DECAYF[NP] = {1.f, 0.7f, 0.5f, 0.28f, 0.18f, 0.12f};
+static const float HG_NL = 0.004f;          // strength of the 1:2:3 shell coupling
+// The hang's long tail is its octave and fifth: measured, they ring about
+// 1.5 and 1.8 times as long as the fundamental, which leaves first.
+static const float HG_DECAYF[NP] = {1.f, 1.5f, 1.8f, 0.2f, 0.14f, 0.1f};
+static const float HG_DECAYF_DING[NP] = {1.f, 1.1f, 2.2f, 1.6f, 0.5f, 1.2f};
 
 struct HgParams {
 	int scale = 0;
@@ -240,6 +250,9 @@ struct HgNote {
 	float beatHz[NP];             // pair split in Hz at BEAT = 1
 	float pairAmp[NP];            // level of the second mode of each pair
 	float ratioJit[NP];           // fixed inharmonic jitter of the upper modes
+	float radVar[NP];             // this field's own voicing: how loud each partial speaks
+	float decVar[NP];             // and how long each rings
+	float rad[NP];                // output gain of each partial
 };
 
 struct HgQueued {
@@ -337,6 +350,10 @@ struct HangoverEngine {
 				n.beatHz[k] = (0.25f + 2.4f * r.uni()) * (k == 0 ? 0.6f : 1.f + 0.4f * k);
 				n.pairAmp[k] = 0.3f + 0.6f * r.uni();
 				n.ratioJit[k] = k < 3 ? 0.f : 0.03f * r.bi();
+				// measured fields differ a lot: octave anywhere from 12 dB under the
+				// fundamental to 10 dB over it. Each field gets its own voicing.
+				n.radVar[k] = k == 0 ? 1.f : std::pow(2.f, 0.9f * r.bi());
+				n.decVar[k] = k == 0 ? 1.f : std::pow(1.3f, r.bi());
 			}
 		}
 		const float bf[NBODY] = {165.f, 272.f, 418.f, 633.f, 905.f};
@@ -417,15 +434,17 @@ struct HangoverEngine {
 		float muteAmt = std::max(p.mute, muteGate);
 		for (int i = 0; i < nNotes; i++) {
 			HgNote& n = note[i];
-			float pitchF = std::pow(220.f / n.freq, 0.3f);
-			pitchF = std::max(0.5f, std::min(1.6f, pitchF));
+			float pitchF = std::pow(220.f / n.freq, 0.15f);
+			pitchF = std::max(0.7f, std::min(1.3f, pitchF));
+			const float* ratio = i == 0 ? HG_RATIO_DING : HG_RATIO;
+			const float* decf = i == 0 ? HG_DECAYF_DING : HG_DECAYF;
 			float glide = (0.0015f + 0.004f * p.tuning) * std::min(n.env, 1.5f);
 			float base = n.freq * std::pow(2.f, n.tuneErr[0] * 8.f * p.tuning / 1200.f) * (1.f + glide);
 			for (int k = 0; k < NP; k++) {
 				float cents = k == 0 ? 0.f : n.tuneErr[k] * (k == 2 ? 28.f : 20.f) * p.tuning;
-				float f = base * HG_RATIO[k] * (1.f + n.ratioJit[k]) * std::pow(2.f, cents / 1200.f);
+				float f = base * ratio[k] * (1.f + n.ratioJit[k]) * std::pow(2.f, cents / 1200.f);
 				float split = n.beatHz[k] * p.beat * 0.5f;
-				float t60 = p.decay * HG_DECAYF[k] * pitchF * (i == 0 ? 1.3f : 1.f);
+				float t60 = p.decay * decf[k] * n.decVar[k] * pitchF * (i == 0 ? 1.15f : 1.f);
 				float inv = 1.f / t60 + muteAmt * (12.f + 4.f * k);
 				t60 = 1.f / inv;
 				n.m[2 * k].setCoef(f - split, t60, sr);
@@ -446,7 +465,17 @@ struct HangoverEngine {
 			{
 				float w0 = n.wk[0];
 				float Iref = HG_FINGER_MASS * 1.5f;
-				n.eps = HG_NL * n.M * n.M * w0 * w0 * w0 / Iref;
+				// (the ding's big dome is the most nonlinear: its octave swells in)
+				n.eps = HG_NL * (i == 0 ? 3.f : 1.f) * n.M * n.M * w0 * w0 * w0 / Iref;
+				// radiation: a field is small beside the wavelength of its own note,
+				// so its octave and fifth leave the steel more easily than its
+				// fundamental (pressure rises with frequency, up to about 900 Hz)
+				const float fc = 900.f;
+				float fb = std::min(n.wk[0] / (2.f * HG_PI), fc);
+				for (int k = 0; k < NP; k++) {
+					float fk = std::min(n.wk[k] / (2.f * HG_PI), fc);
+					n.rad[k] = (k < 3 ? fk / fb : 1.f) * (i == 0 ? HG_RAD_DING[k] : HG_RAD[k]) * n.radVar[k];
+				}
 				n.aRef = Iref / (n.M * w0);
 			}
 			n.rFund = std::sqrt(n.m[0].c * n.m[0].c + n.m[0].s * n.m[0].s);
@@ -549,7 +578,7 @@ struct HangoverEngine {
 		// the finger: soft pad (long, lossy contact) .. hard slap (short, springy)
 		// (real finger strikes on a handpan last about 0.5 to 2.5 ms; any longer
 		// and the force pulse itself cancels the upper fields' fundamentals)
-		float contact = 0.0022f - 0.00175f * touch;  // at unit speed on rigid steel
+		float contact = 0.0016f - 0.0012f * touch;   // at unit speed on rigid steel
 		int L = std::max(3, (int) (contact * (1.15f - 0.3f * std::min(v, 1.f)) * sr));
 		int slot = n.conNext;
 		n.conNext = (n.conNext + 1) % NPULSE;
@@ -664,7 +693,7 @@ struct HangoverEngine {
 			}
 		}
 		// 2) forces: fingers, the shell's own nonlinearity, the neighbours, the air
-		const float bleedRate = 2.f * (2.f * HG_PI * 1.6f) * bleed * dt;   // coupling rate up to 1.6 Hz
+		const float bleedRate = 2.f * (2.f * HG_PI * 2.2f) * bleed * dt;   // coupling rate up to 2.2 Hz
 		float helmDrive = 0.f;
 		for (int i = 0; i < nNotes; i++) {
 			HgNote& n = note[i];
@@ -694,13 +723,16 @@ struct HangoverEngine {
 				// a pure cubic potential has no floor, and a pile of slaps could
 				// otherwise throw the shell over the top of it)
 				float lim = 1.f / (3.f * n.aRef);
-				float u0 = n.u[0] / (1.f + std::fabs(n.u[0]) * lim);
-				float u1 = n.u[1] / (1.f + std::fabs(n.u[1]) * lim);
-				float u2 = n.u[2] / (1.f + std::fabs(n.u[2]) * lim);
+				// (each force is the exact gradient of the limited energy, so the
+				// coupling only moves energy between the three partials)
+				float d0 = 1.f / (1.f + std::fabs(n.u[0]) * lim);
+				float d1 = 1.f / (1.f + std::fabs(n.u[1]) * lim);
+				float d2 = 1.f / (1.f + std::fabs(n.u[2]) * lim);
+				float u0 = n.u[0] * d0, u1 = n.u[1] * d1, u2 = n.u[2] * d2;
 				float e = n.eps;
-				F[0] -= e * (2.f * u0 * u1 + 0.7f * u1 * u2);
-				F[1] -= e * (u0 * u0 + 0.7f * u0 * u2);
-				F[2] -= e * 0.7f * u0 * u1;
+				F[0] -= e * (2.f * u0 * u1 + 0.7f * u1 * u2) * d0 * d0;
+				F[1] -= e * (u0 * u0 + 0.7f * u0 * u2) * d1 * d1;
+				F[2] -= e * 0.7f * u0 * u1 * d2 * d2;
 			}
 			float x[NP];
 			for (int k = 0; k < NP; k++) x[k] = F[k] * dt + sym * HG_CPL[k] * n.sqMw[k];
@@ -716,7 +748,7 @@ struct HangoverEngine {
 			float y = 0.f;
 			for (int k = 0; k < NP; k++) {
 				float st = n.m[2 * k].commit(x[k]) + n.m[2 * k + 1].commit(x[k] * n.m[2 * k + 1].gain);
-				y += HG_RAD[k] * st;
+				y += n.rad[k] * st;
 			}
 			// radiated ~ surface velocity x area; the heavy fields are the big ones,
 			// so the 1/M of the velocity and the area cancel to first order

@@ -58,7 +58,7 @@ struct Hangover : Module {
 		std::vector<std::string> keyNames;
 		for (int i = 0; i < 12; i++) keyNames.push_back(HG_NOTE_NAMES[i]);
 		configSwitch(KEY_PARAM, 0.f, 11.f, 2.f, "Key (the ding's note)", keyNames);
-		configParam(DECAY_PARAM, 0.f, 1.f, 0.7f, "Decay (how long the ding rings)", " s", 30.f, 0.4f);
+		configParam(DECAY_PARAM, 0.f, 1.f, 0.6f, "Decay (how long the ding rings)", " s", 30.f, 0.4f);
 		configParam(FORCE_PARAM, 0.f, 1.f, 0.7f, "Force (when VEL is not patched)", "%", 0.f, 100.f);
 		configParam(TOUCH_PARAM, 0.f, 1.f, 0.3f, "Touch: soft finger pad to hard slap", "%", 0.f, 100.f);
 		configParam(STRIKE_PARAM, 0.f, 1.f, 0.3f, "Strike spot: centre of the field (fundamental) to edge (octave + fifth)", "%", 0.f, 100.f);

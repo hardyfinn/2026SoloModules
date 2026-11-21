@@ -41,7 +41,32 @@
 namespace panorama {
 
 static const int MAX_NOTES = 32;
-static const int NUM_MODES = 6;  // fund, oct, twelfth, double oct, ping a, ping b
+static const int NUM_MODES = 8;  // near-harmonic modes 1 2 3 4 5 6 8 10 of each note area
+// which harmonic each mode sits near. Measured pans (see docs) ring mostly on
+// the even ones: 2, 4, 6, 8 carry the brightness of a hard hit, 3 is weak.
+static const int HARM[NUM_MODES] = {1, 2, 3, 4, 5, 6, 8, 10};
+// Three-mode resonances (harmonic i + harmonic j = harmonic k) through which
+// the shell's quadratic nonlinearity passes energy up the series. Each is a
+// term c * a_i * a_j * a_k of one energy function, so energy only moves.
+static const int NUM_TRI = 15;
+struct Tri { int i, j, k; float c; };
+static const Tri TRIS[NUM_TRI] = {
+	{0, 0, 1, 2.2f},   // 1+1 = 2   the octave bloom
+	{0, 1, 2, 0.35f},  // 1+2 = 3
+	{0, 2, 3, 0.25f},  // 1+3 = 4
+	{1, 1, 3, 0.45f},   // 2+2 = 4
+	{0, 3, 4, 0.4f},   // 1+4 = 5
+	{1, 2, 4, 0.3f},   // 2+3 = 5
+	{0, 4, 5, 0.3f},   // 1+5 = 6
+	{1, 3, 5, 2.6f},   // 2+4 = 6
+	{2, 2, 5, 0.2f},   // 3+3 = 6
+	{1, 5, 6, 1.0f},   // 2+6 = 8
+	{3, 3, 6, 1.5f},   // 4+4 = 8
+	{2, 4, 6, 0.2f},   // 3+5 = 8
+	{1, 6, 7, 0.5f},   // 2+8 = 10
+	{3, 5, 7, 0.6f},   // 4+6 = 10
+	{4, 4, 7, 0.3f},   // 5+5 = 10
+};
 static const int NUM_NB = 6;
 static const int MAX_PULSES = 48;
 static const int NUM_TYPES = 3;
@@ -78,7 +103,8 @@ struct TypeSpec {
 	int numPans;
 	int pcOrder[3][6];       // pitch classes on each pan, in order round the rim
 	int pcCount;             // pitch classes per pan
-	float t60Low;            // fundamental decay at the lowest note (s)
+	float t60Low;            // fundamental decay at the lowest note (s) with DECAY at 1x.
+	                         // A measured tenor rings about 1.3 s (T60) on every note
 	float stickMs;           // stick contact time at mid STICK (ms)
 	float bodyF[NUM_BODY], bodyT[NUM_BODY], bodyAmp;  // skirt / shell
 	float twelfthAmp;        // how strongly the twelfth is tuned in
@@ -86,13 +112,13 @@ struct TypeSpec {
 
 static const TypeSpec TYPES[NUM_TYPES] = {
 	// Low-C tenor: C4..E6, one pan in the circle of fifths, octave notes inside
-	{60, 88, 1, {{0, 7, 2, 9, 4, 11}, {}, {}}, 12, 2.4f, 0.75f,
+	{60, 88, 1, {{0, 7, 2, 9, 4, 11}, {}, {}}, 12, 1.9f, 0.75f,
 	 {340.f, 820.f, 1720.f, 3150.f}, {0.10f, 0.07f, 0.16f, 0.09f}, 0.05f, 1.0f},
 	// Double seconds: F#3..C#6, two pans split by whole tones
-	{54, 85, 2, {{0, 2, 4, 6, 8, 10}, {1, 3, 5, 7, 9, 11}, {}}, 6, 2.9f, 0.95f,
+	{54, 85, 2, {{0, 2, 4, 6, 8, 10}, {1, 3, 5, 7, 9, 11}, {}}, 6, 2.3f, 0.95f,
 	 {260.f, 610.f, 1380.f, 2600.f}, {0.13f, 0.09f, 0.14f, 0.08f}, 0.06f, 1.0f},
 	// Triple cello: B2..E5, three pans in minor-third (diminished) groups
-	{47, 76, 3, {{0, 3, 6, 9}, {1, 4, 7, 10}, {2, 5, 8, 11}}, 4, 3.4f, 1.3f,
+	{47, 76, 3, {{0, 3, 6, 9}, {1, 4, 7, 10}, {2, 5, 8, 11}}, 4, 2.9f, 1.3f,
 	 {170.f, 430.f, 980.f, 2050.f}, {0.18f, 0.12f, 0.16f, 0.09f}, 0.08f, 0.8f},
 };
 
@@ -123,6 +149,10 @@ struct Contact {
 	float ucPrev = 0.f;
 	int sepN = 0, life = 0, sepMax = 100, lifeMax = 3000;
 	float phi[NUM_MODES];
+	// the same blow also shakes the note areas next door through the steel
+	int nbN = 0;
+	int nbIdx[8];
+	float nbW[8];
 	void start(int n, float uc, float v, float T, float lambda, float retract, float fs) {
 		static const float IA = contactIntegral(STICK_ALPHA);
 		note = n;
@@ -138,6 +168,7 @@ struct Contact {
 		float d = xs - uc;
 		float F = 0.f;
 		if (d > 0.f) {
+			if (d > 20.f * dRef) d = 20.f * dRef;  // (safety: a wildly moving surface)
 			float dd = vs - (uc - ucPrev) / dt;
 			F = K * std::pow(d, STICK_ALPHA) * (1.f + lam * dd);
 			if (F < 0.f) F = 0.f;
@@ -255,6 +286,8 @@ struct Layout {
 				W[i][j] /= maxRow;
 				if (W[i][j] > 0.f && wn[i] < MAX_WN) { wj[i][wn[i]] = j; wv[i][wn[i]] = W[i][j]; wn[i]++; }
 			}
+			wmax[i] = 1e-6f;
+			for (int k = 0; k < wn[i]; k++) wmax[i] = std::max(wmax[i], wv[i][k]);
 		}
 		// modal mass: lower and bigger (outer ring) areas are heavier
 		float fLow = 440.f * std::pow(2.f, (T.lowMidi - 69) / 12.f);
@@ -268,6 +301,7 @@ struct Layout {
 	int wn[MAX_NOTES];
 	int wj[MAX_NOTES][MAX_WN];
 	float wv[MAX_NOTES][MAX_WN];
+	float wmax[MAX_NOTES];
 
 	int nearest(float midi) const {
 		int best = 0;
@@ -285,7 +319,9 @@ struct Tuning {
 	uint32_t seed = 20261120u;
 	float rnd[NUM_TYPES][MAX_NOTES][3];    // unit-size errors: fund, oct, twelfth
 	float hand[NUM_TYPES][MAX_NOTES][3];   // hand edits (cents)
-	float ping[NUM_TYPES][MAX_NOTES][2];   // untuned mode ratios
+	float stretch[NUM_TYPES][MAX_NOTES][NUM_MODES];  // how sharp each upper mode sits (units of PARTIALS)
+	float nlw[NUM_TYPES][MAX_NOTES][NUM_TRI];        // this note's own strength of each resonance
+	float radw[NUM_TYPES][MAX_NOTES][NUM_MODES];     // this note's own radiation of each mode
 
 	Tuning() {
 		std::memset(hand, 0, sizeof(hand));
@@ -299,8 +335,12 @@ struct Tuning {
 				rnd[t][i][0] = r.gauss();
 				rnd[t][i][1] = r.gauss();
 				rnd[t][i][2] = r.gauss() * 1.4f + 0.25f;  // twelfths are the least accurate, slightly stretched
-				ping[t][i][0] = 2.32f + 0.5f * r.uni();
-				ping[t][i][1] = 4.6f + 1.4f * r.uni();
+				// upper modes sit a little sharp of the harmonics, each by its own amount
+				for (int k = 0; k < NUM_MODES; k++) stretch[t][i][k] = 0.25f + 1.75f * r.uni();
+				// every note has its own character: which resonances are strong,
+				// which partials speak (factor 0.45 .. 2.2 and 0.6 .. 1.6)
+				for (int q = 0; q < NUM_TRI; q++) nlw[t][i][q] = std::pow(2.2f, 2.f * r.uni() - 1.f);
+				for (int k = 0; k < NUM_MODES; k++) radw[t][i][k] = k == 0 ? 1.f : std::pow(1.6f, 2.f * r.uni() - 1.f);
 			}
 	}
 	void clearHand() { std::memset(hand, 0, sizeof(hand)); }
@@ -309,13 +349,13 @@ struct Tuning {
 struct Controls {
 	int type = TENOR;
 	float stick = 0.5f;      // 0 soft rubber .. 1 hard
-	float position = 0.25f;  // 0 centre .. 1 edge of the note area
+	float position = 0.08f;  // 0 centre .. 1 edge of the note area
 	float decay = 1.f;       // multiplier 0.25..2.5
 	float damp = 0.f;        // 0..1 constant hand damping
 	float mute = 0.f;        // palm mute held (0 or 1; a float so Controls has no padding)
 	float neighbours = 0.35f;// 0..1
 	float bloom = 0.5f;      // 0..1
-	float glide = -6.f;      // cents at full force (negative = starts flat)
+	float glide = 15.f;      // cents at full force (real pans start sharp and settle)
 	float detune = 4.f;      // cents (scale of the random fundamental error)
 	float partials = 8.f;    // cents (scale of the random octave/twelfth error)
 	float tune = 0.f;        // cents, whole instrument
@@ -334,6 +374,7 @@ struct Mode {
 	float invMw = 0.f;  // state -> physical displacement, 1/(M w)
 	float sqMw = 0.f, invSqMw = 0.f;  // for energy-symmetric coupling
 	float fr = 0.f, fi = 0.f;         // free-running prediction this sample
+	float nl = 0.f;                   // w * Iref: scale of the three-mode forces
 	bool on = false;
 };
 
@@ -357,7 +398,12 @@ struct PanEngine {
 	bool active[MAX_NOTES];
 	Pulse pulses[MAX_PULSES];
 	Contact contacts[MAX_CONTACTS];
-	float eps[MAX_NOTES];      // quadratic shell coupling of each area
+	float lastGl[MAX_NOTES] = {};
+	float panL[MAX_NOTES], panR[MAX_NOTES];
+	float gainN[MAX_NOTES];    // loudness trim, so the rich low notes do not swamp the top
+	float eta[MAX_NOTES];      // strength of the shell's quadratic coupling
+	float triw[MAX_NOTES][NUM_TRI];
+	float triG[MAX_NOTES][NUM_TRI][3];
 	float aRef[MAX_NOTES];     // fundamental displacement of a full-force hit
 	float u[MAX_NOTES][NUM_MODES];
 	float ut[MAX_NOTES];
@@ -368,9 +414,10 @@ struct PanEngine {
 	// stick click noise
 	float clickEnv = 0.f, clickSx = 0.f, clickHp = 0.f, clickLast = 0.f;
 	Rng noise{12345u};
-	float outGain = 6.5f;
+	float outGain = 5.2f;
 	static constexpr float IREF = STICK_MASS * 1.5f;  // impulse of a full-force hit
-	static constexpr float BLOOM_MAX = 0.03f;
+	static constexpr float BLOOM_MAX = 0.033f;
+	static constexpr float BLEED = 0.18f;    // force share of the nearest neighbour at NEIGHBOURS 35%
 	bool fullDirty = true;
 
 	PanEngine() { reset(); }
@@ -380,7 +427,7 @@ struct PanEngine {
 		for (int i = 0; i < MAX_NOTES; i++) { y[i] = 0.f; energy[i] = 0.f; bend[i] = 1.f; active[i] = false; }
 		for (int p = 0; p < MAX_PULSES; p++) pulses[p].note = -1;
 		for (int p = 0; p < MAX_CONTACTS; p++) contacts[p].note = -1;
-		for (int i = 0; i < MAX_NOTES; i++) { eps[i] = 0.f; aRef[i] = 1e-3f; ut[i] = 0.f; for (int k = 0; k < NUM_MODES; k++) u[i][k] = 0.f; }
+		for (int i = 0; i < MAX_NOTES; i++) { eta[i] = 0.f; gainN[i] = 1.f; lastGl[i] = 0.f; aRef[i] = 1e-3f; ut[i] = 0.f; for (int k = 0; k < NUM_MODES; k++) u[i][k] = 0.f; }
 		for (int b = 0; b < NUM_BODY; b++) bzr[b] = bzi[b] = 0.f;
 		lay.build(cur.type);
 		blockPos = 0;
@@ -427,8 +474,22 @@ struct PanEngine {
 		}
 		// only areas that are sounding need their poles refreshed (glide);
 		// everything is refreshed when a control moves
-		for (int i = 0; i < lay.count; i++)
-			if (changed || active[i]) updateNote(i);
+		if (changed)
+			for (int i = 0; i < lay.count; i++) {
+				float pan = 0.5f + 0.5f * lay.n[i].sx * c.width;
+				panL[i] = std::sqrt(1.f - pan);
+				panR[i] = std::sqrt(pan);
+			}
+		for (int i = 0; i < lay.count; i++) {
+			if (changed) updateNote(i);
+			else if (active[i] && c.glide != 0.f && std::fabs(glideNow(i) - lastGl[i]) > 0.25f) updateNote(i);
+		}
+	}
+
+	// glide: frequency follows how hard the fundamental is moving (amplitude squared)
+	float glideNow(int i) const {
+		float amp2 = (m[i][0].zr * m[i][0].zr + m[i][0].zi * m[i][0].zi) * (1.f / (IREF * IREF));
+		return cur.glide * std::min(amp2 * 1.3f, 1.5f);
 	}
 
 	void updateNote(int i) {
@@ -438,21 +499,27 @@ struct PanEngine {
 		{
 			const NoteArea& a = lay.n[i];
 			float f0 = 440.f * std::pow(2.f, (a.midi - 69) / 12.f + c.tune / 1200.f) * bend[i];
-			// glide: frequency follows how hard the fundamental is moving (amplitude squared)
-			float amp2 = (m[i][0].zr * m[i][0].zr + m[i][0].zi * m[i][0].zi) * (1.f / (IREF * IREF));
-			float gl = c.glide * std::min(amp2 * 1.3f, 1.5f);
-			float t60 = T.t60Low * std::pow(f0 / (440.f * std::pow(2.f, (T.lowMidi - 69) / 12.f)), -0.55f) * c.decay;
+			float gl = glideNow(i);
+			lastGl[i] = gl;
+			float fLow = 440.f * std::pow(2.f, (T.lowMidi - 69) / 12.f);
+			// measured: every note of a tenor rings about as long, top to bottom
+			float t60 = T.t60Low * std::pow(f0 / fLow, -0.12f) * c.decay;
 			float dampDiv = 1.f + damp * (c.mute > 0.5f ? 30.f : 12.f);
-			float ratios[NUM_MODES] = {1.f, 2.f, 3.f, 4.f, tun.ping[c.type][i][0], tun.ping[c.type][i][1]};
-			float cents[NUM_MODES] = {errCents(c.type, i, 0, c), errCents(c.type, i, 1, c),
-			                          errCents(c.type, i, 2, c), errCents(c.type, i, 1, c) * 0.7f + 6.f, 0.f, 0.f};
-			float tScale[NUM_MODES] = {1.f, 0.8f, 0.5f, 0.3f, 0.06f, 0.035f};
+			// where each mode sits: 1, a tuned octave, a tuned (but weak) twelfth,
+			// then modes a little sharp of harmonics 4 5 6 8 10. PARTIALS scales
+			// how far they stray; at 0 everything is exactly harmonic.
+			float cents[NUM_MODES];
+			cents[0] = errCents(c.type, i, 0, c);
+			cents[1] = errCents(c.type, i, 1, c) + 0.6f * c.partials;   // octaves are tuned a touch wide
+			cents[2] = errCents(c.type, i, 2, c);
+			for (int k = 3; k < NUM_MODES; k++) cents[k] = tun.stretch[c.type][i][k] * c.partials * (HARM[k] >= 8 ? 1.3f : 1.f);
+			static const float tScale[NUM_MODES] = {1.f, 0.9f, 0.6f, 0.7f, 0.55f, 0.55f, 0.5f, 0.4f};
 			// the glide moves the fundamental most, the partials a little less
-			float glScale[NUM_MODES] = {1.f, 0.85f, 0.7f, 0.6f, 0.4f, 0.4f};
+			static const float glScale[NUM_MODES] = {1.f, 0.85f, 0.7f, 0.6f, 0.5f, 0.5f, 0.4f, 0.4f};
 			for (int k = 0; k < NUM_MODES; k++) {
 				Mode& md = m[i][k];
-				float f = f0 * ratios[k] * std::pow(2.f, (cents[k] + gl * glScale[k]) / 1200.f);
-				if (f > 0.45f * fs || f < 20.f) {
+				float f = f0 * HARM[k] * std::pow(2.f, (cents[k] + gl * glScale[k]) / 1200.f);
+				if (f > 0.42f * fs || f < 20.f) {
 					md.on = false;
 					md.zr = md.zi = 0.f;
 					continue;
@@ -470,27 +537,40 @@ struct PanEngine {
 				md.invMw = 1.f / (a.M * wr);
 				md.sqMw = std::sqrt(a.M * wr);
 				md.invSqMw = 1.f / md.sqMw;
+				md.nl = wr * IREF;  // scale of the resonance forces on this mode
 			}
-			// the shell's quadratic coupling, eps = eta M w0^2 / A, A = Iref/(M w0)
+			// this note's strength of each resonance. The small inner notes are
+			// stiffer (less nonlinear overall) and are tuned 1 : 2 : 4, so on them
+			// the octave feeds the double octave (2+2 = 4) rather than swelling itself.
+			eta[i] = c.bloom * BLOOM_MAX;
+			gainN[i] = std::min(1.f, 0.5f * std::pow(f0 / fLow, 0.7f));
+			for (int q = 0; q < NUM_TRI; q++) {
+				float w = eta[i] * TRIS[q].c * tun.nlw[c.type][i][q];
+				if (a.ring >= 1) w *= (q == 0 ? 0.25f : q == 3 ? 13.f : q == 4 ? 2.5f : q == 7 ? 1.7f : 0.6f);
+				triw[i][q] = w;
+				// the force each resonance puts on its three modes, ready to use
+				const Tri& T3 = TRIS[q];
+				bool ok = m[i][T3.i].on && m[i][T3.j].on && m[i][T3.k].on;
+				triG[i][q][0] = ok ? w * m[i][T3.k].nl : 0.f;
+				triG[i][q][1] = ok ? w * m[i][T3.i].nl * (T3.i == T3.j ? 2.f : 1.f) : 0.f;
+				triG[i][q][2] = ok && T3.i != T3.j ? w * m[i][T3.j].nl : 0.f;
+			}
+			// radiation: a note area is small next to the wavelength of its own
+			// fundamental, so it throws high partials better than low ones (pressure
+			// rises with frequency) until the wavelength is down to its own size,
+			// around 1.1 kHz for the big outer notes and higher for the small inner
+			// ones. So low notes sound rich in partials and top notes pure.
 			{
-				float w0 = TWO_PI_F * f0;
-				eps[i] = c.bloom * BLOOM_MAX * a.M * a.M * w0 * w0 * w0 / IREF;
-				aRef[i] = IREF / (a.M * w0);
+				const float fc = a.ring == 0 ? 1150.f : a.ring == 1 ? 1700.f : 2300.f;
+				float fb = std::min(f0, fc);
+				for (int k = 0; k < NUM_MODES; k++) {
+					float fk = std::min(f0 * HARM[k], fc);
+					m[i][k].rad = (fk / fb) * tun.radw[c.type][i][k] * (k == 1 ? 1.25f : k == 2 ? 0.5f * T.twelfthAmp : 1.f);
+				}
 			}
-			// radiation: the fundamental pumps the most air; the rest less so.
-			// Big outer areas radiate better (area), which cancels their mass.
-			{
-				float tw = T.twelfthAmp * (a.ring == 0 ? 1.f : a.ring == 1 ? 0.6f : 0.35f);
-				const float rad[NUM_MODES] = {1.f, 0.5f, 0.75f * tw, 0.2f, 0.3f, 0.25f};
-				for (int k = 0; k < NUM_MODES; k++) m[i][k].rad = rad[k];
-			}
-			// coupling sensitivity
-			m[i][0].cpl = 1.f;
-			m[i][1].cpl = 0.9f;
-			m[i][2].cpl = 0.75f;
-			m[i][3].cpl = 0.4f;
-			m[i][4].cpl = 0.f;
-			m[i][5].cpl = 0.f;
+			// how much each mode feels the steel around the note (sympathy)
+			static const float cpl[NUM_MODES] = {1.f, 0.9f, 0.6f, 0.f, 0.f, 0.f, 0.f, 0.f};
+			for (int k = 0; k < NUM_MODES; k++) m[i][k].cpl = cpl[k];
 		}
 	}
 
@@ -509,7 +589,6 @@ struct PanEngine {
 		float fLow = 440.f * std::pow(2.f, (T.lowMidi - 69) / 12.f);
 		float f0 = 440.f * std::pow(2.f, (a.midi - 69) / 12.f);
 		float ms = T.stickMs * (1.9f - 1.55f * hard) * 0.9f * std::pow(f0 / fLow, -0.4f);
-		int len = std::max(2, (int) (ms * 0.001f * fs * (1.15f - 0.3f * std::min(force, 1.f))));
 		if (!active[i]) updateNote(i);
 		int slot = -1;
 		for (int k = 0; k < MAX_CONTACTS; k++)
@@ -525,15 +604,16 @@ struct PanEngine {
 		// small angle off the long axis (players aim along it, but not exactly).
 		// The octave's nodal line crosses the long axis at the middle and the
 		// twelfth's runs along it, so a dead-centre hit is nearly a pure tone
-		float r = 0.05f + 0.9f * p;
+		float r = 0.9f * p * std::sqrt(p);
 		float th = 0.3f + 0.25f * (srng.uni() * 2.f - 1.f);
 		float sr1 = std::sin(3.14159265f * std::min(r, 0.95f));
 		C.phi[0] = std::cos(0.5f * 3.14159265f * r);
-		C.phi[1] = sr1 * std::cos(th);
-		C.phi[2] = sr1 * std::sin(th) + 0.15f * r;
-		C.phi[3] = 0.15f + 0.6f * std::fabs(std::sin(2.f * 3.14159265f * r));
-		C.phi[4] = 0.3f + 0.7f * r;   // rim and skirt modes: more towards the edge
-		C.phi[5] = 0.2f + 0.8f * r;
+		C.phi[1] = 0.6f * sr1 * std::cos(th);
+		C.phi[2] = sr1 * std::sin(th) + 0.1f * r;
+		// the upper modes are barely reached by the stick itself (they are fed
+		// by the shell's nonlinearity instead); more of them towards the edge
+		for (int k = 3; k < NUM_MODES; k++)
+			C.phi[k] = (0.01f + 0.25f * r) * (0.5f + 0.5f * std::fabs(std::sin(3.14159265f * r * (0.55f * k + 0.3f) + 0.7f * k)));
 		float uc = 0.f;
 		for (int k = 0; k < NUM_MODES; k++) uc += C.phi[k] * m[i][k].zi * m[i][k].invMw;
 		float lam = 0.15f + 0.6f * (1.f - hard);  // soft rubber loses more
@@ -541,13 +621,20 @@ struct PanEngine {
 		float v = force * std::pow(f0 / fLow, 0.2f);
 		C.start(i, uc, v, ms * 0.001f, lam, 25.f + 20.f * hard, fs);
 		active[i] = true;
-		// edge hits knock the areas next door directly
-		if (edgeBleed > 0.f) {
-			float bleed = force * (0.04f + 0.16f * p) * edgeBleed;
-			for (int k = 0; k < std::min(3, a.numNb); k++) {
-				float am[NUM_MODES] = {0.5f, 0.6f, 0.4f, 0.1f, 0.2f, 0.1f};
-				addPulse(a.nb[k], bleed * a.nbw[k], len + len / 2, am);
-			}
+		// the blow shakes the steel around the note too: the areas next door get
+		// a share of the same force (more from an edge hit). On a real pan they
+		// ring 15 to 25 dB under the struck note, at their own pitches.
+		C.nbN = 0;
+		// (the small inner notes are stiff and pass on less)
+		float share = BLEED * (c.neighbours / 0.35f) * (0.7f + 1.3f * p) * edgeBleed * (a.ring == 0 ? 1.f : a.ring == 1 ? 0.5f : 0.35f);
+		for (int k = 0; k < lay.wn[i] && C.nbN < 8; k++) {
+			int j = lay.wj[i][k];
+			float w = share * lay.wv[i][k] / lay.wmax[i];
+			if (w < 0.01f) continue;
+			if (!active[j]) { updateNote(j); active[j] = true; }
+			C.nbIdx[C.nbN] = j;
+			C.nbW[C.nbN] = w;
+			C.nbN++;
 		}
 		// stick click
 		float ck = force * (0.015f + 0.06f * hard * hard);
@@ -594,7 +681,8 @@ struct PanEngine {
 			Mode* mm = m[i];
 			for (int q = 0; q < NUM_MODES; q++) {
 				Mode& md = mm[q];
-				if (!md.on) { md.fr = md.fi = 0.f; u[i][q] = 0.f; continue; }
+				// asleep (off, or an upper mode nothing has reached): costs nothing
+				if (!md.on || (md.zr == 0.f && md.zi == 0.f)) { md.fr = md.fi = 0.f; u[i][q] = 0.f; continue; }
 				md.fr = md.pr * md.zr - md.pi * md.zi;
 				md.fi = md.pi * md.zr + md.pr * md.zi;
 				u[i][q] = md.fi * md.invMw;
@@ -613,6 +701,12 @@ struct PanEngine {
 			for (int q = 0; q < NUM_MODES; q++) uc += C.phi[q] * u[i][q];
 			float F = C.step(uc, dt) * dt;
 			for (int q = 0; q < NUM_MODES; q++) x[i][q] += C.phi[q] * F;
+			for (int b = 0; b < C.nbN; b++) {
+				int j = C.nbIdx[b];
+				x[j][0] += C.nbW[b] * F;
+				x[j][1] += 0.5f * C.nbW[b] * F;
+				active[j] = true;
+			}
 			active[i] = true;
 		}
 		// knocks from an edge hit next door (short half-sine pushes)
@@ -628,45 +722,74 @@ struct PanEngine {
 		// tuned to the same partial)
 		const float kc = 2.f * (TWO_PI_F * 2.5f) * c.neighbours * dt;
 		float L = 0.f, R = 0.f;
-		float halfW = c.width;
 		for (int i = 0; i < N; i++) {
-			const NoteArea& a = lay.n[i];
 			float in = 0.f;
 			for (int k = 0; k < lay.wn[i]; k++) in += lay.wv[i][k] * ut[lay.wj[i][k]];
 			in *= kc;
 			if (!active[i]) {
-				if (std::fabs(in) < 1e-9f) { y[i] = 0.f; continue; }
+				if (std::fabs(in) < 2e-8f) { y[i] = 0.f; continue; }
 				// woken by its neighbours: start from rest
 				for (int q = 0; q < NUM_MODES; q++) m[i][q].fr = m[i][q].fi = 0.f;
-				updateNote(i);
 			}
 			Mode* mm = m[i];
-			// shell nonlinearity, H = e (u0^2 u1 + 0.8 u0 u1 u2), softly limited
-			// at a few times a full hit (a cubic potential has no floor)
-			{
-				float lim = 1.f / (3.f * aRef[i]);
-				float u0 = u[i][0] / (1.f + std::fabs(u[i][0]) * lim);
-				float u1 = u[i][1] / (1.f + std::fabs(u[i][1]) * lim);
-				float u2 = u[i][2] / (1.f + std::fabs(u[i][2]) * lim);
-				float e = eps[i] * dt;
-				x[i][0] -= e * (2.f * u0 * u1 + 0.8f * u1 * u2);
-				x[i][1] -= e * (u0 * u0 + 0.8f * u0 * u2);
-				x[i][2] -= e * 0.8f * u0 * u1;
+			// the shell's nonlinearity: every three-mode resonance moves energy
+			// between its modes (amplitudes softly limited at a few times a full
+			// hit: a cubic energy has no floor)
+			// (skipped while the note is too quiet for it to matter)
+			float e01 = mm[0].fi * mm[0].fi + mm[0].fr * mm[0].fr + mm[1].fi * mm[1].fi + mm[1].fr * mm[1].fr;
+			if (eta[i] > 0.f && e01 > (0.02f * IREF) * (0.02f * IREF)) {
+				// (the energy is c*s(a_i)*s(a_j)*s(a_k) with s a soft limiter, and
+				// each force is its exact gradient, so the coupling only ever
+				// moves energy around and what it can hold is bounded)
+				float am[NUM_MODES], ds[NUM_MODES];
+				for (int q = 0; q < NUM_MODES; q++) {
+					float v = mm[q].on ? mm[q].fi * (1.f / IREF) : 0.f;
+					float d = 1.f / (1.f + std::fabs(v) * 0.33f);
+					am[q] = v * d;
+					ds[q] = d * d;
+				}
+				for (int q = 0; q < NUM_TRI; q++) {
+					const Tri& T3 = TRIS[q];
+					const float* g = triG[i][q];
+					float ai = am[T3.i], aj = am[T3.j], ak = am[T3.k] * dt;
+					x[i][T3.k] -= g[0] * ai * aj * dt * ds[T3.k];
+					x[i][T3.i] -= g[1] * aj * ak * ds[T3.i];
+					x[i][T3.j] -= g[2] * ai * ak * ds[T3.j];
+				}
 			}
 			float out = 0.f, en = 0.f;
 			for (int q = 0; q < NUM_MODES; q++) {
 				Mode& md = mm[q];
 				if (!md.on) continue;
-				md.zr = md.fr + x[i][q] + in * md.cpl * md.sqMw;
+				float xin = x[i][q] + in * md.cpl * md.sqMw;
+				if (xin == 0.f && md.fr == 0.f && md.fi == 0.f) continue;
+				md.zr = md.fr + xin;
 				md.zi = md.fi;
+				// an upper mode that has rung right down goes back to sleep
+				if (q >= 3 && md.zr * md.zr + md.zi * md.zi < 1e-16f) { md.zr = md.zi = 0.f; continue; }
 				out += md.rad * md.zi;
 				en += md.zr * md.zr + md.zi * md.zi;
 			}
-			out *= 1.f / IREF;
 			en *= 1.f / (IREF * IREF);
+			// safety net: a note can never hold more than 20x a full hit
+			if (!(en < 400.f)) {
+				float sc = std::isfinite(en) ? std::sqrt(400.f / en) : 0.f;
+				for (int q = 0; q < NUM_MODES; q++) {
+					mm[q].zr = sc > 0.f ? mm[q].zr * sc : 0.f;
+					mm[q].zi = sc > 0.f ? mm[q].zi * sc : 0.f;
+				}
+				out = sc > 0.f ? out * sc : 0.f;
+				en = sc > 0.f ? 400.f : 0.f;
+			}
+			// and steel driven far past a full hit loses energy faster
+			if (en > 16.f) {
+				float sc = 1.f - std::min(0.02f, 0.0004f * (en - 16.f));
+				for (int q = 0; q < NUM_MODES; q++) { mm[q].zr *= sc; mm[q].zi *= sc; }
+			}
+			out *= gainN[i] * (1.f / IREF);
 			y[i] = out;
 			energy[i] = en;
-			if (en < 1e-12f) {
+			if (en < 1e-8f) {  // 80 dB under a full hit: asleep
 				bool pending = false;
 				for (int k = 0; k < MAX_PULSES; k++)
 					if (pulses[k].note == i) pending = true;
@@ -679,9 +802,8 @@ struct PanEngine {
 			}
 			else
 				active[i] = true;
-			float pan = 0.5f + 0.5f * a.sx * halfW;
-			L += out * std::sqrt(1.f - pan);
-			R += out * std::sqrt(pan);
+			L += out * panL[i];
+			R += out * panR[i];
 		}
 		// body / skirt: shared ring, knocked by strikes and fed by the whole drum
 		float bus = 0.f;
@@ -703,7 +825,7 @@ struct PanEngine {
 			click = clickHp * clickEnv;
 			clickEnv *= std::exp(-1.f / (0.0006f * fs));
 		}
-		float cp = 0.5f + 0.5f * clickSx * halfW;
+		float cp = 0.5f + 0.5f * clickSx * c.width;
 		L += body * 0.707f + click * std::sqrt(1.f - cp);
 		R += body * 0.707f + click * std::sqrt(cp);
 		// soft ceiling around +-9 V (piles of long rolls can stack up)
