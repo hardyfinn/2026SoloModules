@@ -162,6 +162,55 @@ int main(int argc, char** argv) {
 		check(mxv - mn >= 1, "eccentric record wobbles the pitch");
 	}
 
+	// 7. bass mistracking: a hot low kick throws a lightly tracked stylus (cantilever spring), not a heavy one
+	{
+		auto skip = [](float force) {
+			Settings s; s.disc = 2; s.speed = 1; s.sideMin = 7; s.cutLevelDb = 9; s.force = force; s.wow = s.flutter = s.eccMm = 0;
+			Engine e; e.s = s; e.init(FS);
+			float mx = 0;
+			for (int n = 0; n < (int) FS; n++) {
+				float x = 5.f * std::sin(2 * kPi * 40 * n / FS), a, b, c, d;
+				e.process(x, x, a, b, c, d);
+				if (n > FS / 4) mx = std::max(mx, e.m.mistrack);
+			}
+			return mx;
+		};
+		float light = skip(0.75f), heavy = skip(3.f);
+		std::printf("  40 Hz at +9 dB cut: skip meter %.2f at 0.75 g, %.2f at 3 g\n", light, heavy);
+		check(light > 0.05f && heavy < 0.01f, "hot bass mistracks at light force only");
+	}
+	// 8. cutter depth limit: wide out-of-phase bass with ELLIPTIC off hits it, with ELLIPTIC on it doesn't
+	{
+		auto depth = [](bool ell) {
+			Settings s; s.ellOn = ell; s.cutLevelDb = 6; s.wow = s.flutter = s.eccMm = 0;
+			Engine e; e.s = s; e.init(FS);
+			for (int n = 0; n < (int) FS; n++) {
+				float x = 5.f * std::sin(2 * kPi * 60 * n / FS), a, b, c, d;
+				e.process(x, -x, a, b, c, d);
+			}
+			return e.m.excGR;
+		};
+		float off = depth(false), on = depth(true);
+		std::printf("  out-of-phase 60 Hz: limiter meter %.1f dB with ELLIPTIC off, %.1f dB on\n", off, on);
+		check(off < -3.f && on > -1.f, "stereo bass without the elliptic EQ hits the cutter depth limit");
+	}
+	// 9. tracing distortion grows in proportion to level (no threshold)
+	{
+		Settings s = allOff(); s.trcOn = true; s.needle = 1; s.sideMin = 20;
+		Tone a = measure(s, 3000, 0.25f), b = measure(s, 3000, 0.5f);
+		double ra = a.h2 / a.fund, rb = b.h2 / b.fund;
+		std::printf("  tracing H2 at 3 kHz: %.2f%% at 0.25 V, %.2f%% at 0.5 V\n", 100 * ra, 100 * rb);
+		check(ra > 0.002 && rb / ra > 1.6 && rb / ra < 2.5, "tracing distortion doubles for each 6 dB, from low levels up");
+	}
+	// 10. treble falls towards the label (contact patch) but the edge stays open
+	{
+		Settings s = allOff(); s.trcOn = true; s.sideMin = 20;
+		s.needle = 0; double e = db(measure(s, 15000, 0.2f).fund / 0.2);
+		s.needle = 1; double i = db(measure(s, 15000, 0.2f).fund / 0.2);
+		std::printf("  15 kHz, 0.7 mil tip at 2.5 g: edge %.1f dB, end of side %.1f dB\n", e, i);
+		check(e > -1.0 && i < -3.0 && i > -8.0, "inner-groove treble loss in the realistic range");
+	}
+
 	// demo: dry, 12" 45 outer, LP 33 at the label, worn dub plate (8 s each)
 	{
 		std::vector<float> L, R;

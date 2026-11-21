@@ -38,11 +38,11 @@ for i in range(10):
     comp("VCVButton_0", x, L["ON_Y"])
     g.append(f'<circle cx="{x}" cy="{L["ON_Y"]}" r="1.6" fill="#ffffff" fill-opacity="0.85"/>')
     comp("PJ301M", x, L["CV_Y"])
-comp("CKSS_0", cx(5) - 4, L["SW_Y"]); comp("CKSS_1", cx(9) - 4, L["K3_Y"])
+comp("CKSS_0", cx(5) - 4, L["SW_Y"]); comp("CKSSThree_2", cx(9) - 4, L["K3_Y"] + 1)
 for i, yy in ((1, L["SW_Y"] + 1), (2, L["SW_Y"] + 1)):
     g.append(f'<circle cx="{cx(i)}" cy="{yy}" r="1.5" fill="#3a1010" stroke="#555" stroke-width="0.2"/>')
 g.append(f'<circle cx="{cx(5)}" cy="{L["K3_Y"]}" r="1.5" fill="#3a1010" stroke="#555" stroke-width="0.2"/>')
-g.append(f'<circle cx="{cx(9) + 5.8}" cy="{L["K3_Y"] + 4}" r="1.5" fill="#3a1010" stroke="#555" stroke-width="0.2"/>')
+g.append(f'<circle cx="{cx(9) + 6.4}" cy="{L["K3_Y"] - 1.2}" r="1.5" fill="#3a1010" stroke="#555" stroke-width="0.2"/>')
 comp("VCVBezel", L["FMT_X"], L["SW2_Y"]); comp("CKSSThree_2", L["DISC_X"], L["SW2_Y"]); comp("CKSS_0", L["SPEED_X"], L["SW2_Y"])
 knob("RoundHugeBlackKnob", L["NEEDLE_X"], L["NEEDLE_Y"], 0.35)
 comp("VCVBezel", L["PLAY_X"], L["PLAY_Y"])

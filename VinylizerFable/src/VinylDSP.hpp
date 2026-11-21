@@ -1,7 +1,7 @@
 #pragma once
 // Vinylizer Fable: the record chain as physics, no Rack dependency (used by the module and test/render.cpp).
 //
-// Signal order (internal units: 1.0 = 5 cm/s peak groove velocity, which is 5 V in at 0 dB cut level):
+// Signal order (internal units: 1.0 = 5 cm/s peak groove velocity; 5 V in at 0 dB cut level = 12 cm/s):
 //   1 ELLIPTIC  bass to mono (console, before the lathe)
 //     record curve (RIAA pre-emphasis, matched to the playback curve) x cut level
 //   3 CUT       side-length high-pass, excursion limiter on groove displacement
@@ -24,7 +24,8 @@
 namespace vinyl {
 
 static constexpr double kPi = 3.14159265358979323846;
-static constexpr float kVref = 0.05f;  // m/s for internal 1.0
+static constexpr float kVref = 0.05f;  // m/s for internal 1.0 (the 5 cm/s reference level)
+static constexpr float kInScale = 0.48f;  // 5 V in at 0 dB cut = 2.4 units = 12 cm/s peak, a normal hot programme peak
 
 inline float dbToGain(float db) { return std::pow(10.f, db / 20.f); }
 inline float clampf(float x, float a, float b) { return std::min(std::max(x, a), b); }
@@ -38,6 +39,12 @@ struct Biquad {
 		z1 = b1 * x - a1 * y + z2;
 		z2 = b2 * x - a2 * y;
 		return (float) y;
+	}
+	inline double processD(double x) {
+		double y = b0 * x + z1;
+		z1 = b1 * x - a1 * y + z2;
+		z2 = b2 * x - a2 * y;
+		return y;
 	}
 	void reset() { z1 = z2 = 0; }
 	void setAnalog(double B0, double B1, double B2, double A0, double A1, double A2, double K) {
@@ -196,10 +203,10 @@ struct Settings {
 	bool medOn = true; int medType = 0; float echo = 0.3f, wear = 0;
 	bool trcOn = true; int stylus = 0; float trcAmount = 1;
 	bool trkOn = true; float force = 2.5f, balance = 0; int align = 0;
-	bool cartOn = true; int cartModel = 0; float loadPf = 200, sepDb = 25, azimuth = 0;
+	bool cartOn = true; int cartModel = 0; float loadPf = 300, sepDb = 20, azimuth = 0;
 	bool armOn = true; float armRes = 10, armDamp = 0.5f, warpMm = 0;
 	bool pltOn = true; int drive = 0; float eccMm = 0.15f, wow = 0.2f, flutter = 0.2f;
-	bool phoOn = true; int phoType = 1; float phoGainDb = 0, tol = 0; bool subsonic = true;
+	bool phoOn = true; int phoType = 1; float phoGainDb = 0, tol = 0; int subsonic = 2;  // 0 off, 1 IEC 20 Hz, 2 18 Hz high-pass
 	float needle = 0;
 	bool truePreEcho = false;
 };
@@ -207,7 +214,7 @@ struct Settings {
 struct Meters {
 	float hflGR = 0, excGR = 0, mistrack = 0, overload = 0;
 	float radius = 0.146f, grooveSpeed = 0.5f, pitch = 0.1e-3f, rEnd = 0.06f, rOut = 0.146f, rMin = 0.06f;
-	float trackErrDeg = 0, sideDb = 0;
+	float trackErrDeg = 0, sideDb = 0, contactUm = 0;
 	int latency = 0;
 };
 
@@ -221,8 +228,8 @@ public:
 		os = fs < 60000 ? 4 : (fs < 120000 ? 2 : 1);
 		fsOS = fs * os;
 		if (os > 1) {
-			int N = 16 * os + 1;
-			auto h = designLowpass(N, 0.45 / os, 8.0);
+			int N = 48 * os + 1;
+			auto h = designLowpass(N, 0.46 / os, 7.0);
 			half = (N - 1) / 2;
 			for (int c = 0; c < 2; c++) { up[c].init(h, os); dn[c].init(h); }
 		}
@@ -236,10 +243,11 @@ public:
 		for (int c = 0; c < 2; c++) {
 			for (auto& v : hist[c]) v = 0;
 			osY[c] = sp[c] = sv[c] = tPrev[c] = outPrev[c] = 0;
-			exY[c] = 0; hiPrev[c] = 0;
+			exY[c] = 0; hiPrev[c] = 0; hfX1[c] = hfY1[c] = 0;
+			bodyHP[c].reset();
 		}
 		histPos = 0;
-		hfEnv = 0; hfGain = 1; exEnv = 0; exGain = 1; thermal = 0;
+		hfEnv = 0; hfGain = 1; exEnv = 0; exGain = 1; zPrev = zcPrev = 0;
 		theta = 0; wowInt = 0; zrelPrev = 0;
 		ctr = 0;
 		update();
@@ -250,7 +258,7 @@ public:
 		dryBuf[0].push(inL); dryBuf[1].push(inR);
 		dryL = dryBuf[0].at(latency); dryR = dryBuf[1].at(latency);
 
-		float xL = inL * 0.2f, xR = inR * 0.2f;
+		float xL = inL * kInScale, xR = inR * kInScale;
 
 		// 1 ELLIPTIC: fade the side signal below the crossover
 		if (s.ellOn) {
@@ -280,7 +288,16 @@ public:
 				float lo = exSplit[c].lp(v[c]);
 				v[c] += (exGain - 1.f) * lo;
 			}
-			m.excGR = std::min(m.excGR * 0.9995f, 20.f * std::log10(std::max(exGain, 1e-4f)));
+			// vertical depth: the cutter lifts out of the lacquer going up, and may only dig so deep
+			float z = (exY[0] - exY[1]) * 0.70710678f;
+			float zc = z;
+			if (z > zUp) zc = zUp + (z - zUp) / (1.f + (z - zUp) / 3e-6f);
+			else if (z < -zDown) zc = -zDown + (z + zDown) / (1.f - (z + zDown) / 10e-6f);
+			float dv = ((zc - zcPrev) - (z - zPrev)) * fs / kVref;
+			zPrev = z; zcPrev = zc;
+			v[0] += 0.70710678f * dv; v[1] -= 0.70710678f * dv;
+			float depthGR = zc != z ? -6.f : 0.f;
+			m.excGR = std::min(m.excGR * 0.9995f, std::min(depthGR, 20.f * std::log10(std::max(exGain, 1e-4f))));
 		}
 
 		// 2 HF LIMIT: limiter on treble acceleration
@@ -295,32 +312,32 @@ public:
 			if (a > hfEnv) hfEnv = a; else hfEnv += (a - hfEnv) * hfRel;
 			float gt = hfEnv > hfThr ? hfThr / hfEnv : 1.f;
 			hfGain += (gt - hfGain) * hfSmooth;
-			for (int c = 0; c < 2; c++) v[c] = lo[c] + hi[c] * hfGain;
+			// the gain cell is a low-pass whose corner slides down: at gain g the band edge is cut by g
+			float fc = hfGain >= 0.999f ? 0.4999f * fs : std::min(0.4999f * fs, s.hflFreq * hfGain / std::sqrt(std::max(1e-6f, 1.f - hfGain * hfGain)));
+			float t = std::tan((float) kPi * fc / fs);
+			float b = t / (1.f + t), a1 = (t - 1.f) / (t + 1.f);
+			for (int c = 0; c < 2; c++) {
+				float yv = b * (v[c] + hfX1[c]) - a1 * hfY1[c];
+				hfX1[c] = v[c]; hfY1[c] = yv;
+				v[c] = hfGain >= 0.999f ? v[c] : yv;
+			}
 			m.hflGR = std::min(m.hflGR * 0.9995f, 20.f * std::log10(std::max(hfGain, 1e-4f)));
 		}
 
-		// 3 CUT: cutter head roll-off, coil heating, drive amp saturation
+		// 3 CUT: cutter head roll-off, drive amp ceiling
 		if (s.cutOn) {
-			float p = 0;
 			for (int c = 0; c < 2; c++) {
-				v[c] = headLP[c].process(v[c]);
-				float h = heatHP[c].hp(v[c]);
-				p += h * h;
-			}
-			thermal += (p * 0.125f - thermal) * thermCoef;
-			float gT = 1.f / (1.f + 0.5f * s.head * thermal);
-			for (int c = 0; c < 2; c++) {
-				float x = v[c] * gT;
-				v[c] = satThr * std::tanh(x / satThr);
+				if (headOn) v[c] = headLP[c].process(v[c]);
+				v[c] = satThr * std::tanh(v[c] / satThr);  // a safety ceiling only: cutting amps had large headroom
 			}
 		}
 
 		// 4 MEDIUM
 		if (s.medOn) {
 			for (int c = 0; c < 2; c++) {
-				if (s.medType != 2) v[c] = plateLP[c].lp(v[c]);
+				if (s.medType != 2 && plateOn) v[c] = plateLP[c].lp(v[c]);
 				if (wearEff > 0.01f) {
-					v[c] = wearLP[c].lp(v[c]);
+					if (wearHz < 0.45f * fs) v[c] = wearLP[c].lp(v[c]);
 					float lo = wearSplit[c].lp(v[c]), hi = v[c] - lo;
 					v[c] = lo + wearThr * std::tanh(hi / wearThr);
 				}
@@ -386,8 +403,8 @@ public:
 				t[c] = osY[c];
 			}
 			if (s.trkOn) {  // 6 tracking angle error: reading point moves along the groove with lateral excursion
-				double lat = (osY[0] - osY[1]) * 0.70710678;
-				double tau = alpha * lat / vg;
+				double lat = (osY[0] - osY[1]) * 0.70710678, vert = (osY[0] + osY[1]) * 0.70710678;
+				double tau = (alpha * lat + beta * vert) / vg;
 				t[0] += tau * vm[0]; t[1] += tau * vm[1];
 			}
 			for (int c = 0; c < 2; c++) hist[c][histPos] = t[c];
@@ -396,18 +413,33 @@ public:
 			for (int c = 0; c < 2; c++) {
 				double y0 = hist[c][ci];
 				double yc = y0;
-				if (s.trcOn && nTrace > 0) {  // 5 tracing: circle of radius rho rolling over the wall
+				if (s.trcOn) {  // 5 tracing: circle of radius rho rolling over the wall
+					// best contact point on the sampled wall, then refined between samples so the result
+					// grows smoothly with level (centre height = y + rho (sqrt(1 + slope^2) - 1) for gentle slopes)
+					int jb = 0;
 					double mx = y0;
 					for (int j = 1; j <= nTrace; j++) {
-						double a = hist[c][(ci - j) & kHmask], b = hist[c][(ci + j) & kHmask];
-						double cand = std::max(a, b) + traceTab[j];
-						if (cand > mx) mx = cand;
+						double a = hist[c][(ci - j) & kHmask] + traceTab[j], b = hist[c][(ci + j) & kHmask] + traceTab[j];
+						if (a > mx) { mx = a; jb = -j; }
+						if (b > mx) { mx = b; jb = j; }
+					}
+					int ja = jb < 0 ? -jb : jb;
+					if (ja + 1 <= kNmax) {
+						int jm = jb - 1, jp = jb + 1;
+						double fm = hist[c][(ci + jm) & kHmask] + traceTab[jm < 0 ? -jm : jm];
+						double fp = hist[c][(ci + jp) & kHmask] + traceTab[jp < 0 ? -jp : jp];
+						double den = fm - 2 * mx + fp;
+						if (den < 0) {
+							double pk = mx - (fp - fm) * (fp - fm) / (8 * den);
+							if (pk > mx) mx = pk;
+						}
 					}
 					yc = y0 + s.trcAmount * (mx - y0);
 				}
 				double out = yc;
-				if (s.trkOn) {  // 6 one-sided contact: the stylus is only pushed down by the tracking force
-					sv[c] -= aMax[c] * dtos;
+				double body = yc - bodyHP[c].processD(yc);  // below the arm resonance the cartridge body follows the groove
+				if (s.trkOn) {  // 6 one-sided contact: tracking force plus the cantilever spring around the body
+					sv[c] += (-aMax[c] - kOverM * (sp[c] - body)) * dtos;
 					sp[c] += sv[c] * dtos;
 					if (sp[c] <= yc) { sv[c] = (yc - tPrev[c]) / dtos; sp[c] = yc; }
 					else mistrackN++;
@@ -417,6 +449,12 @@ public:
 				double vo = (out - osLeak * outPrev[c]) / dtos;
 				outPrev[c] = out;
 				float vu = (float)(vo / kVref);
+				// linear playback filters run here too, so their top octave isn't bent by the base-rate Nyquist
+				if (s.trcOn) vu = scanLP[c].process(vu);
+				if (s.cartOn) {
+					if (s.cartModel != 2) vu = cartE[c].process(vu);
+					vu = cartM[c].process(vu);
+				}
 				if (os > 1) { dn[c].push(vu); if (k == 0) o[c] = dn[c].out(); }
 				else o[c] = vu;
 			}
@@ -428,13 +466,8 @@ public:
 		}
 		float pL = o[0], pR = -o[1];  // back to channel signals
 
-		// 5 tracing: scanning loss (contact length)
-		if (s.trcOn) { pL = scanLP[0].lp(pL); pR = scanLP[1].lp(pR); }
-
 		// 7 CARTRIDGE
 		if (s.cartOn) {
-			if (s.cartModel != 2) { pL = cartE[0].process(pL); pR = cartE[1].process(pR); }
-			pL = cartM[0].process(pL); pR = cartM[1].process(pR);
 			float xl = xtHP[0].hp(pL), xr = xtHP[1].hp(pR);
 			float nL = pL + xtLR * (pR + 2.f * xr);
 			float nR = pR + xtRL * (pL + 2.f * xl);
@@ -478,13 +511,14 @@ public:
 				x /= phoG;
 				if (s.phoType == 0) { x = x + 0.03f * x * x; x = tubeHP[c].hp(x); }
 				else if (s.phoType == 2) x = djHP[c].hp(x);
-				if (s.subsonic) x = subHP[c].process(x);
+				if (s.subsonic == 2) x = subHP[c].process(x);
+				else if (s.subsonic == 1) x = iecHP[c].hp(x);
 			}
 			y[c] = x;
 		}
 		m.overload *= 0.9997f;
-		wetL = y[0] / gCut * 5.f;
-		wetR = y[1] / gCut * 5.f;
+		wetL = y[0] / (gCut * kInScale);
+		wetR = y[1] / (gCut * kInScale);
 	}
 
 private:
@@ -499,7 +533,9 @@ private:
 	int histPos = 0;
 	double osY[2] = {}, sp[2] = {}, sv[2] = {}, tPrev[2] = {}, outPrev[2] = {};
 	double osLeak = 1, dtos = 1, alpha = 0, vg = 0.3, aMax[2] = {1e9, 1e9};
-	double traceTab[kNmax + 1] = {};
+	double traceTab[kNmax + 2] = {};
+	double beta = 0.052, kOverM = 0;
+	Biquad bodyHP[2];
 	int nTrace = 0;
 	int mistrackN = 0, mistrackCtr = 0;
 
@@ -507,24 +543,30 @@ private:
 	Biquad rec[2], pb[2], sideHP[2], headLP[2];
 	float gCut = 1;
 	float exY[2] = {}, exLeak = 1, exEnv = 0, exGain = 1, exAtk = 0.1f, exRel = 0.001f, yMax = 1e-4f;
-	OnePole exSplit[2], hfSplit[2], heatHP[2];
+	OnePole exSplit[2], hfSplit[2];
+	float zPrev = 0, zcPrev = 0, zUp = 30e-6f, zDown = 100e-6f;
+	float hfX1[2] = {}, hfY1[2] = {};
+	bool headOn = true;
 	float hiPrev[2] = {}, accNorm = 1, hfEnv = 0, hfGain = 1, hfThr = 1, hfRel = 0.001f, hfSmooth = 0.2f;
-	float thermal = 0, thermCoef = 1e-5f, satThr = 7.5f;
+	float satThr = 30.f;
 	OnePole plateLP[2], wearLP[2], wearSplit[2], echoLP[2], echoLP2[2];
-	float wearEff = 0, wearThr = 10, ePre = 0, ePost = 0;
+	float wearEff = 0, wearThr = 10, ePre = 0, ePost = 0, wearHz = 1e9f;
+	bool plateOn = false;
 	int trev = 86400;
 	double theta = 0;
 	float cogPh = 0, beltPh = 0, cogHz = 7, beltHz = 0.6f, revHz = 0.5556f;
 	float wowInt = 0, wowLeak = 1, eccTerm = 0, wowPct = 0, flPct = 0;
 	SmoothRandom wowRnd, flRnd;
-	OnePole scanLP[2], xtHP[2];
+	Biquad scanLP[2];
+	OnePole xtHP[2], iecHP[2];
 	Biquad cartE[2], cartM[2], armHP[2], warpHP, subHP[2];
 	float xtLR = 0, xtRL = 0, warpAmp = 0, zrelPrev = 0;
 	float phoG = 1, phoThr = 10;
 	OnePole tubeHP[2], djHP[2];
 
 	void update() {
-		const float rOutT[3] = {0.0835f, 0.1175f, 0.1460f}, rMinT[3] = {0.0530f, 0.0600f, 0.0600f};
+		// JIS S 8502: music starts inside 168 / 242 / 293 mm and ends outside 106 / 115.2 / 115.2 mm diameter
+		const float rOutT[3] = {0.0840f, 0.1210f, 0.1465f}, rMinT[3] = {0.0530f, 0.0576f, 0.0576f};
 		int di = std::min(std::max(s.disc, 0), 2);
 		float rpm = s.speed ? 45.f : 33.333f;
 		revHz = rpm / 60.f;
@@ -547,10 +589,13 @@ private:
 		exAtk = 1.f - std::exp(-1.f / (0.002f * fs));
 		exRel = 1.f - std::exp(-1.f / (0.15f * fs));
 		for (int c = 0; c < 2; c++) exSplit[c].set(fs, 250.f);
-		float hf = std::min(18000.f * (1.f - 0.3f * s.head) + 4000.f, 0.45f * fs);
-		for (int c = 0; c < 2; c++) { headLP[c].lowpass(fs, hf, 0.65 + 0.4 * s.head); heatHP[c].set(fs, 4000.f); }
-		thermCoef = 1.f - std::exp(-1.f / (1.5f * fs));
-		satThr = 10.f - 5.f * s.head;
+		// cutter head: flat past 20 kHz when modern (HEAD 0), 16 kHz with a small peak when old (HEAD 1)
+		float hf = 25000.f - 9000.f * s.head;
+		headOn = hf < 0.45f * fs;
+		for (int c = 0; c < 2; c++) headLP[c].lowpass(fs, hf, 0.62 + 0.35 * s.head);
+		satThr = 30.f;
+		// vertical groove depth limits (rest depth about 35 um, 90 degree groove)
+		zUp = 30e-6f; zDown = 100e-6f;
 
 		// elliptic
 		ellOP.set(fs, s.ellFreq);
@@ -561,7 +606,7 @@ private:
 		// hf limit
 		for (int c = 0; c < 2; c++) hfSplit[c].set(fs, s.hflFreq);
 		accNorm = fs / (2.f * (float) kPi * s.hflFreq);
-		hfThr = 1.5f * dbToGain(s.hflThreshDb);
+		hfThr = 4.f * dbToGain(s.hflThreshDb);
 		hfRel = 1.f - std::exp(-1.f / (std::max(s.hflRelease, 0.001f) * fs));
 		hfSmooth = 1.f - std::exp(-1.f / (0.0002f * fs));
 
@@ -575,12 +620,17 @@ private:
 		for (int c = 0; c < 2; c++) riaa(pb[c], fs, t1, t2, t3, false);
 
 		// medium
-		float plateHz = s.medType == 0 ? 26000.f : 40000.f;
+		// losses set by groove wavelength, so they bite harder as the groove slows towards the label
+		float plateLen = s.medType == 0 ? 2.0e-6f : 1.0e-6f;  // effective smoothing length of the plating chain
+		float plateHz = (float) vg / ((float) kPi * plateLen);
 		const float wearRate[3] = {0.08f, 0.08f, 1.0f};
 		wearEff = s.medOn ? s.wear * wearRate[std::min(std::max(s.medType, 0), 2)] : 0.f;
+		float wearLen = 0.15e-6f * wearEff;  // worn-off radius of the shortest groove curves
+		wearHz = wearLen > 0 ? (float) vg / ((float) kPi * wearLen) : 0.45f * fs;
 		for (int c = 0; c < 2; c++) {
 			plateLP[c].set(fs, plateHz);
-			wearLP[c].set(fs, 24000.f / (1.f + 0.12f * wearEff));
+			wearLP[c].set(fs, wearHz);
+			plateOn = plateHz < 0.45f * fs;
 			wearSplit[c].set(fs, 3000.f);
 			echoLP[c].set(fs, 1200.f); echoLP2[c].set(fs, 1200.f);
 		}
@@ -613,32 +663,51 @@ private:
 		double me = meffT[std::min(std::max(s.cartModel, 0), 2)];
 		aMax[0] = Fwall * (1 + 0.35 * s.balance) / me;
 		aMax[1] = Fwall * (1 - 0.35 * s.balance) / me;
+		// cantilever compliance (m/N): DJ stiff, hi-fi MM soft, MC medium
+		const double compT[3] = {0.010, 0.020, 0.012};
+		kOverM = 1.0 / (compT[std::min(std::max(s.cartModel, 0), 2)] * me);
+		{
+			double q = 0.3 + (1.0 - s.armDamp) * 2.7;
+			for (int c = 0; c < 2; c++) bodyHP[c].highpass(fsOS, s.armRes, q);
+		}
+		beta = std::tan(3.0 * kPi / 180.0);  // vertical tracking angle mismatch, about 3 degrees
 		const double rhoT[3] = {17.8e-6, 7.6e-6, 3.0e-6};
-		const float scanT[3] = {3.0e-6f, 2.0e-6f, 1.5e-6f};
 		int st = std::min(std::max(s.stylus, 0), 2);
 		double rho = rhoT[st];
 		double dx = vg / fsOS;
 		nTrace = (int) std::floor(rho / dx);
-		if (nTrace > kNmax) nTrace = kNmax;
-		for (int j = 0; j <= nTrace; j++) {
+		if (nTrace > kNmax - 1) nTrace = kNmax - 1;
+		for (int j = 0; j <= nTrace + 1; j++) {
 			double u = j * dx;
-			traceTab[j] = std::sqrt(std::max(0.0, rho * rho - u * u)) - rho;
+			traceTab[j] = u <= rho ? std::sqrt(rho * rho - u * u) - rho : -u * u / (2 * rho);
 		}
-		float scanHz = (float)(vg / (kPi * scanT[st]));
-		for (int c = 0; c < 2; c++) scanLP[c].set(fs, scanHz);
+		// scanning loss: the groove wall gives way under the tip (Hertz contact), and wavelengths near the
+		// contact length are averaged out. Contact radius a = (3 F R / 4 E*)^(1/3).
+		{
+			const double Estar[3] = {3.4e9, 3.4e9, 1.8e9};  // vinyl pressing, DMM pressing, acetate lacquer
+			double Ra = rho;  // radius along the groove
+			double a = std::cbrt(3.0 * Fwall * Ra / (4.0 * Estar[std::min(std::max(s.medType, 0), 2)]));
+			double scanHz = 1.7 * vg / (kPi * a);
+			for (int c = 0; c < 2; c++) scanLP[c].lowpass(fsOS, scanHz, 0.5);
+			m.contactUm = (float)(2e6 * a);
+		}
 
 		// cartridge
 		{
-			const double Lt[3] = {0.60, 0.45, 0.0}, Rt[3] = {1000, 1300, 10};
-			const double mf[3] = {16000, 22000, 30000}, mq[3] = {1.5, 2.0, 2.5}, mg[3] = {2.5, 3.0, 4.0};
+			// DJ: Shure M44-7 sheet gives 720 mH and a 400-500 pF / 47k optimum load
+			const double Lt[3] = {0.72, 0.45, 0.0}, Rt[3] = {630, 1300, 10}, RpT[3] = {120e3, 180e3, 1e9};
+			const double mf[3] = {17000, 22000, 32000}, mq[3] = {1.3, 1.8, 2.5}, mg[3] = {4.0, 3.0, 3.0};
 			int cm = std::min(std::max(s.cartModel, 0), 2);
-			double L = Lt[cm], R = Rt[cm], Rl = 47000, C = s.loadPf * 1e-12;
+			double L = Lt[cm], R = Rt[cm], Rl = 47000, C = s.loadPf * 1e-12, Rp = RpT[cm];
 			if (cm != 2) {
-				double A0 = (Rl + R) / Rl, A1 = (L + R * Rl * C) / Rl, A2 = L * C;
+				// coil (L with eddy-current loss Rp across it, series R) into the 47k || C load
+				double B0 = Rl * Rp, B1 = Rl * L;
+				double A0 = Rl * Rp + R * Rp, A1 = Rl * L + R * L + L * Rp + Rl * C * R * Rp, A2 = Rl * C * (R * L + L * Rp);
+				double k = A0 / B0;
 				double f0 = 1.0 / (2 * kPi * std::sqrt(L * C));
-				for (int c = 0; c < 2; c++) cartE[c].setAnalog(A0, 0, 0, A0, A1, A2, Biquad::warpK(fs, f0));
+				for (int c = 0; c < 2; c++) cartE[c].setAnalog(B0 * k, B1 * k, 0, A0, A1, A2, Biquad::warpK(fsOS, f0));
 			}
-			for (int c = 0; c < 2; c++) { cartM[c].peak(fs, mf[cm], mq[cm], mg[cm]); xtHP[c].set(fs, 6000.f); }
+			for (int c = 0; c < 2; c++) { cartM[c].peak(fsOS, mf[cm], mq[cm], mg[cm]); xtHP[c].set(fs, 6000.f); }
 			float xt = dbToGain(-s.sepDb);
 			xtLR = xt * (1.f + 0.8f * s.azimuth);
 			xtRL = xt * (1.f - 0.8f * s.azimuth);
@@ -653,12 +722,14 @@ private:
 		}
 
 		// phono
-		const float thrT[3] = {6.f, 10.f, 3.5f};
+		// overload in 5 cm/s units at the input (about 5 mV each for a 1 mV/cm/s cartridge)
+		const float thrT[3] = {14.f, 20.f, 8.f};
 		phoThr = thrT[std::min(std::max(s.phoType, 0), 2)];
 		phoG = dbToGain(s.phoGainDb);
 		for (int c = 0; c < 2; c++) {
 			tubeHP[c].set(fs, 6.f); djHP[c].set(fs, 25.f);
 			subHP[c].highpass(fs, 18.f, 0.7071);
+			iecHP[c].set(fs, 20.02f);  // IEC amendment, 7950 us
 		}
 
 		latency = center + osLatency + (s.truePreEcho ? trev : 0);

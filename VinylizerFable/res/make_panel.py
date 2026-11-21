@@ -135,8 +135,8 @@ for i, (name, col, sw, knobs, cvl) in enumerate(COLS):
             continue
         if i == 9 and k == 2:  # subsonic switch
             add(text(kn, x, ky - 6.4, CONTROL - 0.3))
-            add(text("ON", x - 0.9, ky - 1.4 + 0.6, SMALL, FONT_BOLD, SOFT, anchor="start"))
-            add(text("OFF", x - 0.9, ky + 3.6 + 0.6, SMALL, FONT_BOLD, SOFT, anchor="start"))
+            for yy, o in zip([ky + 1.0 + 5.0, ky + 1.0 + 1.0, ky + 1.0 - 3.0], ["OFF", "IEC", "18Hz"]):
+                add(text(o, x - 0.9, yy + 0.8, SMALL, FONT_BOLD, SOFT, anchor="start"))
             continue
         add(text(kn, x, ky - 6.6, CONTROL if len(kn) < 9 else CONTROL - 0.3))
         r = RANGES.get((i, k))
@@ -149,7 +149,7 @@ for i, (name, col, sw, knobs, cvl) in enumerate(COLS):
 
 # tracking / phono lights labels
 add(text("SKIP", colx(5), K3_Y + 5.6, SMALL, FONT_BOLD, SOFT))
-add(text("OVL", colx(9) + 5.8, K3_Y + 8.4, SMALL, FONT_BOLD, SOFT))
+add(text("OVL", colx(9) + 6.4, K3_Y + 3.2, SMALL, FONT_BOLD, SOFT))
 
 add(text("CV  0-10 V = full range of the named control", 5.0, 121.3, 2.1, FONT_MED, SOFT, anchor="start"))
 

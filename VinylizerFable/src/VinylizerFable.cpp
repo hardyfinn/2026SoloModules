@@ -77,8 +77,8 @@ struct VinylizerFable : Module {
 		configParam(TRK_FORCE, 0.75f, 5.f, 2.5f, "Tracking force", " g");
 		configParam(TRK_BAL, -1.f, 1.f, 0.f, "Skating balance (left / right wall force)", "%", 0.f, 100.f);
 		configSwitch(CART_MODEL, 0.f, 2.f, 0.f, "Cartridge", {"DJ moving magnet", "Hi-fi moving magnet", "Moving coil"});
-		configParam(CART_LOAD, 50.f, 600.f, 200.f, "Load capacitance (cable + input)", " pF");
-		configParam(CART_SEP, 10.f, 40.f, 25.f, "Channel separation", " dB");
+		configParam(CART_LOAD, 50.f, 600.f, 300.f, "Load capacitance (cable + input)", " pF");
+		configParam(CART_SEP, 10.f, 40.f, 20.f, "Channel separation", " dB");
 		configParam(CART_AZ, -1.f, 1.f, 0.f, "Azimuth error", "%", 0.f, 100.f);
 		configParam(ARM_RES, 5.f, 20.f, 10.f, "Arm resonance", " Hz");
 		configParam(ARM_DAMP, 0.f, 1.f, 0.5f, "Arm damping", "%", 0.f, 100.f);
@@ -90,7 +90,7 @@ struct VinylizerFable : Module {
 		configSwitch(PHO_TYPE, 0.f, 2.f, 1.f, "Phono stage", {"Tube", "Op-amp", "DJ mixer"});
 		configParam(PHO_GAIN, -6.f, 24.f, 0.f, "Phono input drive", " dB");
 		configParam(PHO_TOL, -1.f, 1.f, 0.f, "RIAA part tolerance (bass tilt)", "%", 0.f, 5.f);
-		configSwitch(PHO_SUB, 0.f, 1.f, 1.f, "Subsonic filter", {"Off", "On"});
+		configSwitch(PHO_SUB, 0.f, 2.f, 2.f, "Subsonic filter", {"Off", "IEC roll-off (20 Hz, 6 dB/oct)", "Subsonic (18 Hz, 12 dB/oct)"});
 		const char* names[10] = {"Elliptic", "HF limit", "Cut", "Medium", "Tracing", "Tracking", "Cartridge", "Arm", "Platter", "Phono"};
 		for (int i = 0; i < 10; i++) {
 			configSwitch(ON_PARAM + i, 0.f, 1.f, 1.f, std::string(names[i]) + " on", {"Bypassed", "On"});
@@ -158,7 +158,7 @@ struct VinylizerFable : Module {
 		s.cartOn = on(6); s.cartModel = (int) val(CART_MODEL); s.loadPf = val(CART_LOAD, 6); s.sepDb = val(CART_SEP); s.azimuth = val(CART_AZ);
 		s.armOn = on(7); s.armRes = val(ARM_RES); s.armDamp = val(ARM_DAMP); s.warpMm = val(ARM_WARP, 7);
 		s.pltOn = on(8); s.drive = (int) val(PLT_DRIVE); s.eccMm = val(PLT_ECC); s.wow = val(PLT_WOW, 8); s.flutter = val(PLT_FLUT);
-		s.phoOn = on(9); s.phoType = (int) val(PHO_TYPE); s.phoGainDb = val(PHO_GAIN, 9); s.tol = val(PHO_TOL); s.subsonic = val(PHO_SUB) > 0.5f;
+		s.phoOn = on(9); s.phoType = (int) val(PHO_TYPE); s.phoGainDb = val(PHO_GAIN, 9); s.tol = val(PHO_TOL); s.subsonic = (int) val(PHO_SUB);
 		s.disc = (int) params[DISC_PARAM].getValue();
 		s.speed = (int) params[SPEED_PARAM].getValue();
 		float n = params[NEEDLE_PARAM].getValue();
@@ -322,8 +322,8 @@ struct VinylizerFableWidget : ModuleWidget {
 		sw3(8, M::PLT_DRIVE); knob(8, K1_Y, M::PLT_ECC); knob(8, K2_Y, M::PLT_WOW); knob(8, K3_Y, M::PLT_FLUT);
 		// 10 PHONO
 		sw3(9, M::PHO_TYPE);
-		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(colX(9) + 5.8f, K3_Y + 4.f)), module, M::PHO_LIGHT));
-		knob(9, K1_Y, M::PHO_GAIN); knob(9, K2_Y, M::PHO_TOL); sw2(9, K3_Y, M::PHO_SUB);
+		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(colX(9) + 6.4f, K3_Y - 1.2f)), module, M::PHO_LIGHT));
+		knob(9, K1_Y, M::PHO_GAIN); knob(9, K2_Y, M::PHO_TOL); addParam(createParamCentered<CKSSThree>(mm2px(Vec(colX(9) - 4.f, K3_Y + 1.f)), module, M::PHO_SUB));
 
 		for (int i = 0; i < 10; i++) {
 			addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(colX(i), ON_Y)), module, M::ON_PARAM + i, M::ON_LIGHT + i));
