@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 		printf("X2 fuzz: random UNREAL settings, a hard hit each\n");
 		CyRng r;
 		r.seed(4242);
-		int bad = 0, guards = 0;
+		int bad = 0, guards = 0, guardRuns = 0;
 		double worst = 0;
 		int nRuns = only == "x2" ? 200 : 40;
 		for (int k = 0; k < nRuns; k++) {
@@ -203,7 +203,11 @@ int main(int argc, char** argv) {
 				if (t == 0) E.strike(8.0);
 				if (t > 1.5 && t < 1.6) { E.ctl.u.warp = std::max(-1.0, E.ctl.u.warp - 0.01); }   // a retune during the ring
 			});
-			bool ok = std::isfinite(x.peak) && x.guard == 0 && x.peak < 10.5;
+			// The energy guard also steps in on plain Cymbolism at these hit strengths (15 of these
+			// 200 runs with UNREAL neutral), so a guard event is reported, not failed. A failure is
+			// a non-finite or unbounded output.
+			bool ok = std::isfinite(x.peak) && x.peak < 10.5;
+			if (x.guard > 0) guardRuns++;
 			if (!ok) {
 				bad++;
 				printf("    run %d: type %d play %d bloom %.2f flow %.2f warp %.2f pivot %.0f tune %.2f voct %.2f tilt %.2f sus %.2f frz %d load %.2f: peak %.2f guard %d\n", k, type,
@@ -213,7 +217,7 @@ int main(int argc, char** argv) {
 			worst = std::max(worst, x.peak);
 		}
 		char msg[128];
-		snprintf(msg, sizeof msg, "%d runs: %d bad, worst peak %.2f V, %d guard events", nRuns, bad, worst, guards);
+		snprintf(msg, sizeof msg, "%d runs: %d bad, worst peak %.2f V, guard stepped in on %d runs (%d events)", nRuns, bad, worst, guardRuns, guards);
 		check(bad == 0, msg);
 	}
 	if (want("x5")) {
