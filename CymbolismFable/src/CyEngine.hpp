@@ -84,7 +84,7 @@ public:
 	std::vector<double> firBuf;
 	int firPos = 0;
 	double dcX = 0, dcY = 0;
-	double outGain = 0.006;  // pickup units -> volts (medium crash hit ~3 V peak)
+	double outGain = 0.004;  // pickup units -> volts (medium crash hit ~2 V peak, hard ~7 V)
 	double lp = 0, lpA = 1.0;         // ROOM air absorption
 	double lastEnergy = 0;
 	int guardEvents = 0;
@@ -285,7 +285,7 @@ public:
 	}
 
 	// ---- statistical cascade above the core (calibrated against the full coupled model) ----
-	double cascK = 2.5e-4, cascG = 6e-4;
+	double cascK = 2.5e-5, cascG = 6e-5, cascP = 2.0;   // rates ~ eps^2 (four-wave), so the wash fades with the core
 	double lastEps = 0;
 	std::vector<double> bandE, bandN, bandPin;
 	void cascadeBlock(double blockSec) {
@@ -313,7 +313,7 @@ public:
 			Ecore += 0.5 * v * v + 0.5 * wS[i] * wS[i] * q[i] * qp[i];
 		}
 		double Eref = M->Eref * std::pow(lam, 3.0) / std::pow(lam, 2.0);   // E ~ w^2 q^2: x lam^-2 lam^5
-		double eps = std::max(0.0, Ecore / Eref);
+		double eps = std::pow(std::max(0.0, Ecore / Eref), cascP);
 		lastEps = eps;
 		double fTopC = M->fTopCore / lam;
 		double nuOut = std::min(60.0, cascK * ctl.bloom * eps * fTopC);
@@ -574,8 +574,10 @@ public:
 		abuf.assign(M->stress.size(), 0.0);
 	}
 
+	double vnl = 0;   // nonlinear potential at the last step
 	void nonlinearGradient(double bloom) {
 		std::fill(grad.begin(), grad.begin() + std::max(NC, NA), 0.0);
+		vnl = 0;
 		if (bloom <= 0) return;
 		if (tripOff.size() != M->stress.size() + 1) prepareNonlinear();
 		const double* qd = q.data();
@@ -592,17 +594,20 @@ public:
 				z1 += T[t + 1].c * qd[T[t + 1].i] * qd[T[t + 1].j];
 			}
 			if (t < e) z0 += T[t].c * qd[T[t].i] * qd[T[t].j];
-			double zeta = (z0 + z1) * sB;
+			// BLOOM scales the stress-function amplitude zeta (not A): V = (A.q) z + z^2/2 with
+			// z = bloom * zeta = 1/2 (z + A.q)^2 - 1/2 (A.q)^2 stays bounded below for any BLOOM.
+			double zeta = (z0 + z1) * sB * bloom;
 			double an = 0;
 			for (size_t a = 0; a < sm.aIdx.size(); a++) an += sm.aVal[a] * qd[sm.aIdx[a]];
 			an *= sA;
+			vnl += an * zeta + 0.5 * zeta * zeta;
 			double coef = (an + zeta) * bloom * sB;
 			for (int u = tripOff[n]; u < e; u++) {
 				double cc = coef * T[u].c;
 				gd[T[u].i] += cc * qd[T[u].j];
 				gd[T[u].j] += cc * qd[T[u].i];
 			}
-			double za = zeta * bloom * sA;
+			double za = zeta * sA;
 			for (size_t a = 0; a < sm.aIdx.size(); a++) gd[sm.aIdx[a]] += za * sm.aVal[a];
 		}
 	}
@@ -711,6 +716,7 @@ public:
 				updateCoefficients();
 				setRivets((int)std::lround(ctl.sizzle * 12));
 				cascadeBlock(32.0 / fsHost);
+				energyGuard(excIn != nullptr && ctl.excite > 0);
 			}
 			double e = excIn ? excIn[s] : 0.0;
 			double acc = 0;
@@ -743,6 +749,25 @@ public:
 			if (ao > 8.0) o = (o > 0 ? 1 : -1) * (8.0 + 2.0 * std::tanh((ao - 8.0) / 2.0));
 			out[s] = (float)o;
 		}
+	}
+
+	// Energy guard: with nothing driving the shell its (linear) energy can only fall,
+	// apart from the small exchange with the nonlinear potential. If it grows by more
+	// than that within a control block (explicit stepping beyond its stability limit at
+	// high BLOOM), pull the state back. Silent in normal use.
+	double guardE = 0;
+	void energyGuard(bool driven) {
+		bool contact = false;
+		for (auto& c : beaters) contact |= c.active;
+		double E = energy() + vnl;
+		if (!std::isfinite(E)) { reset(); guardEvents++; guardE = 0; return; }
+		if (!driven && !contact && guardE > 0 && E > guardE * 1.05) {
+			double s = std::sqrt(guardE * 1.05 / E);
+			for (int i = 0; i < NA; i++) { q[i] *= s; qp[i] *= s; }
+			E = guardE * 1.05;
+			guardEvents++;
+		}
+		guardE = E;
 	}
 
 	void reset() {
