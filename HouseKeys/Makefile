@@ -9,6 +9,8 @@ DISTRIBUTABLES += $(wildcard LICENSE*)
 HOST_GOALS := test trims demos early hktest
 ifeq ($(filter $(HOST_GOALS),$(MAKECMDGOALS)),)
 include $(RACK_DIR)/plugin.mk
+# ymfm and the engines need C++17 (Rack's default is C++11); the later flag wins
+CXXFLAGS += -std=c++17
 endif
 
 # Offline engine tests, loudness trims and demo WAVs (no Rack needed)
