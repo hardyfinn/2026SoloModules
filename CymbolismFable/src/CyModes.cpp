@@ -717,10 +717,11 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 	const Shape& sh = M.sh;
 	const Material& mt = sh.mat;
 
-	static const int CORE_N[3] = {48, 96, 160};
-	static const int STRESS_N[3] = {32, 56, 96};
-	static const int LOW_N[3] = {0, 8, 16};
-	static const int PAIRS_K[3] = {0, 2, 4};
+	static const int CORE_N[3] = {48, 64, 96};
+	static const int STRESS_N[3] = {24, 40, 56};
+	static const int LOW_N[3] = {0, 4, 8};
+	static const int PAIRS_K[3] = {0, 1, 2};
+	static const double PAIR_FMAX[3] = {0, 3.5, 6.0};   // x the core's top frequency
 	static const double FOUT[3] = {16000, 20000, 20000};
 	int q = std::max(0, std::min(2, gp.quality));
 	// build up to 1.5x the output band so SIZE can grow the cymbal without a rebuild
@@ -857,8 +858,14 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 		if ((int)k + 1 == nPairsCore) M.nCore = (int)M.modes.size();
 	}
 	if (nPairsCore == 0) M.nCore = 0;
-	M.fTopCore = M.nCore > 0 ? M.modes[M.nCore - 1].f : 0;
+	M.fTopCore = 0;
+	for (int i = 0; i < M.nCore; i++) M.fTopCore = std::max(M.fTopCore, M.modes[i].f);
 
+	// core modes grouped by class (m, parity) so the coupling blocks address contiguous ranges
+	std::stable_sort(M.modes.begin(), M.modes.begin() + M.nCore, [](const Mode& x, const Mode& y) {
+		if (x.m != y.m) return x.m < y.m;
+		return x.par < y.par;
+	});
 	M.classOf.assign(M.nCore, -1);
 	{
 		std::map<std::pair<int, int>, int> cmap;
@@ -878,11 +885,13 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 	}
 
 	if (M.nCore > 0) {
-		int sidx = M.modes[0].shape;
+		int lowest = 0;
+		for (int i = 0; i < M.nCore; i++) if (M.modes[i].f < M.modes[lowest].f) lowest = i;
+		int sidx = M.modes[lowest].shape;
 		double wmax = 0;
 		for (float w : M.shapes[sidx].W) wmax = std::max(wmax, (double)std::fabs(w));
 		double qh = sh.he / std::max(1e-30, wmax);
-		double om = 2 * CY_PI * M.modes[0].f;
+		double om = 2 * CY_PI * M.modes[lowest].f;
 		M.Eref = 0.5 * om * om * qh * qh;
 	}
 
@@ -1047,8 +1056,10 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 				if (lowCount < nLowWanted && pairsK > 0) {
 					std::map<std::pair<int, int>, double> pairs;
 					double win = 2.0 * M.fTopCore;
+					double fPairMax = (opt.pairFMax > 0 ? opt.pairFMax : PAIR_FMAX[q]) * M.fTopCore;
 					for (int i = NC; i < nModes; i++) {
 						const Mode& mi = M.modes[i];
+						if (mi.f > fPairMax) break;
 						std::vector<std::pair<double, int>> cand;
 						for (int sign = -1; sign <= 1; sign += 2) {
 							int mj = std::abs(mi.m + sign * cp->s);

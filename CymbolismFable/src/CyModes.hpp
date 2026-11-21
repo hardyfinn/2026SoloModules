@@ -55,12 +55,12 @@ struct Model {
 	Shape sh;
 	double fs = 48000;
 
-	std::vector<Mode> modes;        // sorted by frequency; [0, nCore) is the core
+	std::vector<Mode> modes;        // [0, nCore) is the core, grouped by class; the rest sorted by frequency
 	std::vector<RadialShape> shapes;
 	int nCore = 0;
 
 	// core mode classes: modes with the same (m, par)
-	struct CoreClass { int m, par; std::vector<int> idx; };
+	struct CoreClass { int m, par; std::vector<int> idx; int start() const { return idx.empty() ? 0 : idx[0]; } };
 	std::vector<CoreClass> classes;
 	std::vector<int> classOf;       // core index -> class
 
@@ -100,6 +100,7 @@ struct SolverOpts {
 	int stressModes = -1;
 	int lowStress = -1;        // stress modes with extended coupling
 	int pairsPerMode = -1;
+	double pairFMax = 0;       // upper modes with pairs: up to this x the core's top frequency (0 = from quality)
 	bool mountSprings = true;
 };
 std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt);
