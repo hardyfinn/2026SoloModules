@@ -1,0 +1,23 @@
+{
+  "slug": "VinylizerFable",
+  "name": "Vinylizer Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "VinylizerFable",
+      "name": "Vinylizer Fable",
+      "description": "The sound of a 90s record from the physics of the chain, no crackle: elliptic EQ, cutter HF limiter, record curve and cut level, lacquer / DMM / dub plate, stylus tracing and inner groove distortion, tracking and mistracking, MM cartridge loading, arm resonance and warps, platter wow, and the phono preamp",
+      "tags": ["Effect", "Distortion", "Equalizer", "Filter", "Visual"]
+    }
+  ]
+}
