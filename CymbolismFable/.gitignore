@@ -1,1 +1,9 @@
 test/out/
+test/render
+test/modes_check
+test/runner_check
+build/
+dist/
+*.d
+*.o
+res/__pycache__/

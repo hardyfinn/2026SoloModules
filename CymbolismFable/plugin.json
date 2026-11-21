@@ -1,0 +1,23 @@
+{
+  "slug": "CymbolismFable",
+  "name": "Cymbolism Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Cymbolism",
+      "name": "Cymbolism",
+      "description": "Physical cymbal: real shell modes computed from the geometry, a nonlinear core for the crash bloom, contact beaters (stick, mallet, rods, brush, bow), rivets, choke and a modelled mic. Ten types from splash to china, nothing sampled",
+      "tags": ["Drum", "Physical modeling", "Synth voice"]
+    }
+  ]
+}

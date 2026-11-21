@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 		E.ctl.hardness = 0.5;
 		E.init(M, SR);
 		E.outGain = 1.0;
-		E.outGain = 0.004;
+		E.outGain = 0.0008;
 		auto t0 = std::chrono::steady_clock::now();
 		double dur = quick ? 3.0 : 10.0;
 		std::vector<Hit> hits = {{0.05, 0.7}, {dur / 3 + 0.05, 3.0}, {2 * dur / 3 + 0.05, 9.0}};

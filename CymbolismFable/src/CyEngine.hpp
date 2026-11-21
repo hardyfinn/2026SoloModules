@@ -139,6 +139,8 @@ public:
 		tuneKey[5] = ctl.hammer;
 		tuneKey[6] = (double)ctl.seed;
 		updateCoefficients(true);
+		qpp.assign(N, 0.0);
+		prepareNonlinear();
 		// stick click modes (5B hickory: ~1.1, 2.9, 5.4 kHz)
 		const double cf[3] = {1100, 2900, 5400}, ct[3] = {0.035, 0.025, 0.02};
 		for (int i = 0; i < 3; i++) {
