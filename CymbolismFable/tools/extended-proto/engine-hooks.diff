@@ -1,0 +1,32 @@
+300c300
+< 	double cascK = 2.5e-5, cascG = 6e-5, cascP = 2.0;   // rates ~ eps^2 (four-wave), so the wash fades with the core
+---
+> 	double xSpeed = 1.0; double cascK = 2.5e-5, cascG = 6e-5, cascP = 2.0;   // rates ~ eps^2 (four-wave), so the wash fades with the core
+304c304
+< 		if (ctl.bloom <= 0) {
+---
+> 		if (ctl.bloom == 0) {
+331c331
+< 		double nuOut = std::min(60.0, cascK * ctl.bloom * eps * fTopC);
+---
+> 		double nuOut = std::min(60.0, cascK * std::fabs(ctl.bloom) * xSpeed * eps * fTopC);
+336c336
+< 			double nu = std::min(400.0, cascG * ctl.bloom * eps * bandF[b]);
+---
+> 			double nu = std::min(400.0, cascG * std::fabs(ctl.bloom) * xSpeed * eps * bandF[b]);
+408c408
+< 		c.phi.resize(NA);
+---
+> 		c.phi.resize(N);
+410c410
+< 		for (int i = 0; i < NA; i++) {
+---
+> 		for (int i = 0; i < N; i++) {
+412c412
+< 			C += c.phi[i] * c.phi[i] * g[i];
+---
+> 			if (i < NA) C += c.phi[i] * c.phi[i] * g[i];
+540c540
+< 		if (bloom <= 0) return;
+---
+> 		if (bloom == 0) return;
