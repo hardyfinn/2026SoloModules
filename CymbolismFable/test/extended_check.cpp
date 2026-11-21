@@ -154,6 +154,24 @@ int main(int argc, char** argv) {
 			check(fr >= 0.9, msg);
 		}
 	}
+	if (want("x8")) {
+		printf("X8 CPU: UNREAL settings against neutral (CRASH, 6 s, hard hit)\n");
+		Controls c = defaults(1);
+		double t0 = run(1, c, 6.0, hitAt0(6.0)).secs;
+		Controls s = c;
+		s.u.warp = 0.6;
+		s.u.tune = 1.0;
+		s.u.tilt = -0.4;
+		s.u.load = 0.2;
+		double t1 = run(1, s, 6.0, hitAt0(6.0)).secs;
+		double t2 = run(1, s, 6.0, [](Engine& E, double t) {
+			if (t == 0) E.strike(6.0);
+			E.ctl.u.warp = 0.6 + 0.3 * std::sin(2 * CY_PI * 0.5 * t);   // swept every block
+		}).secs;
+		char msg[160];
+		snprintf(msg, sizeof msg, "neutral %.2f s, static UNREAL %.2fx, swept WARP %.2fx (targets 1.25x, 1.6x)", t0, t1 / t0, t2 / t0);
+		check(t1 / t0 <= 1.25 && t2 / t0 <= 1.6, msg);
+	}
 	if (want("x2")) {
 		printf("X2 fuzz: random UNREAL settings, a hard hit each\n");
 		CyRng r;
