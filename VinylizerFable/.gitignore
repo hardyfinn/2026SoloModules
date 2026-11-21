@@ -3,3 +3,4 @@ vinylizer-demo.wav
 dist/
 build/
 *.vcvplugin
+__pycache__/
