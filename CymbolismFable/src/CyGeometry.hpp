@@ -39,6 +39,10 @@ static const Material CY_MATERIALS[NUM_ALLOYS] = {
 
 enum Play { TIP = 0, SHOULDER, MALLET, RODS, BRUSH, BOW, NUM_PLAYS };
 static const char* CY_PLAY_NAMES[NUM_PLAYS] = {"TIP", "SHOULDER", "MALLET", "RODS", "BRUSH", "BOW"};
+// Cymbolism Extended adds a seventh way to play (Cymbolism keeps NUM_PLAYS)
+static const int RAIN = NUM_PLAYS;
+static const int NUM_PLAYS_EXT = NUM_PLAYS + 1;
+static const char* CY_PLAY_NAMES_EXT[NUM_PLAYS_EXT] = {"TIP", "SHOULDER", "MALLET", "RODS", "BRUSH", "BOW", "RAIN"};
 
 struct CymbalType {
 	const char* name;

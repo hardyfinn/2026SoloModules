@@ -8,3 +8,4 @@ dist/
 *.o
 res/__pycache__/
 test/extended_check
+test/extended_render

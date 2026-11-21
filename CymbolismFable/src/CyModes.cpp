@@ -814,14 +814,28 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 	}
 
 	std::vector<std::vector<float>> qW(raw.size()), qWr(raw.size());
+	// live TENSION: geometric stiffness of the unit residual-stress pattern, per shape
+	Prestress psU = ps;
+	psU.eps = 3e-4;
+	std::vector<double> shapeTens(raw.size(), 0.0);
 	for (size_t k = 0; k < raw.size(); k++) {
 		RadialShape rs;
 		rs.W.resize(NG);
 		double v, d1;
+		double Gk = 0;
+		const double Thk = raw[k].m == 0 ? 2.0 * CY_PI : CY_PI, mk2 = (double)raw[k].m * raw[k].m;
+		const double dr = (sh.a - sh.r0) / (NG - 1);
 		for (int i = 0; i < NG; i++) {
 			evalW(raw[k], M.gridR[i], v, d1);
 			rs.W[i] = (float)v;
+			double r = M.gridR[i];
+			double Nrr, Ntt;
+			psU.N(r, sh.h(r), Nrr, Ntt);
+			double wt = (i == 0 || i == NG - 1) ? 0.5 : 1.0;
+			Gk += wt * dr * r * Thk * (Nrr * d1 * d1 + Ntt * mk2 * v * v / (r * r));
 		}
+		double om = 2.0 * CY_PI * raw[k].f;
+		shapeTens[k] = Gk / std::max(1e-9, om * om);
 		evalW(raw[k], sh.r0, v, d1);
 		rs.centreW = v;
 		rs.centreWr = d1;
@@ -859,6 +873,7 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 		if ((int)k + 1 == nPairsCore) M.nCore = (int)M.modes.size();
 	}
 	if (nPairsCore == 0) M.nCore = 0;
+	M.tensS.assign(M.modes.size(), 0.0);
 	M.fTopCore = 0;
 	for (int i = 0; i < M.nCore; i++) M.fTopCore = std::max(M.fTopCore, M.modes[i].f);
 
@@ -884,6 +899,8 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 			M.classOf[i] = c;
 		}
 	}
+
+	for (size_t i = 0; i < M.modes.size(); i++) M.tensS[i] = shapeTens[M.modes[i].shape];
 
 	if (M.nCore > 0) {
 		int lowest = 0;

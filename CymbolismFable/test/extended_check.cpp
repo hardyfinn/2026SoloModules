@@ -279,6 +279,44 @@ int main(int argc, char** argv) {
 		snprintf(msg, sizeof msg, "PIEZO: %+.1f dB against AIR on a medium hit", db);
 		check(std::fabs(db) < 4, msg);
 	}
+	if (want("x6")) {
+		printf("X6 PUMP: parametric growth above a threshold\n");
+		int type = 1;
+		Controls c = defaults(type);
+		c.bloom = 0;   // the linear threshold
+		Engine probe;
+		probe.ctl = c;
+		probe.init(model(type), 48000);
+		int i0 = -1;
+		for (int i = 0; i < probe.NC; i++) {
+			double f = probe.wS[i] / (2 * CY_PI);
+			if (f > 60 && std::fabs(model(type)->tensS[i]) > 0.3 && (i0 < 0 || f < probe.wS[i0] / (2 * CY_PI))) i0 = i;
+		}
+		double w = probe.wS[i0], sg = probe.sig[i0], si = model(type)->tensS[i0];
+		double dTh = 4 * sg / (w * std::fabs(si));   // depth of w^2 modulation needed: eps > 4 sigma / w
+		printf("  mode %d at %.1f Hz, loss %.2f /s, sensitivity %.2f, threshold depth %.4f (%.2f V)\n", i0, w / (2 * CY_PI), sg, si, dTh, dTh / 0.04);
+		for (double mult : {0.5, 2.0}) {
+			Engine E;
+			E.ctl = c;
+			E.init(model(type), 48000);
+			E.q[i0] = E.qp[i0] = 1e-6;
+			double a0 = 0, a1 = 0;
+			int n = 48000 * 4;
+			std::vector<float> L(32), P(32);
+			for (int s = 0; s < n; s += 32) {
+				for (int j = 0; j < 32; j++) P[j] = (float)(mult * dTh / 0.04 * std::cos(2 * w * (s + j) / 48000.0));
+				Engine::Extra ex;
+				ex.pump = P.data();
+				E.process(nullptr, L.data(), 32, &ex);
+				double amp = std::hypot(E.q[i0], (E.q[i0] - E.qp[i0]) * 48000 / w);
+				if (s < 48000 / 2) a0 = std::max(a0, amp);
+				if (s > n - 48000 / 2) a1 = std::max(a1, amp);
+			}
+			char msg[128];
+			snprintf(msg, sizeof msg, "pump %.1fx threshold: amplitude x%.3g over 3.5 s", mult, a1 / a0);
+			check(mult < 1 ? a1 < a0 : a1 > 3 * a0, msg);
+		}
+	}
 	if (want("x9")) {
 		printf("X9 retunes during a contact, a roll and a bow stroke\n");
 		for (int play : {SHOULDER, RODS, MALLET, BRUSH, BOW}) {

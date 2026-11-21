@@ -357,6 +357,7 @@ public:
 		}
 		updateColour();
 		computeMakeup();
+		if (unrealFreq || wasUnreal) guardE = 0;   // the energy's yardstick moved with the frequencies
 		if (unrealFreq || wasUnreal) {
 			exciteDirty = true;
 			if (bowOn) bowSetup();
@@ -587,6 +588,7 @@ public:
 		// swing kick: impulse x distance from the centre (loose MOUNT swings more)
 		swingKick(0.04 * v * ctl.position * (0.3 + 0.7 * ctl.mount));
 		if (play == BRUSH) { brushTap(v, ctl.position, 0.0); return; }
+		if (play == RAIN) { rainBurst(v); return; }
 		if (play == BOW) { bowTimer = 0.25 + 0.1 * v; return; }
 		strikeRaw(v);
 	}
@@ -611,6 +613,11 @@ public:
 				c.y = ws + gap;
 				c.yp = c.y + vv * k;    // moving down at vv
 				c.age = 0;
+				// BOUNCE: a return force holds the beater against the cymbal, so it ricochets
+				if (ctl.u.bounce > 0) {
+					c.gravity = 5000.0 * ctl.u.bounce * ctl.u.bounce;
+					c.life = 1.5;
+				}
 				return;
 			}
 		};
@@ -724,7 +731,7 @@ public:
 			// z = bloom * zeta = 1/2 (z + A.q)^2 - 1/2 (A.q)^2 stays bounded below for any BLOOM.
 			double zeta = (z0 + z1) * sB * bloom;
 			double an = 0;
-			const double* af = aFac.data();
+			const double* af = pumpOn ? aPump.data() : aFac.data();
 			for (size_t a = 0; a < sm.aIdx.size(); a++) an += sm.aVal[a] * af[sm.aIdx[a]] * qd[sm.aIdx[a]];
 			an *= sA;
 			vnl += an * zeta + 0.5 * zeta * zeta;
@@ -781,6 +788,7 @@ public:
 		}
 		double fe = exc ? excite * ctl.excite * ctl.force * 1.0 : 0.0;
 		bool inj = ((stepCount++ & 3) == 0);
+		if (pumpOn) pumpCore();
 		for (int i = 0; i < NA; i++) {
 			double fi = -grad[i];
 			if (exc) fi += fe * phiS[i];
@@ -799,7 +807,7 @@ public:
 			double ws = 0;
 			if (c.age > 64 && (c.age & 15) == 0) {
 				for (int i = 0; i < NA; i++) ws += c.phi[i] * q[i];
-				if (c.y - ws > 0.003 && c.y > c.yp) c.active = false;
+				if (c.gravity == 0 && c.y - ws > 0.003 && c.y > c.yp) c.active = false;
 				if (c.age > (int)(c.life * fs)) c.active = false;
 			}
 		}
@@ -849,6 +857,43 @@ public:
 		return out + click * clickLevel;
 	}
 
+	// ---- PUMP: an audio-rate modulation of the tension, on the core (parametric excitation) ----
+	bool pumpOn = false;
+	double pumpV = 0;                 // current pump (tension units)
+	std::vector<double> aPump;
+	void pumpCore() {
+		int nc = std::min(NC, NA);
+		if ((int)aPump.size() != NC) aPump.assign(NC, 1.0);
+		for (int i = 0; i < nc; i++) {
+			double s = (int)ut.tensS.size() == N ? ut.tensS[i] : (int)M->tensS.size() == N ? M->tensS[i] : 0.0;
+			double pf = std::sqrt(std::max(0.05, 1.0 + pumpV * s));
+			double w = wS[i] * pf;
+			double cs = std::cos(w * k);
+			double sg = sig[i];
+			double a = 1 + sg * k;
+			c1[i] = 2 * cs / a;
+			c2[i] = (1 - sg * k) / a;
+			g[i] = 2 * (1 - cs) / (w * w) / a;
+			aPump[i] = aFac[i] * pf;
+		}
+	}
+	void pumpRelease() {
+		for (int i = 0; i < std::min(NC, N); i++) applyLoss(i);
+	}
+
+	// ---- RAIN: small random impacts all over the surface ----
+	void rainBurst(double v) {
+		int n = 40 + (int)(40 * std::min(1.0, v / 5.0));
+		for (int j = 0; j < n; j++) rainDrop(v, (uint64_t)(rng.uni() * 0.06 * fs));
+	}
+	void rainDrop(double v, uint64_t delay) {
+		double hd = std::min(1.0, std::max(0.0, ctl.hardness));
+		double J = 6e-5 * v * (-std::log(std::max(1e-6, rng.uni())));
+		double rr = std::sqrt(0.0025 + 0.95 * rng.uni());   // uniform over the area
+		double th = 2 * CY_PI * rng.uni();
+		queueGrain(stepCount + delay, J, (300e-6 - 260e-6 * hd) * (0.7 + 0.6 * rng.uni()), rr, th);
+	}
+
 	// previous-previous state for the pickup
 	std::vector<double> qpp;
 	double qPrev2(int i) const { return qpp[i]; }
@@ -859,7 +904,7 @@ public:
 	uint64_t stepCount = 0;
 
 	// Extended outputs
-	struct Extra { float* R = nullptr; float* core = nullptr; float* wash = nullptr; float* env = nullptr; };
+	struct Extra { float* R = nullptr; float* core = nullptr; float* wash = nullptr; float* env = nullptr; const float* pump = nullptr; };
 	bool extraOn = false;
 	double stepR = 0, stepCore = 0, stepWash = 0;
 	std::vector<double> micW2, micV2;
@@ -895,7 +940,7 @@ public:
 				cascadeBlock(32.0 / fsHost);
 				exciterBlock(32.0 / fsHost);
 				bool thermo = thermostatBlock(32.0 / fsHost);
-				energyGuard((excIn != nullptr && ctl.excite > 0) || bowOn || !grainQ.empty() || grainFired || thermo);
+				energyGuard((excIn != nullptr && ctl.excite > 0) || bowOn || !grainQ.empty() || grainFired || thermo || pumpOn);
 				mkStep = (mkTarget - mk) / 32.0 * std::min(1.0, 32.0 / (0.05 * fsHost));
 				if (ex) {
 					envBlock();
@@ -904,6 +949,12 @@ public:
 				grainFired = false;
 			}
 			double e = excIn ? excIn[s] : 0.0;
+			if (ex && ex->pump) {
+				pumpV = ex->pump[s] * 0.04;   // +-5 V = +-0.2 of TENSION
+				if (pumpV != 0.0) pumpOn = true;
+				else if (pumpOn) { pumpOn = false; pumpRelease(); }
+			}
+			else if (pumpOn) { pumpOn = false; pumpRelease(); }
 			double acc = 0;
 			for (int o = 0; o < OS; o++) {
 				// keep q^{n-1} for the pickup
@@ -1076,7 +1127,7 @@ public:
 		double rate = std::min(30.0, std::max(2.0, ctl.rate));
 		double v = std::max(0.0, ctl.force);
 		// roll for the contact beaters
-		if (ctl.roll && play != BRUSH && play != BOW) {
+		if (ctl.roll && play != BRUSH && play != BOW && play != RAIN) {
 			rollTimer -= dt;
 			if (rollTimer <= 0) {
 				rollHand ^= 1;
@@ -1103,6 +1154,12 @@ public:
 				uint64_t at = stepCount + (uint64_t)(rng.uni() * dt * fs);
 				queueGrain(at, J, (150e-6 - 110e-6 * hd) * (0.8 + 0.4 * rng.uni()), rr + dr, sweepTh + 0.0125 * rng.bi() / (rr * aS));
 			}
+		}
+		// rain: RATE sets the density (20 .. 2000 drops a second)
+		if (ctl.roll && play == RAIN) {
+			double dps = 20.0 * std::pow(100.0, (rate - 2.0) / 28.0);
+			int n = (int)(dps * dt + rng.uni());
+			for (int j = 0; j < n; j++) rainDrop(v, (uint64_t)(rng.uni() * dt * fs));
 		}
 		// bow: pressure ramps in while bowing (gate or a stroke after STRIKE)
 		bool bowing = play == BOW && (ctl.roll || bowTimer > 0);
@@ -1224,6 +1281,12 @@ public:
 			E = guardE * 1.05;
 			guardEvents++;
 		}
+		// PUMP can grow a mode without limit when BLOOM is low: cap it at a few hard hits
+		if (pumpOn && E > 3.0 * hitEnergy()) {
+			double sc = std::sqrt(3.0 * hitEnergy() / E);
+			for (int i = 0; i < NA; i++) { q[i] *= sc; qp[i] *= sc; }
+			E *= sc * sc;
+		}
 		guardE = E;
 	}
 
@@ -1245,9 +1308,11 @@ public:
 	double energy() const {
 		double E = 0;
 		for (int i = 0; i < NA; i++) {
+			// the discrete invariant of the exact-frequency update: v^2 + (2 (1 - cos wk) / k^2) q q'
+			// (w^2 q q' drifts for modes high in the band, which a bent law fills)
 			double v = (q[i] - qp[i]) * fs;
-			double w = wU[i];
-			E += 0.5 * v * v + 0.5 * w * w * q[i] * qp[i];
+			double w2 = 2.0 * (1.0 - cw[i]) * fs * fs;
+			E += 0.5 * v * v + 0.5 * w2 * q[i] * qp[i];
 		}
 		return E;
 	}
