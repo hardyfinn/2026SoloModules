@@ -11,6 +11,7 @@
 // SIZE is an exact uniform scale of the built model (no rebuild).
 #pragma once
 #include "CyModes.hpp"
+#include "CyUnreal.hpp"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -38,6 +39,7 @@ struct Controls {
 	bool choke = false;
 	bool roll = false;       // ROLL gate: roll (contact beaters), sweep (BRUSH), bow (BOW)
 	uint64_t seed = 1;       // hammering pattern
+	Unreal u;                // Cymbolism Extended (neutral by default)
 };
 
 // one Hertz contact between a point mass and the shell
@@ -54,6 +56,7 @@ struct Contact {
 	std::vector<double> phi; // shape vector at the contact point (scaled)
 	double C = 0;            // compliance sum (phi . g)
 	double force = 0;
+	double life = 0.5;       // seconds before a beater is dropped
 };
 
 class Engine {
@@ -149,6 +152,7 @@ public:
 		tuneKey[5] = ctl.hammer;
 		tuneKey[6] = (double)ctl.seed;
 		updateCoefficients(true);
+		mk = mkTarget;
 		qpp.assign(N, 0.0);
 		prepareNonlinear();
 		// stick click modes (5B hickory: ~1.1, 2.9, 5.4 kHz)
@@ -211,7 +215,8 @@ public:
 	double tuneKey[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
 
 	void applyLoss(int i) {
-		double s = sigBase[i] + sigX[i];
+		if (frozen[i]) { c1[i] = c2[i] = g[i] = 0; sig[i] = 0; return; }
+		double s = sigBase[i] * lossMul + sigX[i] + sigU[i];
 		double a = 1 + s * k;
 		c1[i] = 2 * cw[i] / a;
 		c2[i] = (1 - s * k) / a;
@@ -225,7 +230,16 @@ public:
 		for (int j = 0; j < 7; j++) if (key[j] != tuneKey[j]) changed = true;
 		if ((int)wS.size() != N) {
 			wS.assign(N, 0); cw.assign(N, 0); gw.assign(N, 0); sigBase.assign(N, 0); sigX.assign(N, 0); nz.assign(N, 0); band.assign(N, -1);
+			sigU.assign(N, 0); frozen.assign(N, 0); wU.assign(N, 0); wB.assign(N, 0); aFac.assign(NC, 1.0); logF.assign(N, 0); wCol.assign(N, 1.0);
 			changed = true;
+		}
+		// UNREAL frequency law: checked every 4th control block, retuned only on a real change
+		if ((ctlCounter & 127) == 1 || changed) {
+			ctl.u.freqKey(uKeyNow);
+			if (uKeyNow.size() != uKey.size()) changed = true;
+			else for (size_t j = 0; j < uKey.size(); j++) if (std::fabs(uKeyNow[j] - uKey[j]) > 1e-6 * (1.0 + std::fabs(uKey[j]))) { changed = true; break; }
+			if (changed) uKey = uKeyNow;
+			if (std::fabs(ctl.u.colour - colourCache) > 1e-3 * colourCache) updateColour();
 		}
 		if (changed) {
 			if (key[5] != tuneKey[5] || key[6] != tuneKey[6]) applyHammer();
@@ -244,6 +258,20 @@ public:
 		}
 	}
 
+	// ---- UNREAL state ----
+	std::vector<double> uKey, uKeyNow;
+	std::vector<double> wU, wB;          // working w before MOUNT (unreal law, at size); w with MOUNT under the built law
+	std::vector<double> aFac;            // per core mode: f_now / f_built (keeps diag(w^2) - A^T A >= 0)
+	std::vector<double> sigU;            // thermostat loss (SUSTAIN, FREEZE)
+	std::vector<char> frozen;            // modes moved out of the band by the unreal law
+	std::vector<double> logF, wCol;      // log2 working frequency, COLOUR weights
+	double lossMul = 1.0;                // FREEZE scales the ordinary losses
+	double colourCache = -1;
+	bool unrealFreq = false;
+	UnrealTables ut;
+	std::vector<double> fBaseHz, fUHz, uScratch, uTargets;
+	double mkTarget = 1.0, mk = 1.0;     // level make-up for bent spectra
+
 	void retune() {
 		lam = std::max(0.3, ctl.size);
 		sA = 1.0 / lam;
@@ -257,6 +285,16 @@ public:
 		double cLine = 300.0 * std::pow(0.01, mnt);
 		double r0 = sh.r0 * lam;
 		double chokeS = ctl.choke ? 1.0 : 0.0;
+		const Unreal& u = ctl.u;
+		bool wasUnreal = unrealFreq;
+		unrealFreq = !u.freqNeutral();
+		if (unrealFreq) {
+			prepareUnrealTables();
+			fBaseHz.resize(N);
+			for (int i = 0; i < N; i++) fBaseHz[i] = om0[i] / (2 * CY_PI);
+			applyFrequencyLaw(u, ut, fBaseHz, fUHz, uScratch, uTargets);
+		}
+		double tiltE = 1.5 * std::max(-1.0, std::min(1.0, u.tilt));
 		for (int i = 0; i < N; i++) {
 			const Mode& md = M->modes[i];
 			const RadialShape& rs = M->shapes[md.shape];
@@ -264,10 +302,30 @@ public:
 			double w0 = om0[i] / lam;
 			double Wc = rs.centreW * sPhi, Wr = rs.centreWr * sPhi / lam;
 			double dw2 = Th * r0 * (kLine * Wc * Wc + kRot * Wr * Wr);
-			double w = std::sqrt(w0 * w0 + dw2);
+			double wb = std::sqrt(w0 * w0 + dw2);
+			wB[i] = wb;
+			double w = wb;
+			frozen[i] = 0;
+			if (unrealFreq) {
+				double wu = 2 * CY_PI * fUHz[i] / lam;
+				// TUNE aims at the pitch you hear, so take the MOUNT shift out first
+				if (u.tune > 0) wu = std::sqrt(std::max(0.25 * wu * wu, wu * wu - u.tune * dw2));
+				// core modes are always kept (the coupling indexes them): clamp into the band
+				if (i < NC) wu = std::max(2 * CY_PI * 25.0, std::min(2 * CY_PI * 0.45 * fs, wu));
+				w = std::sqrt(wu * wu + dw2);
+				double fw = w / (2 * CY_PI);
+				if (i >= NC && (fw < 25.0 || fw >= fTop)) frozen[i] = 1;
+				if (i < NC) aFac[i] = wu / w0;
+				wU[i] = wu;
+			}
+			else {
+				wU[i] = w0;
+				if (i < NC) aFac[i] = 1.0;
+			}
 			double fHz = w / (2 * CY_PI);
-			if (fHz < fTop) NA = i + 1;
+			if (unrealFreq ? !frozen[i] : fHz < fTop) NA = i + 1;
 			double s = lossAt(fHz, i) / std::max(0.1, ctl.decay);
+			if (tiltE != 0.0) s = std::max(0.05, std::min(60.0, s * std::pow(std::max(1.0, fHz) / 1000.0, tiltE)));
 			s += 0.5 * cLine * Th * r0 * Wc * Wc;
 			if (ctl.damp > 0) {
 				double wd = M->W(i, sh.r0 + 0.85 * (sh.a - sh.r0)) * sPhi;
@@ -278,9 +336,12 @@ public:
 			sigBase[i] = s;
 			cw[i] = std::cos(w * k);
 			gw[i] = 2 * (1 - cw[i]) / (w * w);
+			if (frozen[i]) { q[i] = qp[i] = 0; if ((int)qpp.size() == N) qpp[i] = 0; }
+			logF[i] = std::log2(std::max(1.0, fHz));
 			applyLoss(i);
 		}
-		// cascade bands (1/3 octave) above the core
+		// cascade bands (1/3 octave) above the core, from the built law: coupling follows the
+		// shapes' wavelengths, which the unreal law does not change
 		double fTopCore = M->fTopCore / lam;
 		nBands = (int)std::ceil(3.0 * std::log2(fTop / fTopCore)) + 1;
 		if (nBands < 1) nBands = 1;
@@ -288,20 +349,94 @@ public:
 		for (int b = 0; b < nBands; b++) bandF[b] = fTopCore * std::pow(2.0, (b + 0.5) / 3.0);
 		for (int i = 0; i < N; i++) {
 			band[i] = -1;
-			double fHz = wS[i] / (2 * CY_PI);
+			double fHz = wB[i] / (2 * CY_PI);
 			if (i < NC) { if (fHz > 0.7 * fTopCore) band[i] = -2; continue; }
-			if (i >= NA) continue;
+			if (i >= NA || frozen[i]) continue;
 			int b = (int)std::floor(3.0 * std::log2(std::max(1e-9, fHz / fTopCore)));
 			band[i] = std::max(0, std::min(nBands - 1, b));
 		}
+		updateColour();
+		computeMakeup();
+		if (unrealFreq || wasUnreal) {
+			exciteDirty = true;
+			if (bowOn) bowSetup();
+			for (auto& c : beaters) if (c.active) refreshContact(c);
+			for (auto& c : rivets) refreshContact(c);
+		}
 	}
 
-	// ---- statistical cascade above the core (calibrated against the full coupled model) ----
+	// per-mode tables for the unreal law (built once per model, LOAD's when its position moves)
+	double loadPosCache = -1, loadLamCache = -1;
+	void prepareUnrealTables() {
+		if ((int)ut.twin.size() != N) {
+			ut.twin.assign(N, 0);
+			std::vector<int> first(M->shapes.size(), -1);
+			for (int i = 0; i < N; i++) {
+				int s = M->modes[i].shape;
+				ut.twin[i] = i;
+				if (first[s] < 0) first[s] = i;
+				else { ut.twin[i] = first[s]; ut.twin[first[s]] = i; }
+			}
+			ut.jit.assign(N, 0.0);
+			CyRng r;
+			r.seed(ctl.seed * 104729 + 3);
+			std::vector<double> js(M->shapes.size());
+			for (double& j : js) j = 0.04 * r.bi();   // about +-4 cents of residual chorus
+			for (int i = 0; i < N; i++) ut.jit[i] = js[M->modes[i].shape];
+			ut.tensS.assign(M->tensS.begin(), M->tensS.end());
+			ut.fModel.resize(N);
+			for (int i = 0; i < N; i++) ut.fModel[i] = M->modes[i].f;
+		}
+		const Unreal& u = ctl.u;
+		if (u.load != 0.0 && (std::fabs(u.loadPos - loadPosCache) > 1e-4 || lam != loadLamCache || (int)ut.loadPhi2.size() != N)) {
+			ut.loadPhi2.resize(N);
+			const Shape& sh = M->sh;
+			double r = sh.r0 + std::min(0.99, std::max(0.0, u.loadPos)) * (sh.a - sh.r0);
+			for (int i = 0; i < N; i++) {
+				double ph = M->phi(i, r, 0.5 * CY_PI, thOff[i]);   // 90 degrees round from the strike point
+				ut.loadPhi2[i] = ph * ph * sPhi * sPhi;   // mass-normalised at the current SIZE
+			}
+			loadPosCache = u.loadPos;
+			loadLamCache = lam;
+		}
+	}
+
+	// MORPH target: called by the builder (not the audio thread) with TYPE B's model
+	void setMorphModel(const Model& B) { ut.fBr = morphRatios(*M, B); }
+
+	// COLOUR weights for SUSTAIN: a Gaussian in log frequency, 1.5 octaves wide
+	void updateColour() {
+		colourCache = std::max(20.0, ctl.u.colour);
+		double lc = std::log2(colourCache);
+		for (int i = 0; i < N; i++) {
+			double x = (logF[i] - lc) / 1.5;
+			wCol[i] = std::exp(-0.5 * x * x);
+		}
+	}
+
+	// level make-up for bent spectra: a compressed law piles modes onto few pitches and sums
+	// coherently (louder), a stretched one pushes modes out of the band (quieter). Measured
+	// on CRASH and RIDE at a medium hit (geometric mean of the gain each needed).
+	void computeMakeup() {
+		if (!unrealFreq || ctl.u.warp == 1.0) { mkTarget = 1.0; return; }
+		
+		// knots at warp -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.5, 2 (and 2.5 = 4.0)
+		static const double X[12] = {-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.5, 2, 2.5};
+		static const double Y[12] = {3.0, 3.0, 2.6, 2.0, 1.7, 0.8, 0.5, 0.6, 1.0, 1.8, 2.4, 3.4};
+
+		double w = std::max(-1.0, std::min(2.5, ctl.u.warp));
+		int j = 0;
+		while (j < 10 && w > X[j + 1]) j++;
+		double t = (w - X[j]) / (X[j + 1] - X[j]);
+		mkTarget = std::exp((1 - t) * std::log(Y[j]) + t * std::log(Y[j + 1]));
+	}
+
+		// ---- statistical cascade above the core (calibrated against the full coupled model) ----
 	double cascK = 2.5e-5, cascG = 6e-5, cascP = 2.0;   // rates ~ eps^2 (four-wave), so the wash fades with the core
 	double lastEps = 0;
 	std::vector<double> bandE, bandN, bandPin;
 	void cascadeBlock(double blockSec) {
-		if (ctl.bloom <= 0) {
+		if (ctl.bloom == 0) {
 			for (int i = 0; i < N; i++) if (sigX[i] != 0 || nz[i] != 0) { sigX[i] = 0; nz[i] = 0; applyLoss(i); }
 			return;
 		}
@@ -328,12 +463,13 @@ public:
 		double eps = std::pow(std::max(0.0, Ecore / Eref), cascP);
 		lastEps = eps;
 		double fTopC = M->fTopCore / lam;
-		double nuOut = std::min(60.0, cascK * ctl.bloom * eps * fTopC);
+		double bl = std::fabs(ctl.bloom) * ctl.u.flow;   // BLOOM either way; FLOW scales the cascade rates
+		double nuOut = std::min(60.0, cascK * bl * eps * fTopC);
 		bandPin[0] += 2 * nuOut * Etop;
 		std::vector<double> nuB(nBands, 0.0);
 		for (int b = 0; b < nBands; b++) {
 			if (bandN[b] == 0) continue;
-			double nu = std::min(400.0, cascG * ctl.bloom * eps * bandF[b]);
+			double nu = std::min(400.0, cascG * bl * eps * bandF[b]);
 			nuB[b] = nu;
 			if (b + 1 < nBands) bandPin[b + 1] += 2 * nu * bandE[b];
 		}
@@ -375,7 +511,12 @@ public:
 	// neighbouring mic positions, rotate by each pair's orientation and the swing angle,
 	// and scale to the current SIZE (mic distances scale with the cymbal).
 	double swingAng = 0;
+	double widthCache = -1, pickupCache = -1;
+	double piezoGain = 3.8e3;   // contact pickup level (matched to the air mic on a medium hit)
 	void computeMic() {
+		widthCache = ctl.u.width;
+		pickupCache = ctl.u.pickup;
+		if (extraOn) { micW2.assign(N, 0.0); micV2.assign(N, 0.0); }
 		double u = std::min(4.0, std::max(0.0, ctl.mic));
 		int p0 = std::min(3, (int)u);
 		double t = u - p0;
@@ -386,7 +527,7 @@ public:
 		const float* i1 = &M->micIm[(size_t)(p0 + 1) * NS];
 		double n0 = (1 - t) * M->micNorm[p0], n1 = t * M->micNorm[p0 + 1];
 		for (int i = 0; i < N; i++) {
-			if (i >= NA) { micW[i] = micV[i] = 0; continue; }
+			if (i >= NA || frozen[i]) { micW[i] = micV[i] = 0; continue; }
 			const Mode& md = M->modes[i];
 			int s = md.shape;
 			double re = n0 * r0[s] + n1 * r1[s];
@@ -397,20 +538,46 @@ public:
 				fac = md.par ? -std::sin(ang) : std::cos(ang);
 			}
 			fac *= sPhi;
-			double w = om0[i] / lam;
+			double w = wU[i];
 			micW[i] = re * fac;
 			micV[i] = -im * fac * w;
+			if (extraOn) {
+				// stereo: mics at azimuth +-WIDTH; PICKUP crossfades to a contact pickup at the MIC radius
+				double ps = ctl.u.width, p = std::min(1.0, std::max(0.0, ctl.u.pickup));
+				double facL = 1.0, facR = 1.0;
+				if (md.m > 0) {
+					double aL = md.m * (thOff[i] + swingAng - ps), aR = md.m * (thOff[i] + swingAng + ps);
+					facL = md.par ? -std::sin(aL) : std::cos(aL);
+					facR = md.par ? -std::sin(aR) : std::cos(aR);
+				}
+				facL *= sPhi;
+				facR *= sPhi;
+				double rr = std::min(0.98, 0.05 + 0.93 * std::min(1.0, u / 2.0));
+				const Shape& sh = M->sh;
+				double W = M->W(i, sh.r0 + rr * (sh.a - sh.r0)) * sPhi * piezoGain;
+				micW[i] = (1 - p) * re * facL;
+				micV[i] = (1 - p) * (-im * facL * w) + p * W * facL / sPhi;
+				micW2[i] = (1 - p) * re * facR;
+				micV2[i] = (1 - p) * (-im * facR * w) + p * W * facR / sPhi;
+			}
 		}
 	}
 
 	// ---- beaters ----
+	// contact vectors cover every mode, so a retune while a contact is alive stays in range
 	void setupContact(Contact& c) {
-		c.phi.resize(NA);
+		c.phi.resize(N);
 		double C = 0;
-		for (int i = 0; i < NA; i++) {
+		for (int i = 0; i < N; i++) {
 			c.phi[i] = phiAt(i, c.r, c.th);
-			C += c.phi[i] * c.phi[i] * g[i];
+			if (i < NA) C += c.phi[i] * c.phi[i] * g[i];
 		}
+		c.C = C;
+	}
+	void refreshContact(Contact& c) {
+		if ((int)c.phi.size() != N) { setupContact(c); return; }
+		double C = 0;
+		for (int i = 0; i < NA; i++) C += c.phi[i] * c.phi[i] * g[i];
 		c.C = C;
 	}
 
@@ -537,7 +704,7 @@ public:
 	void nonlinearGradient(double bloom) {
 		std::fill(grad.begin(), grad.begin() + std::max(NC, NA), 0.0);
 		vnl = 0;
-		if (bloom <= 0) return;
+		if (bloom == 0) return;
 		if (tripOff.size() != M->stress.size() + 1) prepareNonlinear();
 		const double* qd = q.data();
 		double* gd = grad.data();
@@ -557,7 +724,8 @@ public:
 			// z = bloom * zeta = 1/2 (z + A.q)^2 - 1/2 (A.q)^2 stays bounded below for any BLOOM.
 			double zeta = (z0 + z1) * sB * bloom;
 			double an = 0;
-			for (size_t a = 0; a < sm.aIdx.size(); a++) an += sm.aVal[a] * qd[sm.aIdx[a]];
+			const double* af = aFac.data();
+			for (size_t a = 0; a < sm.aIdx.size(); a++) an += sm.aVal[a] * af[sm.aIdx[a]] * qd[sm.aIdx[a]];
 			an *= sA;
 			vnl += an * zeta + 0.5 * zeta * zeta;
 			double coef = (an + zeta) * bloom * sB;
@@ -567,7 +735,7 @@ public:
 				gd[T[u].j] += cc * qd[T[u].i];
 			}
 			double za = zeta * sA;
-			for (size_t a = 0; a < sm.aIdx.size(); a++) gd[sm.aIdx[a]] += za * sm.aVal[a];
+			for (size_t a = 0; a < sm.aIdx.size(); a++) gd[sm.aIdx[a]] += za * sm.aVal[a] * af[sm.aIdx[a]];
 		}
 	}
 
@@ -603,11 +771,11 @@ public:
 		nonlinearGradient(ctl.bloom);
 		// external forces: EXCITE at the strike point
 		bool exc = excite != 0.0 && ctl.excite > 0;
-		static thread_local std::vector<double> phiS;
 		if (exc) {
-			if ((int)phiS.size() != NA || exciteDirty) {
-				phiS.resize(NA);
-				for (int i = 0; i < NA; i++) phiS[i] = phiAt(i, ctl.position, 0.0);
+			if ((int)phiS.size() != N || exciteDirty || excPos != ctl.position) {
+				phiS.resize(N);
+				for (int i = 0; i < N; i++) phiS[i] = phiAt(i, ctl.position, 0.0);
+				excPos = ctl.position;
 				exciteDirty = false;
 			}
 		}
@@ -632,7 +800,7 @@ public:
 			if (c.age > 64 && (c.age & 15) == 0) {
 				for (int i = 0; i < NA; i++) ws += c.phi[i] * q[i];
 				if (c.y - ws > 0.003 && c.y > c.yp) c.active = false;
-				if (c.age > (int)(0.5 * fs)) c.active = false;
+				if (c.age > (int)(c.life * fs)) c.active = false;
 			}
 		}
 		for (auto& c : rivets) solveContact(c);
@@ -651,14 +819,33 @@ public:
 		// pickup: acceleration and velocity
 		double out = 0;
 		double ik2 = 1.0 / (k * k), i2k = 0.5 / k;
+		double clickLevel = (ctl.mic < 2.5 ? 1.0 : 0.25) * 2e4;
 		// (acceleration from the central difference of the last three states)
-		for (int i = 0; i < NA; i++) {
-			double v = (q[i] - qPrev2(i)) * i2k;
-			double a = (q[i] - 2 * qp[i] + qPrev2(i)) * ik2;
-			out += micW[i] * a + micV[i] * v;
+		if (!extraOn) {
+			for (int i = 0; i < NA; i++) {
+				double v = (q[i] - qPrev2(i)) * i2k;
+				double a = (q[i] - 2 * qp[i] + qPrev2(i)) * ik2;
+				out += micW[i] * a + micV[i] * v;
+			}
+		}
+		else {
+			// Extended: right mic, and the left mic split into the core and the wash above it
+			double oc = 0, orr = 0;
+			int nc = std::min(NC, NA);
+			for (int i = 0; i < NA; i++) {
+				double v = (q[i] - qPrev2(i)) * i2k;
+				double a = (q[i] - 2 * qp[i] + qPrev2(i)) * ik2;
+				double c = micW[i] * a + micV[i] * v;
+				out += c;
+				if (i < nc) oc += c;
+				orr += micW2[i] * a + micV2[i] * v;
+			}
+			stepCore = oc;
+			stepWash = out - oc + click * clickLevel;
+			stepR = orr + click * clickLevel * (1.0 - ctl.u.pickup);
+			return out + click * clickLevel * (1.0 - ctl.u.pickup);
 		}
 		rotatePrev2();
-		double clickLevel = (ctl.mic < 2.5 ? 1.0 : 0.25) * 2e4;
 		return out + click * clickLevel;
 	}
 
@@ -667,10 +854,39 @@ public:
 	double qPrev2(int i) const { return qpp[i]; }
 	void rotatePrev2() {}
 	bool exciteDirty = true;
+	std::vector<double> phiS;   // EXCITE drive shape
+	double excPos = -1;
 	uint64_t stepCount = 0;
 
+	// Extended outputs
+	struct Extra { float* R = nullptr; float* core = nullptr; float* wash = nullptr; float* env = nullptr; };
+	bool extraOn = false;
+	double stepR = 0, stepCore = 0, stepWash = 0;
+	std::vector<double> micW2, micV2;
+	struct Chain {
+		double dcX = 0, dcY = 0, bz1 = 0, bz2 = 0, lp = 0;
+		double run(double x, const double* bq, double lpA) {
+			double yv = x - dcX + 0.9995 * dcY;
+			dcX = x;
+			dcY = yv;
+			double ya = bq[0] * yv + bz1;
+			bz1 = bq[1] * yv - bq[3] * ya + bz2;
+			bz2 = bq[2] * yv - bq[4] * ya;
+			lp += lpA * (ya - lp);
+			return lp;
+		}
+	};
+	Chain chR, chCore, chWash;
+	double envV = 0;
+	static double softLimit(double o) {
+		double ao = std::fabs(o);
+		if (ao > 8.0) o = (o > 0 ? 1 : -1) * (8.0 + 2.0 * std::tanh((ao - 8.0) / 2.0));
+		return o;
+	}
+
 	// host-rate processing
-	void process(const float* excIn, float* out, int n) {
+	void process(const float* excIn, float* out, int n, const Extra* ex = nullptr) {
+		if (ex && !extraOn) { extraOn = true; computeMic(); }
 		if ((int)qpp.size() != N) qpp.assign(N, 0.0);
 		for (int s = 0; s < n; s++) {
 			if ((ctlCounter++ & 31) == 0) {
@@ -678,7 +894,13 @@ public:
 				setRivets((int)std::lround(ctl.sizzle * 12));
 				cascadeBlock(32.0 / fsHost);
 				exciterBlock(32.0 / fsHost);
-				energyGuard((excIn != nullptr && ctl.excite > 0) || bowOn || !grainQ.empty() || grainFired);
+				bool thermo = thermostatBlock(32.0 / fsHost);
+				energyGuard((excIn != nullptr && ctl.excite > 0) || bowOn || !grainQ.empty() || grainFired || thermo);
+				mkStep = (mkTarget - mk) / 32.0 * std::min(1.0, 32.0 / (0.05 * fsHost));
+				if (ex) {
+					envBlock();
+					if (std::fabs(ctl.u.width - widthCache) > 1e-3 || std::fabs(ctl.u.pickup - pickupCache) > 1e-3) computeMic();
+				}
 				grainFired = false;
 			}
 			double e = excIn ? excIn[s] : 0.0;
@@ -707,6 +929,7 @@ public:
 			bz2 = bq[2] * yv - bq[4] * ya;
 			lp += lpA * (ya - lp);
 			double o = lp * outGain * typeTrim();
+			if (mk != 1.0 || mkStep != 0.0) { mk += mkStep; o *= mk; }
 			if (!std::isfinite(o)) {
 				reset();
 				o = 0;
@@ -716,7 +939,34 @@ public:
 			double ao = std::fabs(o);
 			if (ao > 8.0) o = (o > 0 ? 1 : -1) * (8.0 + 2.0 * std::tanh((ao - 8.0) / 2.0));
 			out[s] = (float)o;
+			if (ex) {
+				double gsc = outGain * typeTrim() * mk;
+				double r = chR.run(stepR, bq, lpA) * gsc;
+				double c = chCore.run(stepCore, bq, lpA) * gsc;
+				double w = chWash.run(stepWash, bq, lpA) * gsc;
+				if (!std::isfinite(r + c + w)) { r = c = w = 0; chR = Chain(); chCore = Chain(); chWash = Chain(); }
+				if (ex->R) ex->R[s] = (float)softLimit(r);
+				if (ex->core) ex->core[s] = (float)softLimit(c);
+				if (ex->wash) ex->wash[s] = (float)softLimit(w);
+				if (ex->env) {
+					double tgt = envTarget;
+					envV += (tgt - envV) * (tgt > envV ? envAtt : envRel);
+					ex->env[s] = (float)envV;
+				}
+			}
 		}
+	}
+	// ENV: a follower of the core's energy, 0..10 V (about 10 V for a hard hit)
+	double envTarget = 0, envAtt = 0.05, envRel = 0.0005;
+	void envBlock() {
+		double Ec = 0;
+		for (int i = 0; i < NC && i < NA; i++) {
+			double v = (q[i] - qp[i]) * fs;
+			Ec += 0.5 * v * v + 0.5 * wS[i] * wS[i] * q[i] * qp[i];
+		}
+		envTarget = std::min(10.0, 10.0 * std::sqrt(std::max(0.0, Ec) / hitEnergy()));
+		envAtt = 1 - std::exp(-1.0 / (0.002 * fsHost));
+		envRel = 1 - std::exp(-1.0 / (0.15 * fsHost));
 	}
 
 	// per-type output trim (equal loudness across the type table at a medium hit)
@@ -774,10 +1024,10 @@ public:
 	std::vector<double> bowPhi;
 	void bowSetup() {
 		double r = 0.99 - 0.08 * (1.0 - std::min(1.0, std::max(0.0, ctl.position)));
-		bowPhi.resize(NA);
+		bowPhi.resize(N);
 		double C = 0;
 		// sub-audio rocking / sleeve modes are left out: the bow would just push the cymbal around
-		for (int i = 0; i < NA; i++) {
+		for (int i = 0; i < N; i++) {
 			// the hair ribbon (about 15 mm along the edge) averages short waves, and its
 			// compliance rolls off what it can drive above a few kHz
 			double fi = wS[i] / (2 * CY_PI);
@@ -785,13 +1035,13 @@ public:
 			double avg = x < 1e-6 ? 1.0 : std::sin(x) / x;
 			double hair = 1.0 / (1.0 + (fi / 4000.0) * (fi / 4000.0));
 			bowPhi[i] = fi < 40.0 ? 0.0 : phiAt(i, r, 0.0) * avg * hair;
-			C += bowPhi[i] * bowPhi[i] * g[i];
+			if (i < NA) C += bowPhi[i] * bowPhi[i] * g[i];
 		}
 		bowCB = C;
 		bowR = r;
 	}
 	void bowStep() {
-		if ((int)bowPhi.size() != NA) bowSetup();
+		if ((int)bowPhi.size() != N) bowSetup();
 		// predicted velocity at the bow point (q holds the predicted new state, qp the old)
 		double vp = 0;
 		for (int i = 0; i < NA; i++) vp += bowPhi[i] * (q[i] - qp[i]);
@@ -877,6 +1127,86 @@ public:
 		}
 	}
 
+	// ---- SUSTAIN / SWELL / COLOUR / FREEZE: negative damping under an energy thermostat ----
+	bool thermoOn = false, freezeWas = false;
+	double freezeE = 0, seedTimer = 0, thermoEt = 0, thermoI = 0;
+	double mkStep = 0;
+	// energy of a hard hit at the type's usual spot: a stick impulse projected on the modes,
+	// with the contact's half-sine spectrum (scaled to match a measured hard CRASH hit)
+	double hitE = -1, hitLam = -1, hitKE = 0.1;
+	double hitEnergy() {
+		if (hitE < 0 || hitLam != lam) {
+			double pos = CY_TYPES[std::min(M->gp.type, NUM_TYPES - 1)].position;
+			double J = 0.025 * 8.0, Tc = 0.0006, s = 0;
+			for (int i = 0; i < NA; i++) {
+				if (frozen[i]) continue;
+				double fT = wB[i] / (2 * CY_PI) * Tc, x = 2 * fT;
+				double H = std::fabs(1 - x * x) < 1e-6 ? CY_PI / 4 : std::cos(CY_PI * fT) / (1 - x * x);
+				double ph = phiAt(i, pos, 0.0);
+				s += ph * ph * H * H;
+			}
+			hitE = std::max(1e-30, 0.5 * J * J * s * hitKE);
+			hitLam = lam;
+		}
+		return hitE;
+	}
+	bool thermostatBlock(double dt) {
+		const Unreal& u = ctl.u;
+		bool sus = u.sustain > 0.0;
+		bool frz = u.freeze;
+		if (!sus && !frz) {
+			if (thermoOn) {
+				lossMul = 1.0;
+				for (int i = 0; i < N; i++) if (sigU[i] != 0.0) { sigU[i] = 0.0; applyLoss(i); }
+				for (int i = 0; i < NA; i++) applyLoss(i);
+				thermoOn = false;
+				thermoI = 0;
+			}
+			freezeWas = false;
+			return false;
+		}
+		thermoOn = true;
+		double E = std::max(0.0, energy() + vnl);   // total: the membrane's share counts too
+		double Et, G;
+		if (frz) {
+			if (!freezeWas) { freezeE = std::max(E, 1e-9 * hitEnergy()); thermoI = 0; }
+			freezeWas = true;
+			Et = freezeE;
+			G = 80.0;
+			lossMul = 0.1;
+		}
+		else {
+			freezeWas = false;
+			Et = u.sustain * u.sustain * 0.5 * hitEnergy();
+			G = std::max(0.5, std::min(30.0, u.swell));
+			lossMul = 1.0;
+		}
+		thermoEt = Et;
+		// something has to ring for it to grow: a very soft brush tap when it is silent
+		seedTimer -= dt;
+		if (E < 1e-7 * Et && seedTimer <= 0) {
+			brushTap(0.05, std::max(0.3, ctl.position), 0.0);
+			seedTimer = 0.25;
+		}
+		// proportional-integral: the integral removes the steady offset against the losses
+		// (and only runs near the target, so a long swell does not wind it up)
+		double err = std::max(-1.0, std::min(1.0, 1.0 - E / std::max(1e-30, Et)));
+		if (std::fabs(err) < 0.3) thermoI = std::max(-0.5, std::min(0.8, thermoI + err * dt * (frz ? 10.0 : 3.0)));
+		double uu = std::max(-1.0, std::min(1.0, err + thermoI));
+		for (int i = 0; i < NA; i++) {
+			if (frozen[i]) continue;
+			double w = frz ? 1.0 : wCol[i];
+			sigU[i] = uu > 0 ? -G * uu * w : G * (-uu);
+			applyLoss(i);
+		}
+		// hard cap
+		if (E > 4.0 * Et) {
+			double sc = std::sqrt(4.0 * Et / E);
+			for (int i = 0; i < NA; i++) { q[i] *= sc; qp[i] *= sc; }
+		}
+		return true;
+	}
+
 	// Energy guard: with nothing driving the shell its (linear) energy can only fall,
 	// apart from the small exchange with the nonlinear potential. If it grows by more
 	// than that within a control block (explicit stepping beyond its stability limit at
@@ -916,7 +1246,7 @@ public:
 		double E = 0;
 		for (int i = 0; i < NA; i++) {
 			double v = (q[i] - qp[i]) * fs;
-			double w = om0[i] / lam;
+			double w = wU[i];
 			E += 0.5 * v * v + 0.5 * w * w * q[i] * qp[i];
 		}
 		return E;

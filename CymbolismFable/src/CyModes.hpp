@@ -84,6 +84,9 @@ struct Model {
 	double micNorm[NMIC] = {1, 1, 1, 1, 1};
 	double pickupMs = 0;
 
+	// live TENSION: per mode, d(w^2)/w^2 for unit tension (empty until computed)
+	std::vector<double> tensS;
+
 	// value of mode i's radial shape at radius r (linear interpolation)
 	double W(int i, double r) const;
 	// full shape at (r, th), with an orientation offset for the mode pair

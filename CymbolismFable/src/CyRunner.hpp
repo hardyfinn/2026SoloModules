@@ -89,9 +89,11 @@ public:
 
 	// request a model for these geometry settings (call when they change)
 	// returns false if it should be called again (lock busy)
-	bool requestBuild(const GeomParams& g, const Controls& c) {
+	// typeB >= 0 also builds TYPE B for MORPH (Cymbolism Extended)
+	bool requestBuild(const GeomParams& g, const Controls& c, int typeB = -1) {
 		std::unique_lock<std::mutex> lk(buildMx, std::try_to_lock);
 		if (!lk.owns_lock()) return false;
+		reqTypeB = typeB;
 		reqGeom = g;
 		reqCtl = c;
 		reqSeq++;
@@ -222,6 +224,7 @@ private:
 	std::condition_variable buildCv;
 	GeomParams reqGeom;
 	Controls reqCtl;
+	int reqTypeB = -1;
 	uint64_t reqSeq = 0, builtSeq = 0;
 	std::chrono::steady_clock::time_point reqTime;
 	std::string infoKey;
@@ -232,6 +235,7 @@ private:
 			GeomParams g;
 			Controls c;
 			uint64_t seq;
+			int typeB = -1;
 			{
 				std::unique_lock<std::mutex> lk(buildMx);
 				buildCv.wait_for(lk, std::chrono::milliseconds(20), [this] { return quit || reqSeq != builtSeq; });
@@ -247,24 +251,36 @@ private:
 				g = reqGeom;
 				c = reqCtl;
 				seq = reqSeq;
+				typeB = reqTypeB;
 			}
-			std::string key = g.key();
+			GeomParams gb = g;
+			if (typeB >= 0) {
+				gb.fromType(typeB);
+				gb.weight = g.weight;
+				gb.alloy = g.alloy;
+				gb.tension = g.tension;
+			}
+			std::string key = g.key() + (typeB >= 0 ? "|B" + gb.key() : std::string());
 			{
 				std::lock_guard<std::mutex> lk(infoMx);
 				if (key == infoKey && hasModel) { builtSeq = seq; continue; }
 			}
 			building = true;
-			std::shared_ptr<Model> M;
-			for (auto it = cache.begin(); it != cache.end(); ++it)
-				if (it->first == key) { M = it->second; cache.splice(cache.begin(), cache, it); break; }
-			if (!M) {
-				M = buildModel(g);
-				cache.push_front({key, M});
+			auto fetch = [&](const GeomParams& gg) {
+				std::string kk = gg.key();
+				for (auto it = cache.begin(); it != cache.end(); ++it)
+					if (it->first == kk) { auto m = it->second; cache.splice(cache.begin(), cache, it); return m; }
+				auto m = buildModel(gg);
+				cache.push_front({kk, m});
 				while (cache.size() > 8) cache.pop_back();
-			}
+				return m;
+			};
+			std::shared_ptr<Model> M = fetch(g);
+			std::shared_ptr<Model> MB = typeB >= 0 ? fetch(gb) : nullptr;
 			Engine* e = new Engine();
 			e->ctl = c;   // the worker sets the live controls again at the swap
 			e->init(M, g.sampleRate);
+			if (MB) e->setMorphModel(*MB);
 			delete pending.exchange(e);   // a newer build replaces one still waiting
 			{
 				std::lock_guard<std::mutex> lk(infoMx);
