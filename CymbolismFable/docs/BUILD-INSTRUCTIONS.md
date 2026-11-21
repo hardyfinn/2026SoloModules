@@ -1,6 +1,6 @@
 # Cymbolism Fable: build instructions
 
-A single VCV Rack module that physically models one cymbal at a time (crash, ride, china, splash, flat ride, bell and more; no hi-hats) for the most realistic sound we can get on a CPU. Written by Fable on 2026-11-21 for an Opus build session.
+A single VCV Rack module that physically models one cymbal at a time (crash, ride, china, splash, flat ride, bell and more; no hi-hats) for the most realistic sound we can get on a CPU. Written on 2026-11-21 by Opus 5.5 (this thread ran on Opus throughout, not Fable) for the build.
 
 Hardy's decisions (2026-11-21):
 - One module. Mono output. Monophonic (one cymbal ringing at a time).
