@@ -44,7 +44,10 @@ struct StressMode {
 	std::vector<BBlock> blocks;
 	std::vector<int> aIdx;      // core indices with nonzero A
 	std::vector<double> aVal;
-	std::vector<double> bdiagUpper;  // B_n,ii for upper modes (s = 0 only): shimmer FM
+	// extended coupling (low stress modes only): zeta_n += sum_k pc[k] q[pi[k]] q[pj[k]]
+	// (pc already includes the factor 2 for i != j)
+	std::vector<int> pi, pj;
+	std::vector<double> pc;
 };
 
 struct Model {
@@ -61,7 +64,12 @@ struct Model {
 	std::vector<CoreClass> classes;
 	std::vector<int> classOf;       // core index -> class
 
-	std::vector<StressMode> stress;
+	std::vector<StressMode> stress;  // stress[0 .. nLow) carry extended (upper-mode) pairs
+	int nLow = 0;
+	double aScale = 1.0;            // factor applied to A to keep diag(w^2) - A^T A >= 0
+	double minEigCore = 0.0;        // smallest eigenvalue of that matrix (before scaling), for tests
+	double tensionUsed = 0.0;       // TENSION after clamping
+	int nUpperPairs = 0;
 
 	std::vector<float> gridR;       // radial lookup grid
 	double fTopCore = 0;
@@ -90,6 +98,8 @@ struct SolverOpts {
 	double fMax = 0;           // 0 = automatic (min(20k, 0.42 fs))
 	int coreModes = -1;        // -1 = from quality
 	int stressModes = -1;
+	int lowStress = -1;        // stress modes with extended coupling
+	int pairsPerMode = -1;
 	bool mountSprings = true;
 };
 std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt);

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <cstdio>
 
 namespace cy {
 
@@ -67,28 +68,45 @@ static const CymbalType CY_TYPES[NUM_TYPES] = {
 	{"BELL", 8, 3.00, 1.2, 0.250, 0.60, 25, 0, TIP, 0.10, 0},
 };
 
-// Everything that changes the mode set (a "rebuild").
+// Everything that changes the mode set (a "rebuild"). SIZE and MOUNT are not
+// here: the model is built at the type's reference size and scaled exactly at
+// run time (all lengths x lambda => frequencies / lambda), and the mount is a
+// first-order correction applied by the engine.
 struct GeomParams {
 	int type = 1;
-	double sizeIn = 18.0;
-	double edgeMm = 0.85;
+	double weight = 1.0;     // thickness relative to the type's reference (0.5 .. 2.5)
 	double taper = 1.7;
 	double rise = 0.07;
 	double bell = 1.0;       // x the type's bell size
 	double flangeDeg = 0.0;
 	int alloy = B20;
-	double mount = 0.5;      // 0 tight .. 1 loose
+	double tension = 0.0;    // -1 .. +1 residual hammering stress
 	int quality = 1;         // 0 ECO, 1 HIGH, 2 ULTRA
-	double sampleRate = 48000.0;
+	double sampleRate = 48000.0;   // engine rate (host rate x oversampling)
+	double overrideSizeIn = 0.0;   // tests only: build at this diameter instead of the type's
+	double overrideEdgeMm = 0.0;   // tests only
+	double overrideR0 = 0.0;       // tests only: hole radius (m)
+	double overrideSphereR = 0.0;  // tests only: uniform spherical cap of this radius (m), no bell
 
-	// Quantised key for the model cache.
 	std::string key() const {
 		char buf[256];
-		snprintf(buf, sizeof(buf), "%d|%.2f|%.3f|%.2f|%.4f|%.2f|%.1f|%d|%.2f|%d|%.0f", type, sizeIn, edgeMm, taper, rise, bell,
-		         flangeDeg, alloy, mount, quality, sampleRate);
+		snprintf(buf, sizeof(buf), "%d|%.3f|%.2f|%.4f|%.2f|%.1f|%d|%.3f|%d|%.0f|%.3f|%.3f|%.4f", type, weight, taper, rise, bell,
+		         flangeDeg, alloy, tension, quality, sampleRate, overrideSizeIn, overrideEdgeMm, overrideR0 + overrideSphereR * 1000.0);
 		return buf;
 	}
+	void fromType(int t) {
+		const auto& ct = CY_TYPES[t];
+		type = t;
+		weight = 1.0;
+		taper = ct.taper;
+		rise = ct.rise;
+		bell = 1.0;
+		flangeDeg = ct.flangeDeg;
+	}
 };
+
+// SIZE range, relative to the type's reference diameter
+static const double CY_SIZE_MIN = 0.6, CY_SIZE_MAX = 1.5;
 
 // Derived shape of the shell, in SI units.
 struct Shape {
@@ -97,24 +115,32 @@ struct Shape {
 	double Hb;          // bell height above the bow (m)
 	double he, T, Tb;   // edge thickness (m), taper, bell thickness factor
 	double rf, tanF;    // flange start radius, tan(flange angle)
+	double sphR = 0;    // tests: spherical cap radius (0 = cymbal profile)
 	Material mat;
 
 	void make(const GeomParams& g) {
 		const CymbalType& ct = CY_TYPES[g.type];
-		a = g.sizeIn * 0.0254 * 0.5;
-		r0 = 0.0065;
+		a = (g.overrideSizeIn > 0 ? g.overrideSizeIn : ct.sizeIn) * 0.0254 * 0.5;
+		r0 = g.overrideR0 > 0 ? g.overrideR0 : 0.0065;
 		double bellFrac = ct.bellDia * g.bell;
 		if (bellFrac > 0.75) bellFrac = 0.75;
 		rb = bellFrac * a;
 		if (rb < r0 + 0.002) rb = r0;     // no bell
 		H = g.rise * a;
-		Hb = (rb > r0) ? ct.bellMm * 1e-3 * g.bell * (g.sizeIn / ct.sizeIn > 0 ? 1.0 : 1.0) : 0.0;
-		he = g.edgeMm * 1e-3;
+		Hb = (rb > r0) ? ct.bellMm * 1e-3 * g.bell : 0.0;
+		he = (g.overrideEdgeMm > 0 ? g.overrideEdgeMm : ct.edgeMm * g.weight) * 1e-3;
 		T = g.taper;
 		Tb = T * 1.15;
 		rf = 0.86 * a;
 		tanF = std::tan(g.flangeDeg * CY_PI / 180.0);
 		mat = CY_MATERIALS[g.alloy];
+		sphR = g.overrideSphereR;
+		if (sphR > 0) {
+			rb = r0;
+			Hb = 0;
+			T = 1;
+			tanF = 0;
+		}
 	}
 
 	// bow slope at rb (the bow is a parabola from (rb, H) to (a, 0))
@@ -123,6 +149,11 @@ struct Shape {
 
 	// mid-surface height z(r) and slope z'(r)
 	void z(double r, double& zz, double& zp) const {
+		if (sphR > 0) {
+			zz = std::sqrt(sphR * sphR - r * r) - std::sqrt(sphR * sphR - a * a);
+			zp = -r / std::sqrt(sphR * sphR - r * r);
+			return;
+		}
 		if (r >= rb || rb <= r0) {
 			zz = bowZ(r);
 			zp = bowZp(r);
