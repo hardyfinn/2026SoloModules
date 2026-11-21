@@ -1,0 +1,23 @@
+{
+  "slug": "ClapfallFable",
+  "name": "Clapfall Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Clapfall",
+      "name": "Clapfall",
+      "description": "Multi-particle percussion: bursts of modelled hand claps, snaps, sticks, coins and drum-machine noise pulses, from a tight 808 clap to a hall of applause",
+      "tags": ["Drum", "Percussion", "Granular", "Synth voice"]
+    }
+  ]
+}
