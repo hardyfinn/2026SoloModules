@@ -24,13 +24,13 @@ PATINA = "#7FA58F"    # verdigris accent
 SOFT = "#B7A888"
 
 # ---- LAYOUT (same numbers in src/Cymbolism.cpp) ----
-DISP_X, DISP_Y, DISP_W, DISP_H = 5.0, 14.0, 98.0, 45.0
+DISP_X, DISP_Y, DISP_W, DISP_H = 5.0, 14.0, 98.0, 42.0
 TYPE_X, TYPE_Y = 116.0, 27.0
 NEW_X, NEW_Y = 116.0, 48.0
 POS_X, FORCE_X, BIG_Y = 142.0, 168.0, 27.0
 STRIKE_X, STRIKE_Y, CHOKE_Y = 192.0, 23.0, 43.0
 ROWA_Y, ROWA_X0, ROWA_DX = 69.0, 13.0, 22.0
-ROWB_Y, ROWB_X0, ROWB_DX = 89.0, 12.0, 20.0
+ROWB_Y, ROWB_X0, ROWB_DX = 89.0, 14.0, 19.6
 JACK1_Y, JACK2_Y, JACK_X0, JACK_DX = 106.5, 119.0, 10.0, 16.6
 
 CONTROL = 3.2   # control label size (project standard)
@@ -94,8 +94,8 @@ add(text("hold", STRIKE_X, CHOKE_Y + 7.4, SMALL, fill=SOFT))
 add(f'<rect x="2.6" y="{ROWA_Y - 11.4}" width="{W - 5.2}" height="20.6" rx="1.4" fill="{BG_ROW}"/>')
 add(f'<rect x="2.6" y="{ROWA_Y - 11.4}" width="{W - 5.2}" height="0.5" fill="{GOLD}" fill-opacity="0.6"/>')
 namesA = ["SIZE", "WEIGHT", "TAPER", "PROFILE", "BELL", "FLANGE", "ALLOY", "HAMMER", "TENSION"]
-marksA = [("6\"", "24\""), ("THIN", "HEAVY"), ("EVEN", "THICK"), ("FLAT", "HIGH"), ("NONE", "BIG"),
-          ("DOWN", "UP"), None, ("SPUN", "HAND"), ("LOOSE", "TIGHT")]
+marksA = [("6\"", "24\""), ("THIN", "HEAVY"), None, ("FLAT", "HIGH"), None,
+          ("DOWN", "UP"), None, ("SPUN", "HAND"), ("-", "+")]
 for i, n in enumerate(namesA):
     x = ROWA_X0 + ROWA_DX * i
     add(text(n, x, ROWA_Y - 7.0, CONTROL, fill=GOLD))
@@ -105,7 +105,7 @@ for i, n in enumerate(namesA):
 # ---- row B: sound (no rebuild) and playing
 add(f'<rect x="2.6" y="{ROWB_Y - 10.4}" width="{W - 5.2}" height="19.8" rx="1.4" fill="{BG_ROW}"/>')
 namesB = ["DECAY", "BLOOM", "DAMP", "MOUNT", "SIZZLE", "MIC", "PLAY", "HARDNESS", "RATE", "EXC"]
-marksB = [("SHORT", "LONG"), ("0", "2"), ("OPEN", "TAPE"), ("TIGHT", "LOOSE"), ("0", "12"), ("BELL", "ROOM"),
+marksB = [("SHORT", "LONG"), ("0", "2"), None, ("TIGHT", "LOOSE"), ("0", "12"), ("BELL", "ROOM"),
           None, ("SOFT", "HARD"), ("2", "30"), ("0", "1")]
 for i, n in enumerate(namesB):
     x = ROWB_X0 + ROWB_DX * i

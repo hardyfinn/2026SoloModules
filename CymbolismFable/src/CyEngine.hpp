@@ -86,6 +86,15 @@ public:
 	double dcX = 0, dcY = 0;
 	double outGain = 0.0008;  // pickup units -> volts (medium crash hit at BOW ~3 V peak)
 	double lp = 0, lpA = 1.0;         // ROOM air absorption
+	// mic and air: a gentle 2-pole roll-off above about 11 kHz (bright, not fizzy)
+	double bq[5] = {1, 0, 0, 0, 0}, bz1 = 0, bz2 = 0;
+	void setupAir() {
+		double fc = 11000.0, Q = 0.6;
+		double w0 = 2 * CY_PI * std::min(fc, 0.45 * fsHost) / fsHost, al = std::sin(w0) / (2 * Q), cs = std::cos(w0);
+		double a0 = 1 + al;
+		bq[0] = (1 - cs) / 2 / a0; bq[1] = (1 - cs) / a0; bq[2] = bq[0];
+		bq[3] = -2 * cs / a0; bq[4] = (1 - al) / a0;
+	}
 	double lastEnergy = 0;
 	int guardEvents = 0;
 	int ctlCounter = 0;
@@ -99,7 +108,7 @@ public:
 	void init(std::shared_ptr<const Model> model, double hostRate) {
 		M = model;
 		fsHost = hostRate;
-		OS = M->gp.quality >= 2 ? 2 : 1;
+		OS = 1;   // 2x oversampling measured at ~3x the CPU for no audible gain below 20 kHz
 		fs = fsHost * OS;
 		k = 1.0 / fs;
 		N = (int)M->modes.size();
@@ -132,6 +141,7 @@ public:
 		}
 		for (double& h : firH) h /= sum;
 		firBuf.assign(2 * L, 0.0);
+		setupAir();
 		firPos = 0;
 		beaters.assign(8, Contact());
 		rng.seed(ctl.seed);
@@ -601,7 +611,7 @@ public:
 				exciteDirty = false;
 			}
 		}
-		double fe = exc ? excite * ctl.excite * ctl.force * 4.0 : 0.0;
+		double fe = exc ? excite * ctl.excite * ctl.force * 1.0 : 0.0;
 		bool inj = ((stepCount++ & 3) == 0);
 		for (int i = 0; i < NA; i++) {
 			double fi = -grad[i];
@@ -691,7 +701,11 @@ public:
 			double yv = acc - dcX + 0.9995 * dcY;
 			dcX = acc;
 			dcY = yv;
-			lp += lpA * (yv - lp);
+			// transposed direct form II
+			double ya = bq[0] * yv + bz1;
+			bz1 = bq[1] * yv - bq[3] * ya + bz2;
+			bz2 = bq[2] * yv - bq[4] * ya;
+			lp += lpA * (ya - lp);
 			double o = lp * outGain * typeTrim();
 			if (!std::isfinite(o)) {
 				reset();
@@ -708,7 +722,7 @@ public:
 	// per-type output trim (equal loudness across the type table at a medium hit)
 	double typeTrim() const {
 		static const double T[NUM_TYPES] = {1.2, 1.0, 1.1, 1.0, 1.0, 0.8, 1.0, 1.15, 1.0, 0.45};
-		return T[M->gp.type] * (ctl.play == BOW ? 4.0 : 1.0);   // bowing is far quieter than striking
+		return ctl.play == BOW ? 6.0 : T[M->gp.type];   // bowing is far quieter than striking
 	}
 
 	// ---- brush grains: short half-sine wire impacts, applied as shaped impulses ----
@@ -871,6 +885,7 @@ public:
 	void energyGuard(bool driven) {
 		bool contact = false;
 		for (auto& c : beaters) contact |= c.active;
+		contact |= !rivets.empty();   // rivets trade energy with the shell
 		double E = energy() + vnl;
 		if (!std::isfinite(E)) { reset(); guardEvents++; guardE = 0; return; }
 		if (!driven && !contact && guardE > 0 && E > guardE * 1.05) {
@@ -889,6 +904,7 @@ public:
 		for (auto& c : beaters) c.active = false;
 		rivets.clear();
 		dcX = dcY = lp = 0;
+		bz1 = bz2 = 0;
 		for (auto& r : clk) r[0] = r[1] = 0;
 		grainQ.clear();
 		bowOn = false; bowFN = 0; bowTimer = 0;

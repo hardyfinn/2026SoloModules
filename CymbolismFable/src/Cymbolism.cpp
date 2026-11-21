@@ -8,13 +8,13 @@
 using namespace cy;
 
 // ---- LAYOUT (same numbers in res/make_panel.py) ----
-static const float DISP_X = 5.0f, DISP_Y = 14.0f, DISP_W = 98.0f, DISP_H = 45.0f;
+static const float DISP_X = 5.0f, DISP_Y = 14.0f, DISP_W = 98.0f, DISP_H = 42.0f;
 static const float TYPE_X = 116.0f, TYPE_Y = 27.0f;
 static const float NEW_X = 116.0f, NEW_Y = 48.0f;
 static const float POS_X = 142.0f, FORCE_X = 168.0f, BIG_Y = 27.0f;
 static const float STRIKE_X = 192.0f, STRIKE_Y = 23.0f, CHOKE_Y = 43.0f;
 static const float ROWA_Y = 69.0f, ROWA_X0 = 13.0f, ROWA_DX = 22.0f;
-static const float ROWB_Y = 89.0f, ROWB_X0 = 12.0f, ROWB_DX = 20.0f;
+static const float ROWB_Y = 89.0f, ROWB_X0 = 14.0f, ROWB_DX = 19.6f;
 static const float JACK1_Y = 106.5f, JACK2_Y = 119.0f, JACK_X0 = 10.0f, JACK_DX = 16.6f;
 
 static const char* QUALITY_NAMES[3] = {"ECO", "HIGH", "ULTRA"};
@@ -513,7 +513,7 @@ struct CymbolismWidget : ModuleWidget {
 		Cymbolism* m = getModule<Cymbolism>();
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
-		menu->addChild(createIndexSubmenuItem("Quality", {"ECO (lightest)", "HIGH (default)", "ULTRA (2x oversampled, heavy)"},
+		menu->addChild(createIndexSubmenuItem("Quality", {"ECO (lightest)", "HIGH (default)", "ULTRA (bigger nonlinear core, heavy)"},
 			[=]() { return m->quality; },
 			[=](int q) { m->quality = q; m->geomPending = true; m->lastGeom = GeomParams(); }));
 		menu->addChild(createBoolMenuItem("Run on its own thread", "",
