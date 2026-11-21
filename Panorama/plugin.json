@@ -1,0 +1,23 @@
+{
+  "slug": "Panorama",
+  "name": "Panorama",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Panorama",
+      "name": "Panorama",
+      "description": "Steel pan (tenor, double second, triple cello): modal note areas that ring into their neighbours, octave bloom, onset glide, rubber stick, rolls, and deliberately imperfect, re-rollable, hand-editable tuning. Poly gate + V/OCT in",
+      "tags": ["Physical modeling", "Drum", "Oscillator", "Polyphonic", "Stereo"]
+    }
+  ]
+}
