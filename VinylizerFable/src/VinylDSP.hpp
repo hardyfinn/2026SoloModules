@@ -211,10 +211,151 @@ struct Settings {
 	bool truePreEcho = false;
 };
 
+// ---- MASTER expander: what the cutting engineer was handed ----
+struct MasterSettings {
+	bool on = false;
+	int source = 0;       // 0 half-inch tape 30 ips, 1 quarter-inch 15 ips, 2 1630, 3 DAT, 4 CD master
+	float drive = 0.3f, print = 0, nr = 0, hiss = 0.3f;
+	float convert = 0.5f; // converter quality: 0 early, 1 transparent
+	int bits = 1;         // 0 = 14 bit, 1 = 16 bit
+	int emphasis = 0;     // 0 correct, 1 missed (bright), 2 doubled (dull)
+	bool delayLine = false;
+	float loudDb = 0;
+};
+
+struct MasterStage {
+	MasterSettings s;
+	float limGR = 0;  // dB, for a light
+
+	void init(float sampleRate) {
+		fs = sampleRate;
+		print[0].init((int)(1.8f * fs)); print[1].init((int)(1.8f * fs));
+		nrEnv = 0; limGain = 1; ctr = 0;
+		update();
+	}
+
+	// l, r in volts
+	void process(float& l, float& r) {
+		if (--ctr <= 0) { ctr = 32; update(); }
+		float x[2] = {l * 0.2f, r * 0.2f};
+		bool tape = s.source <= 1;
+		if (tape) {
+			float hiA = 0;
+			float lo[2], hi[2];
+			for (int c = 0; c < 2; c++) {
+				float v = bump[c].process(lfHP[c].process(x[c]));
+				if (s.source == 1) v = hfLP[c].process(v);
+				// record EQ lifts the treble before the oxide, so treble saturates first
+				float e = v + emphK * empHP[c].hp(v);
+				e = satT * std::tanh(e / satT);
+				v = e / (1.f + emphK) + (emphK / (1.f + emphK)) * deLP[c].lp(e);
+				lo[c] = nrSplit[c].lp(v); hi[c] = v - lo[c];
+				hiA = std::max(hiA, std::fabs(hi[c]));
+			}
+			// noise reduction decoded at the wrong level: quiet treble comes out too bright or too dull
+			nrEnv += (hiA - nrEnv) * (hiA > nrEnv ? nrAtk : nrRel);
+			float g = dbToGain(nrDb * (1.f - std::min(1.f, nrEnv / 0.05f)));
+			for (int c = 0; c < 2; c++) {
+				float v = lo[c] + hi[c] * g;
+				float n = rnd();
+				v += hissAmp * (0.3f * n + hissHP[c].hp(n));
+				print[c].push(v);
+				if (printGain > 0) v += printGain * printHP[c].hp(printLP[c].lp(print[c].at(printDelay)));
+				x[c] = v;
+			}
+		}
+		if (!tape || s.delayLine) {
+			for (int c = 0; c < 2; c++) {
+				float v = x[c];
+				if (aaOn) v = aa[c][2].process(aa[c][1].process(aa[c][0].process(v)));
+				v += dnl * (v > 0 ? 1.f : -1.f);
+				float d = dither ? (rnd() + rnd()) * 0.5f : 0.f;
+				v = qStep * std::floor(v / qStep + 0.5f + d);
+				x[c] = clampf(v, -2.f, 2.f);  // 0 dBFS = 10 V
+			}
+		}
+		if (!tape && s.emphasis != 0)
+			for (int c = 0; c < 2; c++) x[c] = emph[c].process(x[c]);
+		if (s.loudDb > 0.05f) {
+			float pk = std::max(std::fabs(x[0]), std::fabs(x[1])) * loudG;
+			float target = pk > 1.f ? 1.f / pk : 1.f;
+			if (target < limGain) limGain = target; else limGain += (target - limGain) * limRel;
+			x[0] *= loudG * limGain; x[1] *= loudG * limGain;
+			limGR = 20.f * std::log10(std::max(limGain, 1e-4f));
+		}
+		else limGR = 0;
+		l = x[0] * 5.f; r = x[1] * 5.f;
+	}
+
+private:
+	float fs = 48000;
+	int ctr = 0;
+	Biquad bump[2], lfHP[2], hfLP[2], aa[2][3], emph[2];
+	OnePole empHP[2], deLP[2], nrSplit[2], hissHP[2], printLP[2], printHP[2];
+	Ring print[2];
+	uint32_t rs = 777;
+	float emphK = 2, satT = 5, nrEnv = 0, nrAtk = 0.01f, nrRel = 0.001f, nrDb = 0, hissAmp = 0, printGain = 0;
+	int printDelay = 1000;
+	bool aaOn = false, dither = true;
+	float dnl = 0, qStep = 1e-4f, loudG = 1, limGain = 1, limRel = 0.001f;
+
+	float rnd() { rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5; return (rs / 4294967295.f) * 2.f - 1.f; }
+
+	void update() {
+		bool q = s.source == 1;
+		for (int c = 0; c < 2; c++) {
+			bump[c].peak(fs, q ? 60.0 : 110.0, 1.0, q ? 1.8 : 1.0);
+			lfHP[c].highpass(fs, q ? 22.0 : 28.0, 0.707);
+			hfLP[c].lowpass(fs, 20000.0, 0.6);
+			empHP[c].set(fs, 5000.f);
+			deLP[c].set(fs, 5000.f / (1.f + emphK));
+			nrSplit[c].set(fs, 3000.f);
+			hissHP[c].set(fs, 2000.f);
+			printLP[c].set(fs, 2500.f); printHP[c].set(fs, 400.f);
+		}
+		emphK = q ? 3.5f : 2.f;
+		float d = clampf(s.drive, 0, 1);
+		satT = q ? 4.f + (0.8f - 4.f) * d : 5.f + (1.2f - 5.f) * d;
+		nrAtk = 1.f - std::exp(-1.f / (0.002f * fs));
+		nrRel = 1.f - std::exp(-1.f / (0.08f * fs));
+		nrDb = 3.f * s.nr;
+		hissAmp = s.hiss > 0.f ? dbToGain(-78.f + 30.f * s.hiss) * (q ? 1.4f : 1.f) : 0.f;
+		printGain = s.print > 0.f ? dbToGain(-60.f + 28.f * s.print) : 0.f;
+		printDelay = std::min((int)((q ? 1.65f : 0.82f) * fs), (int)(1.75f * fs));  // one turn of the reel
+		// converter
+		float cq = clampf(s.convert, 0, 1);
+		float fc = s.source == 3 ? 21500.f : 20000.f;
+		aaOn = cq < 0.95f && fc < 0.46f * fs;
+		const double qe[3] = {0.55, 1.2, 4.0}, qb[3] = {0.518, 0.707, 1.93};
+		for (int c = 0; c < 2; c++)
+			for (int i = 0; i < 3; i++) aa[c][i].lowpass(fs, fc, qe[i] + (qb[i] - qe[i]) * cq);
+		qStep = 4.f / (s.bits ? 65536.f : 16384.f);
+		dither = cq > 0.5f;
+		dnl = (1.f - cq) * 1.5f * qStep;
+		for (int c = 0; c < 2; c++) {
+			if (s.emphasis == 1) emph[c].setAnalog(1, 50e-6, 0, 1, 15e-6, 0, 2.0 * fs);
+			else emph[c].setAnalog(1, 15e-6, 0, 1, 50e-6, 0, 2.0 * fs);
+		}
+		loudG = dbToGain(s.loudDb);
+		limRel = 1.f - std::exp(-1.f / (0.05f * fs));
+	}
+};
+
+// ---- PRESSING expander: the plant and the life of the disc ----
+struct PressSettings {
+	bool on = false;
+	int stock = 0;  // 0 virgin vinyl, 1 regrind, 2 styrene, 3 flexi, 4 picture disc
+	float noise = 1, nonfill = 0, stamper = 0.2f, weight = 120, dust = 0, scratch = 0, cueBurn = 0;
+};
+
+struct Scratch { float theta, needle, depth; };
+
 struct Meters {
 	float hflGR = 0, excGR = 0, mistrack = 0, overload = 0;
 	float radius = 0.146f, grooveSpeed = 0.5f, pitch = 0.1e-3f, rEnd = 0.06f, rOut = 0.146f, rMin = 0.06f;
 	float trackErrDeg = 0, sideDb = 0, contactUm = 0;
+	float fluff = 0;
+	bool nonfill = false, rotation = false, skip = false;  // rotation and skip are set here and cleared by the reader
 	int latency = 0;
 };
 
@@ -222,6 +363,21 @@ class Engine {
 public:
 	Settings s;
 	Meters m;
+	MasterStage master;
+	PressSettings ps;
+	static constexpr int kMaxScratch = 11;
+	Scratch scratches[kMaxScratch];
+	int nScratch = 3;
+
+	void clearScratches() {
+		scratches[0] = {1.0f, 0.20f, 0.6f}; scratches[1] = {3.1f, 0.55f, 0.8f}; scratches[2] = {5.2f, 0.85f, 1.0f};
+		nScratch = 3;
+	}
+	void addScratch(float theta, float needle, float depth) {
+		if (nScratch < kMaxScratch) { scratches[nScratch] = {theta, needle, depth}; nScratch++; }
+	}
+	void addScratchHere() { addScratch(prnd01() * 6.2831f, s.needle, 0.6f + 0.4f * prnd01()); }
+	void clean() { fluff = 0; }
 
 	void init(float sampleRate) {
 		fs = sampleRate;
@@ -250,6 +406,10 @@ public:
 		hfEnv = 0; hfGain = 1; exEnv = 0; exGain = 1; zPrev = zcPrev = 0;
 		theta = 0; wowInt = 0; zrelPrev = 0;
 		ctr = 0;
+		master.init(fs);
+		if (!scratchInit) { clearScratches(); scratchInit = true; }
+		for (auto& t : ticks) t.n = 0;
+		fluff = 0; nfActive = false; nfGap = 4; pEnv = 0;
 		update();
 	}
 
@@ -257,6 +417,7 @@ public:
 		if (--ctr <= 0) { ctr = 32; update(); }
 		dryBuf[0].push(inL); dryBuf[1].push(inR);
 		dryL = dryBuf[0].at(latency); dryR = dryBuf[1].at(latency);
+		if (master.s.on) master.process(inL, inR);
 
 		float xL = inL * kInScale, xR = inR * kInScale;
 
@@ -343,6 +504,13 @@ public:
 				}
 			}
 		}
+		if (ps.on && pressLenOn) {  // tired stamper / cue burn: the shortest groove shapes are rounded off
+			for (int c = 0; c < 2; c++) {
+				v[c] = pressLP[c].lp(v[c]);
+				float lo = pressSplit[c].lp(v[c]), hi = v[c] - lo;
+				v[c] = lo + pressThr * std::tanh(hi / pressThr);
+			}
+		}
 		float g[2];
 		for (int c = 0; c < 2; c++) {
 			cutBuf[c].push(v[c]);
@@ -378,8 +546,10 @@ public:
 			}
 			dev = wowPct * w + flPct * f;
 		}
+		double thetaPrev = theta;
 		theta += 2 * kPi * revHz * (1.0 + dev) / fs;
-		if (theta > 2 * kPi) theta -= 2 * kPi;
+		bool wrapped = false;
+		if (theta > 2 * kPi) { theta -= 2 * kPi; wrapped = true; m.rotation = true; }
 		cogPh += 2.f * (float) kPi * cogHz / fs; if (cogPh > 2 * kPi) cogPh -= 2.f * (float) kPi;
 		beltPh += 2.f * (float) kPi * beltHz / fs; if (beltPh > 2 * kPi) beltPh -= 2.f * (float) kPi;
 		wowInt = wowInt * wowLeak - dev / fs;
@@ -388,6 +558,7 @@ public:
 		if (s.armOn) d += zrelPrev * 0.364f / vg * fs;  // warp wow through vertical tracking angle
 		d = clampf(d, 3.f, 2.f * center + 8.f);
 		float wl = groove[0].frac(d), wr = -groove[1].frac(d);  // to wall coordinates
+		if (ps.on) pressing(wl, wr, thetaPrev, wrapped);
 
 		// -- oversampled stylus / groove contact --
 		float o[2] = {0, 0};
@@ -465,6 +636,7 @@ public:
 			mistrackN = 0; mistrackCtr = 0;
 		}
 		float pL = o[0], pR = -o[1];  // back to channel signals
+		if (ps.on && fluff > 0.002f) { pL = fluffLP[0].lp(pL); pR = fluffLP[1].lp(pR); }  // fluff on the tip
 
 		// 7 CARTRIDGE
 		if (s.cartOn) {
@@ -557,6 +729,99 @@ private:
 	float cogPh = 0, beltPh = 0, cogHz = 7, beltHz = 0.6f, revHz = 0.5556f;
 	float wowInt = 0, wowLeak = 1, eccTerm = 0, wowPct = 0, flPct = 0;
 	SmoothRandom wowRnd, flRnd;
+
+	// pressing
+	struct Tick { int n = 0, len = 1; float amp = 0, mixL = 0, mixR = 0; };
+	Tick ticks[6];
+	bool scratchInit = false;
+	uint32_t prs = 4242;
+	float fluff = 0, pEnv = 0, noiseAmp = 0, burstK = 0, pressThr = 10, ringK = 0, tickRate = 0, nfState = 0, nfTheta = 0, nfWidth = 0.2f;
+	bool nfActive = false, pressLenOn = false;
+	int nfGap = 4, nfTurns = 0, nfWall = 0;
+	SmoothRandom burstRnd;
+	OnePole pressLP[2], pressSplit[2], noiseHP[2], fluffLP[2], nfLP;
+	Biquad ringBP;
+
+	float prnd() { prs ^= prs << 13; prs ^= prs >> 17; prs ^= prs << 5; return (prs / 4294967295.f) * 2.f - 1.f; }
+	float prnd01() { return 0.5f + 0.5f * prnd(); }
+
+	void startTick(float amp, float widthM, float mixL, float mixR) {
+		for (auto& t : ticks) if (t.n <= 0) {
+			t.len = (int) clampf((float)(widthM / vg) * fs, 3.f, 60.f);
+			t.n = t.len; t.amp = amp; t.mixL = mixL; t.mixR = mixR;
+			return;
+		}
+	}
+
+	// Defects are shapes in the groove wall (wall coordinates, velocity units), read by the stylus like the music.
+	void pressing(float& wl, float& wr, double thetaPrev, bool wrapped) {
+		// surface roughness: mostly vertical, rougher where the groove is heavily modulated
+		pEnv += ((std::fabs(wl) + std::fabs(wr)) * 0.25f - pEnv) * 0.001f;
+		float a = noiseAmp * (1.f + 1.5f * std::min(1.f, pEnv));
+		if (burstK > 0) { float b = std::fabs(burstRnd.next(3.f, fs)); a *= 1.f + burstK * b * b * b * b; }
+		if (ps.stock == 4) a *= 1.f + 0.3f * std::sin((float) theta);
+		float nv = prnd(), nl = prnd();
+		float vV = a * (0.7f * nv + 0.8f * noiseHP[0].hp(nv));
+		float vL = 0.5f * a * (0.7f * nl + 0.8f * noiseHP[1].hp(nl));
+		wl += 0.7071f * (vV + vL); wr += 0.7071f * (vV - vL);
+
+		// non-fill: a patch where the vinyl never reached the stamper, at the same place each turn for a few turns
+		if (wrapped) {
+			if (nfActive) { if (--nfTurns <= 0) { nfActive = false; nfGap = 2 + (int)(prnd01() * 24.f * (1.05f - ps.nonfill)); } }
+			else if (ps.nonfill > 0.01f && --nfGap <= 0) {
+				nfActive = true; nfTheta = prnd01() * 6.0f; nfWidth = 0.08f + 0.22f * prnd01();
+				nfTurns = 3 + (int)(prnd01() * 6.f); nfWall = prnd() > 0 ? 1 : 0;
+			}
+		}
+		m.nonfill = false;
+		if (nfActive) {
+			float dth = (float) theta - nfTheta;
+			if (dth > 0 && dth < nfWidth) {
+				m.nonfill = true;
+				if (prnd01() < 900.f / fs) nfState = prnd() * 2.5f * ps.nonfill;
+				float win = std::sin((float) kPi * dth / nfWidth);
+				float n = nfLP.lp(nfState) * win;
+				nfState *= 0.7f;
+				if (nfWall) wr += n; else wl += n;
+			}
+		}
+
+		// dust: fluff builds up on the tip, particles are bumps in the groove
+		if (ps.dust > 0) {
+			fluff = std::min(1.f, fluff + ps.dust / (180.f * fs));
+			if (prnd01() < tickRate / fs) {
+				float r = prnd01();
+				startTick(0.3f + 1.6f * r * r, 40e-6f, prnd(), prnd());
+			}
+		}
+		m.fluff = fluff;
+
+		// scratches: a radial cut crossed once per turn while the needle is in its part of the side
+		if (ps.scratch > 0.01f) {
+			for (int i = 0; i < nScratch; i++) {
+				const Scratch& sc = scratches[i];
+				if (std::fabs(sc.needle - s.needle) > 0.07f) continue;
+				bool hit = wrapped ? (sc.theta > thetaPrev || sc.theta <= theta) : (sc.theta > thetaPrev && sc.theta <= theta);
+				if (hit) {
+					float d = ps.scratch * sc.depth;
+					startTick(7.f * d, 90e-6f, 1.f, -0.6f);
+					if (d > 0.8f) m.skip = true;
+				}
+			}
+		}
+		for (auto& t : ticks) if (t.n > 0) {
+			float u = 1.f - 2.f * (float) t.n / t.len;  // -1..1 across the bump
+			float w = -3.3f * u * std::exp(-4.f * u * u) * t.amp;
+			wl += t.mixL * w; wr += t.mixR * w;
+			t.n--;
+		}
+
+		// a thin disc rings under the stylus
+		if (ringK > 0) {
+			float r = ringBP.process((wl + wr) * 0.7071f) * ringK * 0.7071f;
+			wl += r; wr += r;
+		}
+	}
 	Biquad scanLP[2];
 	OnePole xtHP[2], iecHP[2];
 	Biquad cartE[2], cartM[2], armHP[2], warpHP, subHP[2];
@@ -583,6 +848,8 @@ private:
 		m.sideDb = sideDb;
 		gCut = s.cutOn ? dbToGain(s.cutLevelDb + sideDb) : 1.f;
 		float sideHz = clampf(20.f * std::pow(pRef / pitch, 1.5f), 20.f, 60.f);
+		bool flexi = ps.on && ps.stock == 3;
+		if (flexi) { gCut *= 0.5f; sideHz = std::max(sideHz, 70.f); }  // flexi discs: shallow, quiet cut with little bass
 		for (int c = 0; c < 2; c++) sideHP[c].highpass(fs, sideHz, 0.707);
 		yMax = 0.45f * pitch;
 		exLeak = std::exp(-2.f * (float) kPi * 5.f / fs);
@@ -644,7 +911,7 @@ private:
 		// platter
 		const float driveScale[3] = {0.15f, 1.f, 2.5f};
 		int dv = std::min(std::max(s.drive, 0), 2);
-		wowPct = s.wow * 0.003f * driveScale[dv];
+		wowPct = s.wow * 0.003f * driveScale[dv] + (flexi ? 0.002f : 0.f);  // a flexi slips on the mat
 		flPct = s.flutter * 0.002f * driveScale[dv];
 		cogHz = dv == 0 ? revHz * 12.f : (dv == 1 ? revHz * 15.f : 25.f);
 		beltHz = dv == 2 ? 1.1f : 0.6f;
@@ -663,6 +930,7 @@ private:
 		double me = meffT[std::min(std::max(s.cartModel, 0), 2)];
 		aMax[0] = Fwall * (1 + 0.35 * s.balance) / me;
 		aMax[1] = Fwall * (1 - 0.35 * s.balance) / me;
+		if (ps.on) { aMax[0] *= 1.0 - 0.7 * fluff; aMax[1] *= 1.0 - 0.7 * fluff; }  // riding on fluff
 		// cantilever compliance (m/N): DJ stiff, hi-fi MM soft, MC medium
 		const double compT[3] = {0.010, 0.020, 0.012};
 		kOverM = 1.0 / (compT[std::min(std::max(s.cartModel, 0), 2)] * me);
@@ -686,7 +954,9 @@ private:
 		{
 			const double Estar[3] = {3.4e9, 3.4e9, 1.8e9};  // vinyl pressing, DMM pressing, acetate lacquer
 			double Ra = rho;  // radius along the groove
-			double a = std::cbrt(3.0 * Fwall * Ra / (4.0 * Estar[std::min(std::max(s.medType, 0), 2)]));
+			double E = Estar[std::min(std::max(s.medType, 0), 2)];
+			if (ps.on && s.medType != 2) { const double Es[5] = {3.4e9, 3.2e9, 3.3e9, 1.5e9, 2.8e9}; E = Es[std::min(std::max(ps.stock, 0), 4)]; }
+			double a = std::cbrt(3.0 * Fwall * Ra / (4.0 * E));
 			double scanHz = 1.7 * vg / (kPi * a);
 			for (int c = 0; c < 2; c++) scanLP[c].lowpass(fsOS, scanHz, 0.5);
 			m.contactUm = (float)(2e6 * a);
@@ -719,6 +989,7 @@ private:
 			for (int c = 0; c < 2; c++) armHP[c].highpass(fs, s.armRes, q);
 			warpHP.highpass(fs, s.armRes, q);
 			warpAmp = s.warpMm * 1e-3f;
+			if (ps.on) warpAmp += 0.5e-3f * clampf((180.f - ps.weight) / 90.f, 0.f, 1.f);  // thin discs are never flat
 		}
 
 		// phono
@@ -730,6 +1001,33 @@ private:
 			tubeHP[c].set(fs, 6.f); djHP[c].set(fs, 25.f);
 			subHP[c].highpass(fs, 18.f, 0.7071);
 			iecHP[c].set(fs, 20.02f);  // IEC amendment, 7950 us
+		}
+
+		// pressing
+		{
+			int sk = std::min(std::max(ps.stock, 0), 4);
+			const float base[5] = {0.0012f, 0.0045f, 0.0020f, 0.0060f, 0.0110f};
+			const float burst[5] = {0.f, 3.f, 0.5f, 1.f, 0.3f};
+			const float wearMul[5] = {1.f, 1.2f, 6.f, 3.f, 1.5f};
+			float st = clampf(ps.stamper, 0, 1);
+			float cueW = clampf(1.f - s.needle / 0.03f, 0.f, 1.f) * ps.cueBurn;
+			noiseAmp = base[sk] * ps.noise * (1.f + 2.f * st) * (1.f + 3.f * cueW);
+			burstK = burst[sk];
+			float len = 3.0e-6f * st * st + 6.0e-6f * cueW * wearMul[sk] / 6.f + 1.0e-6f * cueW;
+			float hz = len > 1e-8f ? (float) vg / ((float) kPi * len) : 1e9f;
+			pressLenOn = hz < 0.45f * fs;
+			pressThr = 14.f / (1.f + 4.f * st + 4.f * cueW);
+			float thin = clampf((180.f - ps.weight) / 90.f, 0.f, 1.f);
+			ringK = 0.35f * thin;
+			tickRate = ps.dust * 7.f;
+			for (int c = 0; c < 2; c++) {
+				pressLP[c].set(fs, std::min(hz, 0.45f * fs)); pressSplit[c].set(fs, 3000.f);
+				noiseHP[c].set(fs, 3000.f);
+				fluffLP[c].set(fs, 21000.f / (1.f + 10.f * fluff * fluff));
+			}
+			nfLP.set(fs, 6000.f);
+			double w = 2 * kPi * 230.0;
+			ringBP.setAnalog(0, 1.0 / (6.0 * w), 0, 1, 1.0 / (6.0 * w), 1.0 / (w * w), Biquad::warpK(fs, 230.0));
 		}
 
 		latency = center + osLatency + (s.truePreEcho ? trev : 0);

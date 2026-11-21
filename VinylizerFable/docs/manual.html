@@ -18,7 +18,7 @@ th { background: #f3ece3; }
 code { font-size: 9.4pt; }
 </style></head><body>
 <h1>Vinylizer <span>Fable</span></h1>
-<p class="lead">One 50 HP VCV Rack module that puts audio through the whole chain of a 1990s record, modelled from the physics of cutting, pressing and playing a groove. There is no crackle, no pops and no hiss: everything you hear comes from what the medium does to the signal.</p>
+<p class="lead">One 50 HP VCV Rack module that puts audio through the whole chain of a 1990s record, modelled from the physics of cutting, pressing and playing a groove. Nothing is mixed over the sound: everything you hear comes from what the medium does to the signal. Two expanders, Master and Pressing, add the master tape or early digital source in front of the lathe and the faults of a poor pressing in the groove.</p>
 <img src="../panel-preview.png">
 
 <h2>How the chain works</h2>
@@ -65,6 +65,44 @@ code { font-size: 9.4pt; }
 <div class="sec"><h3>10 PHONO: the preamp</h3>
 <p>Applies the RIAA playback curve after an input stage that can overload, because the input sees the treble-boosted signal. <b>TUBE</b>: soft, asymmetric saturation and a little 2nd harmonic. <b>OPAMP</b>: clean until it hits the rails. <b>DJ</b>: a typical budget club-mixer phono input, with less headroom and a curve that is slightly bass-heavy and dull on top. This is a generalisation, not a measurement of a particular mixer. <b>GAIN</b> drives the input (level-matched afterwards), the OVL light shows overload. <b>TOLERANCE</b> shifts the curve's corner frequencies the way 5% parts do, tilting the bass up or down by a dB or two. <b>SUBSONIC</b> has three positions: OFF, <b>IEC</b> (the 1976 IEC amendment to the RIAA curve, a gentle 6 dB/oct roll-off from 20 Hz that many 80s and 90s stages built in) and <b>18Hz</b>, a steeper 12 dB/oct rumble filter. The input overload is modelled as one threshold on the full pre-emphasised signal; real stages vary with frequency and circuit.</p></div>
 
+<h2>The two expanders</h2>
+<p>Two more modules in the same plugin add what happened before the lathe and at the pressing plant. They have no audio jacks of their own. Place <b>Master</b> touching the <b>left</b> edge of Vinylizer Fable and <b>Pressing</b> touching its <b>right</b> edge. The green LINK light on each comes on when it is connected, and its controls then act inside the main module. Each has its own ON button. Use either one alone or both.</p>
+<img src="../expanders-preview.png" style="width:62%;display:block;margin:2mm auto">
+
+<div class="sec"><h3>MASTER: what the cutting engineer was handed (12 HP, left)</h3>
+<p>MASTER works on the audio before process 1, so everything it adds (tape hiss included) is then cut, pressed and played like the music.</p>
+<table>
+<tr><th style="width:22%">Control</th><th>What it does</th></tr>
+<tr><td>SOURCE</td><td><b>1/2" TAPE</b> at 30 ips: clean and extended. <b>1/4" TAPE</b> at 15 ips: a head bump in the bass, softer top, more hiss, saturates sooner. <b>1630</b>: the 80s CD mastering format, steep filters at 44.1 kHz. <b>DAT</b>: the usual 90s source for dance 12"s, cleaner converters. <b>CD MASTER</b>: the finished CD master sent to the lathe; use it with LOUD.</td></tr>
+<tr><td>DRIVE</td><td>Level into the tape. Treble saturates first, then the bass thickens. Tape sources only. CV input.</td></tr>
+<tr><td>PRINT</td><td>Print-through: loud passages leak to the next layer on the reel and come back as a faint dull echo about one turn of the reel later (0.8 s at 30 ips, 1.6 s at 15 ips). Tape sources only.</td></tr>
+<tr><td>NR</td><td>Noise reduction decoded with the alignment off by up to 3 dB either way. The treble then moves with the level: left of centre it dulls quiet passages, right of centre it brightens them. Centre is correct. Tape sources only.</td></tr>
+<tr><td>HISS</td><td>Tape hiss, on the master and so under everything that follows. Higher on quarter-inch.</td></tr>
+<tr><td>CONVERT</td><td>Converter quality, for the digital sources and the delay line. Left: an early converter with a filter that rings near 20 kHz and small level-dependent errors. Right: transparent.</td></tr>
+<tr><td>LOUD</td><td>CD-style peak limiting before the cut, 0 to 10 dB, level made up afterwards. Flat-topped waves make HF LIMIT, the cutter and the stylus work much harder. The red light shows limiting. CV input.</td></tr>
+<tr><td>BITS</td><td>16 or 14 bit word length for the digital sources and the delay line. Full scale is 10 V, so quiet signals show it most.</td></tr>
+<tr><td>EMPHASIS</td><td>Early digital masters could carry treble pre-emphasis. OK: decoded properly. BRIGHT: the flag was missed, so the boost stays in. DULL: de-emphasis applied to a master that never had it.</td></tr>
+<tr><td>DELAY</td><td>Many lathes needed the audio a moment early to set groove spacing, and sent the cutting signal through a digital delay. ON passes a tape source through the converter as well, the reason plenty of "analogue" 80s LPs went through an early 16-bit converter.</td></tr>
+</table></div>
+
+<div class="sec"><h3>PRESSING: the plant, the plastic and the life of the disc (14 HP, right)</h3>
+<p>PRESSING changes the shape of the groove wall before the stylus reads it. Nothing is mixed over the output: roughness, dust and scratches are displacements in the groove, so the chosen stylus, cartridge and phono stage shape them as they shape the music. Surface noise is mostly vertical, so much of it cancels when you sum to mono, as on a real record.</p>
+<table>
+<tr><th style="width:22%">Control</th><th>What it does</th></tr>
+<tr><td>STOCK</td><td><b>VIRGIN</b>: quiet. <b>REGRIND</b>: recycled vinyl, about 12 dB more rush, with gritty patches. <b>STYRENE</b>: injection-moulded 7" single, bright when new and harder under the tip, but wears fast. <b>FLEXI</b>: cut 6 dB lower, bass removed below 70 Hz, extra wow. <b>PICTURE DISC</b>: a constant coarse hiss, about 19 dB above virgin vinyl.</td></tr>
+<tr><td>NOISE</td><td>Amount of wall roughness. Part is steady and part rises with groove modulation, so the noise breathes with loud passages. 1 is normal for the stock. CV input.</td></tr>
+<tr><td>NON-FILL</td><td>Patches where the vinyl did not fill the stamper: a short tearing sound on one wall at the same point of each turn for a few turns, then it moves on. The light shows a patch passing.</td></tr>
+<tr><td>STAMPER</td><td>How many discs the stamper has pressed, from new to 3000. A tired stamper rounds off the shortest groove shapes, so the treble loss is worse toward the label, and raises the noise. CV input.</td></tr>
+<tr><td>WEIGHT</td><td>Disc weight, 90 to 180 g. Thin discs warp more (it adds to ARM's WARP) and ring under the stylus, which smears the bass slightly.</td></tr>
+<tr><td>DUST</td><td>Dust particles in the groove, each a small bump read by the stylus, and fluff that builds up on the tip as you play: treble fades, then it mistracks. The light shows the fluff. <b>CLEAN</b> (button and trigger) blows it off. At 0 there are no ticks at all. CV input.</td></tr>
+<tr><td>SCRATCH</td><td>Depth of the scratches. <b>ADD</b> (button and trigger) makes a radial scratch at the current needle position, which then ticks once per turn while the needle is near it, with the thump of the arm behind it. Up to 11 are kept and saved with the patch. A deep one can throw the stylus. "Remove added scratches" is in the right-click menu.</td></tr>
+<tr><td>CUE BURN</td><td>Wear where a DJ back-cued: the first seconds of the side are duller and noisier, the rest is not.</td></tr>
+<tr><td>TURN out</td><td>A trigger once per turn of the record (every 1.8 s at 33, 1.33 s at 45). Clock anything from it.</td></tr>
+<tr><td>SKIP out</td><td>A gate while the stylus has left the groove, from mistracking or a deep scratch.</td></tr>
+</table>
+<p>The right-click menu has six presets: Test pressing, 1983 budget reissue, Chart 7" late in the run, Flexi from a magazine, White label 12", Charity-shop LP.</p>
+<div class="box">DUST and SCRATCH start at zero, so a new Pressing module gives you the plant's faults only: rush, non-fill, stamper wear and thin vinyl. Turn those two up only if you want ticks.</div></div>
+
 <h2>Patch recipes</h2>
 <div class="recipe"><b class="t">Club 12" off the shelf.</b> FORMAT to 12" 45. DJ cartridge, SPH stylus, FORCE 3 g, DIRECT drive, PHONO DJ. Feed it a mixdown. Bass goes mono, hats get tamed by HF LIMIT, the top gets the DJ cartridge's peak and fall. Then crank LEVEL to +9 and watch EXC and GR light on the kicks.</div>
 <div class="recipe"><b class="t">Last track on side B.</b> FORMAT LP 33, SIDE 25, HIFI cartridge, TUBE stage. Press PLAY SIDE with a long drone or pad. Over 25 minutes the needle moves in, the treble thickens and loses air, and you can hear inner groove distortion creep in. To hear the end at once, turn NEEDLE fully right.</div>
@@ -74,6 +112,12 @@ code { font-size: 9.4pt; }
 <div class="recipe"><b class="t">Mono check.</b> Turn everything on with NEEDLE fully right and listen to OUT L only, then sum both outputs into one mixer channel. A lot of the tracing distortion vanishes in mono, as it did on real records.</div>
 <div class="recipe"><b class="t">Just the warmth.</b> Turn off PLATTER and ARM, leave the rest on, MIX at 60%. The dry is time-aligned so there is no phasing; you get the vinyl density without any movement.</div>
 
+<div class="recipe"><b class="t">1983 budget reissue (needs Pressing).</b> Pressing preset "1983 budget reissue", main FORMAT LP 33, SIDE 25, HIFI cartridge. Thin, recycled, late in the stamper's life. Sum the outputs to mono and hear the rush drop.</div>
+<div class="recipe"><b class="t">Mid-90s CD master on vinyl (needs Master).</b> SOURCE CD MASTER, LOUD 6 to 8. Main module 12" 45 with HF LIMIT on. Compare LOUD at 0: the limited version lights GR far more and the hats turn to grit at the end of the side.</div>
+<div class="recipe"><b class="t">Early digital LP, 1984 (needs Master).</b> SOURCE 1630, CONVERT fully left, BITS 14, EMPHASIS BRIGHT. Glassy, thin and slightly hard. Flip EMPHASIS to OK to hear how much of "early digital" was that one mistake.</div>
+<div class="recipe"><b class="t">Record-locked delay (needs Pressing).</b> Patch TURN to a delay's clock or a sequencer's reset. With one ADD scratch you get a tick once per turn, and everything clocked from TURN stays locked to it, wow included.</div>
+<div class="recipe"><b class="t">Fluff build-up.</b> DUST 0.7 and play a long passage. The top fades over a minute or two, then the sound breaks up. Send a trigger to CLEAN every 16 bars for a filter-opening effect that is really someone blowing on the stylus.</div>
+
 <h2>Notes</h2>
-<p>A 5 V peak at the input becomes a 12 cm/s groove velocity at 0 dB cut level, a normal programme peak on a hot record (the 5 cm/s reference level is about 1 V). Disc dimensions follow JIS S 8502 (music between 293 and 115 mm diameter on a 12"). The DJ cartridge's inductance and load come from Shure's M44-7 sheet. Tip masses, compliances and the cartridge resonances are typical values rather than measurements of any one product. The module adds about 13 ms of delay (12 ms of it is the room the platter needs to wobble), or one turn more with true pre-echo. It runs the stylus section at 4x the sample rate at 44.1/48 kHz, 2x at 88.2/96 kHz.</p>
+<p>A 5 V peak at the input becomes a 12 cm/s groove velocity at 0 dB cut level, a normal programme peak on a hot record (the 5 cm/s reference level is about 1 V). Disc dimensions follow JIS S 8502 (music between 293 and 115 mm diameter on a 12"). The DJ cartridge's inductance and load come from Shure's M44-7 sheet. Tip masses, compliances and the cartridge resonances are typical values rather than measurements of any one product. The module adds about 13 ms of delay (12 ms of it is the room the platter needs to wobble), or one turn more with true pre-echo. It runs the stylus section at 4x the sample rate at 44.1/48 kHz, 2x at 88.2/96 kHz. The Master and Pressing figures (tape saturation, converter errors, noise levels for each stock, stamper life) are typical values from memory of the literature. They are not measurements and have not yet been tuned by ear in Rack.</p>
 </body></html>

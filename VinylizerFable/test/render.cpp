@@ -211,6 +211,66 @@ int main(int argc, char** argv) {
 		check(e > -1.0 && i < -3.0 && i > -8.0, "inner-groove treble loss in the realistic range");
 	}
 
+	// 11. PRESSING: surface noise comes from the groove, is louder on regrind, and is mostly vertical
+	{
+		auto floorDb = [](int stock, double* sideMid) {
+			Settings s; s.wow = s.flutter = s.eccMm = 0;
+			Engine e; e.s = s; e.ps.on = true; e.ps.stock = stock; e.init(FS);
+			double sm = 0, ss = 0; int n0 = (int)(FS * 0.5), N = (int)(FS * 2);
+			for (int n = 0; n < N; n++) {
+				float a, b, c, d; e.process(0, 0, a, b, c, d);
+				if (n >= n0) { sm += 0.25 * (a + b) * (a + b); ss += 0.25 * (a - b) * (a - b); }
+			}
+			if (sideMid) *sideMid = 10 * std::log10(ss / (sm + 1e-30));
+			return 10 * std::log10((sm + ss) / (N - n0) / 12.5 + 1e-30);  // re a 5 V sine
+		};
+		double sm = 0;
+		double v = floorDb(0, nullptr), r = floorDb(1, &sm), pd = floorDb(4, nullptr);
+		std::printf("  surface noise re 5 V sine: virgin %.1f dB, regrind %.1f dB, picture disc %.1f dB; regrind side/mid %+.1f dB\n", v, r, pd, sm);
+		check(v < -55 && r > v + 6 && pd > r && sm > 3, "pressing noise: quiet virgin vinyl, noisier regrind, mostly vertical");
+	}
+	// 12. PRESSING: a scratch ticks once per turn; fluff builds up and dulls the top until cleaned
+	{
+		Settings s; s.wow = s.flutter = s.eccMm = 0; s.needle = 0.2f;
+		Engine e; e.s = s; e.ps.on = true; e.ps.scratch = 0.6f; e.ps.noise = 0; e.init(FS);
+		int clicks = 0, hold = 0;
+		for (int n = 0; n < (int)(FS * 9.2); n++) {
+			float a, b, c, d; e.process(0, 0, a, b, c, d);
+			if (hold > 0) hold--;
+			else if (std::fabs(a) > 0.05f) { clicks++; hold = (int)(FS * 0.5); }
+		}
+		std::printf("  scratch at needle 0.2 over 9.2 s at 33 rpm: %d clicks\n", clicks);
+		check(clicks == 5, "a scratch clicks once per turn");
+		Engine f; f.s = s; f.ps.on = true; f.ps.dust = 1; f.ps.noise = 0; f.init(FS);
+		for (int n = 0; n < (int)(FS * 60); n++) { float a, b, c, d; f.process(0, 0, a, b, c, d); }
+		float fl = f.m.fluff; f.clean();
+		{ float a, b, c, d; f.process(0, 0, a, b, c, d); }
+		std::printf("  fluff after 60 s at full DUST: %.2f, after CLEAN: %.2f\n", fl, f.m.fluff);
+		check(fl > 0.25f && f.m.fluff < 0.01f, "fluff builds up and CLEAN removes it");
+	}
+	// 13. MASTER: tape saturates the treble first, the limiter makes it louder, 14-bit is grainier than 16
+	{
+		auto run = [](MasterSettings ms, float f, float amp, double* h3, double* rms) {
+			MasterStage m; m.s = ms; m.init(FS);
+			std::complex<double> a1 = 0, a3 = 0; double e = 0; int n0 = (int)(FS * 0.3), N = (int) FS;
+			for (int n = 0; n < N; n++) {
+				float l = amp * std::sin(2 * kPi * f * n / FS), r = l;
+				m.process(l, r);
+				if (n >= n0) { double t = 2 * kPi * f * n / FS; a1 += (double) l * std::polar(1.0, -t); a3 += (double) l * std::polar(1.0, -3 * t); e += l * l; }
+			}
+			if (h3) *h3 = std::abs(a3) / std::abs(a1);
+			if (rms) *rms = std::sqrt(e / (N - n0));
+		};
+		MasterSettings t; t.on = true; t.source = 1; t.drive = 0.8f; t.hiss = 0;
+		double lo3, hi3; run(t, 500, 5, &lo3, nullptr); run(t, 5000, 5, &hi3, nullptr);
+		std::printf("  quarter-inch tape, drive 0.8: H3 %.2f%% at 500 Hz, %.2f%% at 5 kHz\n", 100 * lo3, 100 * hi3);
+		check(hi3 > 1.5 * lo3 && lo3 > 0.001, "tape saturates treble before bass");
+		MasterSettings c; c.on = true; c.source = 4; c.convert = 1; double r0, r1;
+		run(c, 1000, 5, nullptr, &r0); c.loudDb = 8; run(c, 1000, 2, nullptr, &r1);
+		std::printf("  CD master: 5 V sine rms %.2f V; 2 V sine with LOUD 8 dB rms %.2f V\n", r0, r1);
+		check(r1 > 3.3 && r1 < 3.7, "the limiter brings a quiet master up to full level and stops there");
+	}
+
 	// demo: dry, 12" 45 outer, LP 33 at the label, worn dub plate (8 s each)
 	{
 		std::vector<float> L, R;
@@ -242,8 +302,26 @@ int main(int argc, char** argv) {
 		Settings c; c.disc = 1; c.speed = 1; c.sideMin = 6; c.cutLevelDb = 6; c.medType = 2; c.wear = 40; c.needle = 0.6f;
 		c.phoType = 2; c.force = 3; c.eccMm = 0.3f;
 		run(c, 8);
+		// with the expanders: a 1983 budget reissue (quarter-inch tape through the lathe's delay line, regrind, thin, late stamper)
+		{
+			Engine e; Settings d; d.disc = 2; d.speed = 0; d.sideMin = 22; d.needle = 0.7f; d.eccMm = 0.4f; d.drive = 1; d.wow = 0.5f;
+			e.s = d; e.master.s.on = true; e.master.s.source = 1; e.master.s.drive = 0.6f; e.master.s.delayLine = true; e.master.s.convert = 0.2f; e.master.s.bits = 0;
+			e.ps.on = true; e.ps.stock = 1; e.ps.noise = 1.3f; e.ps.nonfill = 0.6f; e.ps.stamper = 0.8f; e.ps.weight = 95; e.ps.dust = 0.3f; e.ps.scratch = 0.5f;
+			e.init(FS);
+			int n0 = (int) L.size();
+			for (int n = 0; n < (int)(10 * FS); n++) { float l, r, a, b, c, dd; music(n0 + n, l, r); e.process(l, r, a, b, c, dd); L.push_back(a); R.push_back(b); }
+		}
+		// and a mid-90s loud CD master on a flexi disc
+		{
+			Engine e; Settings d; d.disc = 0; d.speed = 0; d.sideMin = 6; d.needle = 0.5f; d.drive = 2; d.cartModel = 1;
+			e.s = d; e.master.s.on = true; e.master.s.source = 4; e.master.s.loudDb = 8;
+			e.ps.on = true; e.ps.stock = 3; e.ps.dust = 0.5f;
+			e.init(FS);
+			int n0 = (int) L.size();
+			for (int n = 0; n < (int)(8 * FS); n++) { float l, r, a, b, c, dd; music(n0 + n, l, r); e.process(l, r, a, b, c, dd); L.push_back(a); R.push_back(b); }
+		}
 		writeWav(dir + "/vinylizer-demo.wav", L, R);
-		std::printf("  wrote %s/vinylizer-demo.wav (dry, 12in 45, LP 33 at label, worn dub plate)\n", dir.c_str());
+		std::printf("  wrote %s/vinylizer-demo.wav (dry, 12in 45, LP 33 at label, worn dub plate, 1983 budget reissue, flexi)\n", dir.c_str());
 	}
 	std::printf(fails ? "%d check(s) FAILED\n" : "all checks passed\n", fails);
 	return fails ? 1 : 0;

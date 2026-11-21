@@ -28,6 +28,28 @@ static const Format FORMATS[5] = {
 	{"DUB PLATE", 1, 1, 6.f, 6.f, 2},
 };
 
+// ---- expander ids (the main module reads its neighbours' controls directly) ----
+namespace MasterId {
+	enum ParamId { SOURCE, DRIVE, PRINT, NR, HISS, CONVERT, LOUD, BITS, EMPH, DELAY, ON, PARAMS_LEN };
+	enum InputId { DRIVE_CV, LOUD_CV, INPUTS_LEN };
+	enum LightId { ENUMS(SRC_LIGHT, 5), ON_LIGHT, LINK_LIGHT, LIMIT_LIGHT, LIGHTS_LEN };
+}
+namespace PressId {
+	enum ParamId { STOCK, NOISE, NONFILL, STAMPER, WEIGHT, DUST, SCRATCH, CUE, CLEAN, ADD, ON, PARAMS_LEN };
+	enum InputId { NOISE_CV, DUST_CV, STAMPER_CV, CLEAN_IN, ADD_IN, INPUTS_LEN };
+	enum OutputId { ROT_OUT, SKIP_OUT, OUTPUTS_LEN };
+	enum LightId { ENUMS(STOCK_LIGHT, 5), ON_LIGHT, LINK_LIGHT, FLUFF_LIGHT, NONFILL_LIGHT, LIGHTS_LEN };
+}
+
+static float expVal(Module* m, int p, int cvIn) {
+	float v = m->params[p].getValue();
+	if (cvIn >= 0 && m->inputs[cvIn].isConnected()) {
+		ParamQuantity* q = m->paramQuantities[p];
+		v = clamp(v + m->inputs[cvIn].getVoltage() / 10.f * (q->getMaxValue() - q->getMinValue()), q->getMinValue(), q->getMaxValue());
+	}
+	return v;
+}
+
 struct VinylizerFable : Module {
 	enum ParamId {
 		ELL_FREQ, ELL_AMT, ELL_SLOPE,
@@ -50,7 +72,9 @@ struct VinylizerFable : Module {
 
 	vinyl::Engine engine;
 	dsp::ClockDivider div;
-	dsp::SchmittTrigger playTrig, playBtn, fmtBtn;
+	dsp::SchmittTrigger playTrig, playBtn, fmtBtn, cleanBtn, cleanTrig, addBtn, addTrig;
+	dsp::PulseGenerator rotPulse, skipPulse;
+	bool hasMaster = false, hasPress = false;
 	bool playing = false, loopSide = false;
 	int formatIndex = 3;
 
@@ -164,6 +188,43 @@ struct VinylizerFable : Module {
 		float n = params[NEEDLE_PARAM].getValue();
 		if (inputs[NEEDLE_INPUT].isConnected()) n += inputs[NEEDLE_INPUT].getVoltage() / 10.f;
 		s.needle = clamp(n, 0.f, 1.f);
+
+		// MASTER on the left, PRESSING on the right
+		Module* L = leftExpander.module;
+		hasMaster = L && L->model == modelVinylMaster;
+		vinyl::MasterSettings& ms = engine.master.s;
+		if (hasMaster) {
+			ms.on = L->params[MasterId::ON].getValue() > 0.5f;
+			ms.source = (int) L->params[MasterId::SOURCE].getValue();
+			ms.drive = expVal(L, MasterId::DRIVE, MasterId::DRIVE_CV);
+			ms.print = L->params[MasterId::PRINT].getValue();
+			ms.nr = L->params[MasterId::NR].getValue();
+			ms.hiss = L->params[MasterId::HISS].getValue();
+			ms.convert = L->params[MasterId::CONVERT].getValue();
+			ms.loudDb = expVal(L, MasterId::LOUD, MasterId::LOUD_CV);
+			ms.bits = (int) L->params[MasterId::BITS].getValue();
+			ms.emphasis = (int) L->params[MasterId::EMPH].getValue();
+			ms.delayLine = L->params[MasterId::DELAY].getValue() > 0.5f;
+			L->lights[MasterId::LIMIT_LIGHT].setBrightness(ms.on ? clamp(-engine.master.limGR / 6.f, 0.f, 1.f) : 0.f);
+		}
+		else ms.on = false;
+		Module* Rm = rightExpander.module;
+		hasPress = Rm && Rm->model == modelVinylPressing;
+		vinyl::PressSettings& ps = engine.ps;
+		if (hasPress) {
+			ps.on = Rm->params[PressId::ON].getValue() > 0.5f;
+			ps.stock = (int) Rm->params[PressId::STOCK].getValue();
+			ps.noise = expVal(Rm, PressId::NOISE, PressId::NOISE_CV);
+			ps.nonfill = Rm->params[PressId::NONFILL].getValue();
+			ps.stamper = expVal(Rm, PressId::STAMPER, PressId::STAMPER_CV);
+			ps.weight = Rm->params[PressId::WEIGHT].getValue();
+			ps.dust = expVal(Rm, PressId::DUST, PressId::DUST_CV);
+			ps.scratch = Rm->params[PressId::SCRATCH].getValue();
+			ps.cueBurn = Rm->params[PressId::CUE].getValue();
+			Rm->lights[PressId::FLUFF_LIGHT].setBrightness(ps.on ? engine.m.fluff : 0.f);
+			Rm->lights[PressId::NONFILL_LIGHT].setBrightnessSmooth(ps.on && engine.m.nonfill ? 1.f : 0.f, 32.f * APP->engine->getSampleTime());
+		}
+		else ps.on = false;
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -196,6 +257,19 @@ struct VinylizerFable : Module {
 		float inR = inputs[IN_R].isConnected() ? inputs[IN_R].getVoltage() : inL;
 		float wl, wr, dl, dr;
 		engine.process(inL, inR, wl, wr, dl, dr);
+		if (hasPress) {
+			Module* Rm = rightExpander.module;
+			if (Rm) {
+				if (cleanBtn.process(Rm->params[PressId::CLEAN].getValue() > 0.5f) | cleanTrig.process(Rm->inputs[PressId::CLEAN_IN].getVoltage(), 0.1f, 1.f)) engine.clean();
+				if (addBtn.process(Rm->params[PressId::ADD].getValue() > 0.5f) | addTrig.process(Rm->inputs[PressId::ADD_IN].getVoltage(), 0.1f, 1.f)) engine.addScratchHere();
+				if (engine.m.rotation) rotPulse.trigger(1e-3f);
+				if (engine.m.skip) skipPulse.trigger(0.05f);
+				Rm->outputs[PressId::ROT_OUT].setVoltage(rotPulse.process(args.sampleTime) ? 10.f : 0.f);
+				bool sk = skipPulse.process(args.sampleTime) || engine.m.mistrack > 0.5f;
+				Rm->outputs[PressId::SKIP_OUT].setVoltage(sk ? 10.f : 0.f);
+			}
+		}
+		engine.m.rotation = false; engine.m.skip = false;
 		float mix = params[MIX_PARAM].getValue(), g = params[OUT_PARAM].getValue();
 		outputs[OUT_L].setVoltage(clamp((dl + (wl - dl) * mix) * g, -12.f, 12.f));
 		outputs[OUT_R].setVoltage(clamp((dr + (wr - dr) * mix) * g, -12.f, 12.f));
@@ -207,6 +281,15 @@ struct VinylizerFable : Module {
 		json_object_set_new(r, "truePreEcho", json_boolean(engine.s.truePreEcho));
 		json_object_set_new(r, "loopSide", json_boolean(loopSide));
 		json_object_set_new(r, "playing", json_boolean(playing));
+		json_t* a = json_array();
+		for (int i = 3; i < engine.nScratch; i++) {
+			json_t* o = json_array();
+			json_array_append_new(o, json_real(engine.scratches[i].theta));
+			json_array_append_new(o, json_real(engine.scratches[i].needle));
+			json_array_append_new(o, json_real(engine.scratches[i].depth));
+			json_array_append_new(a, o);
+		}
+		json_object_set_new(r, "scratches", a);
 		return r;
 	}
 	void dataFromJson(json_t* r) override {
@@ -214,6 +297,14 @@ struct VinylizerFable : Module {
 		if (json_t* j = json_object_get(r, "truePreEcho")) engine.s.truePreEcho = json_boolean_value(j);
 		if (json_t* j = json_object_get(r, "loopSide")) loopSide = json_boolean_value(j);
 		if (json_t* j = json_object_get(r, "playing")) playing = json_boolean_value(j);
+		if (json_t* a = json_object_get(r, "scratches")) {
+			engine.clearScratches();
+			size_t i; json_t* o;
+			json_array_foreach(a, i, o) {
+				if (json_array_size(o) == 3)
+					engine.addScratch(json_number_value(json_array_get(o, 0)), json_number_value(json_array_get(o, 1)), json_number_value(json_array_get(o, 2)));
+			}
+		}
 	}
 };
 
@@ -363,3 +454,172 @@ struct VinylizerFableWidget : ModuleWidget {
 };
 
 Model* modelVinylizerFable = createModel<VinylizerFable, VinylizerFableWidget>("VinylizerFable");
+
+
+// =====================================================================================
+// MASTER expander (sits on the left of Vinylizer Fable)
+// =====================================================================================
+struct VinylMaster : Module {
+	VinylMaster() {
+		using namespace MasterId;
+		config(PARAMS_LEN, INPUTS_LEN, 0, LIGHTS_LEN);
+		configSwitch(SOURCE, 0.f, 4.f, 0.f, "Source", {"Half-inch tape, 30 ips", "Quarter-inch tape, 15 ips", "1630 digital (16-bit, 44.1 kHz)", "DAT", "CD master"});
+		configParam(DRIVE, 0.f, 1.f, 0.3f, "Tape drive", "%", 0.f, 100.f);
+		configParam(PRINT, 0.f, 1.f, 0.f, "Tape print-through", "%", 0.f, 100.f);
+		configParam(NR, -1.f, 1.f, 0.f, "Noise reduction misalignment (dull / bright)", " dB", 0.f, 3.f);
+		configParam(HISS, 0.f, 1.f, 0.3f, "Tape hiss", "%", 0.f, 100.f);
+		configParam(CONVERT, 0.f, 1.f, 0.5f, "Converter quality (early to transparent)", "%", 0.f, 100.f);
+		configParam(LOUD, 0.f, 10.f, 0.f, "CD-style limiting", " dB");
+		configSwitch(BITS, 0.f, 1.f, 1.f, "Word length", {"14 bit", "16 bit"});
+		configSwitch(EMPH, 0.f, 2.f, 0.f, "Digital emphasis", {"Decoded correctly", "Missed (bright)", "Doubled (dull)"});
+		configSwitch(DELAY, 0.f, 1.f, 0.f, "Lathe digital delay line (tape sources)", {"Off", "On"});
+		configSwitch(ON, 0.f, 1.f, 1.f, "Master", {"Bypassed", "On"});
+		configInput(DRIVE_CV, "Tape drive CV");
+		configInput(LOUD_CV, "Limiting CV");
+	}
+	void process(const ProcessArgs& args) override {
+		using namespace MasterId;
+		int src = (int) params[SOURCE].getValue();
+		for (int i = 0; i < 5; i++) lights[SRC_LIGHT + i].setBrightness(i == src ? 1.f : 0.f);
+		lights[ON_LIGHT].setBrightness(params[ON].getValue());
+		bool link = rightExpander.module && rightExpander.module->model == modelVinylizerFable;
+		lights[LINK_LIGHT].setBrightness(link ? 1.f : 0.f);
+		if (!link) lights[LIMIT_LIGHT].setBrightness(0.f);
+	}
+};
+
+struct VinylMasterWidget : ModuleWidget {
+	VinylMasterWidget(VinylMaster* module) {
+		using namespace MasterId;
+		setModule(module);
+		setPanel(createPanel(asset::plugin(pluginInstance, "res/VinylMaster.svg")));
+		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
+		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		const float X[3] = {11.f, 30.48f, 49.96f};
+		addParam(createParamCentered<RoundBlackSnapKnob>(mm2px(Vec(12.f, 30.f)), module, SOURCE));
+		for (int i = 0; i < 5; i++)
+			addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(25.f, 22.f + 4.f * i)), module, SRC_LIGHT + i));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[0], 54.f)), module, DRIVE));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[1], 54.f)), module, PRINT));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[2], 54.f)), module, NR));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[0], 72.f)), module, HISS));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[1], 72.f)), module, CONVERT));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[2], 72.f)), module, LOUD));
+		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(X[2] + 6.5f, 67.f)), module, LIMIT_LIGHT));
+		addParam(createParamCentered<CKSS>(mm2px(Vec(X[0] - 4.f, 91.f)), module, BITS));
+		addParam(createParamCentered<CKSSThree>(mm2px(Vec(X[1] - 5.f, 91.f)), module, EMPH));
+		addParam(createParamCentered<CKSS>(mm2px(Vec(X[2] - 4.f, 91.f)), module, DELAY));
+		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(X[0], 116.f)), module, ON, ON_LIGHT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(X[1], 116.f)), module, DRIVE_CV));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(X[2], 116.f)), module, LOUD_CV));
+		addChild(createLightCentered<SmallLight<GreenLight>>(mm2px(Vec(55.5f, 9.f)), module, LINK_LIGHT));
+	}
+};
+
+Model* modelVinylMaster = createModel<VinylMaster, VinylMasterWidget>("VinylMaster");
+
+// =====================================================================================
+// PRESSING expander (sits on the right of Vinylizer Fable)
+// =====================================================================================
+struct PressPreset { const char* name; int stock; float noise, nonfill, stamper, weight, dust, scratch, cue; };
+static const PressPreset PRESS_PRESETS[6] = {
+	{"Test pressing", 0, 0.7f, 0.f, 0.f, 140.f, 0.f, 0.f, 0.f},
+	{"1983 budget reissue", 1, 1.3f, 0.5f, 0.8f, 95.f, 0.2f, 0.f, 0.f},
+	{"Chart 7\" late in the run", 2, 1.2f, 0.3f, 1.0f, 110.f, 0.2f, 0.3f, 0.5f},
+	{"Flexi from a magazine", 3, 1.2f, 0.2f, 0.4f, 90.f, 0.4f, 0.2f, 0.f},
+	{"White label 12\"", 0, 1.0f, 0.1f, 0.1f, 130.f, 0.1f, 0.f, 0.6f},
+	{"Charity-shop LP", 1, 1.5f, 0.2f, 0.5f, 110.f, 0.8f, 0.7f, 0.f},
+};
+
+struct VinylPressing : Module {
+	VinylPressing() {
+		using namespace PressId;
+		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
+		configSwitch(STOCK, 0.f, 4.f, 0.f, "Stock", {"Virgin vinyl", "Regrind (recycled vinyl)", "Styrene 7 inch", "Flexi disc", "Picture disc"});
+		configParam(NOISE, 0.f, 2.f, 1.f, "Surface roughness", "%", 0.f, 100.f);
+		configParam(NONFILL, 0.f, 1.f, 0.f, "Non-fill", "%", 0.f, 100.f);
+		configParam(STAMPER, 0.f, 1.f, 0.2f, "Stamper age", " pressings", 0.f, 3000.f);
+		configParam(WEIGHT, 90.f, 180.f, 120.f, "Disc weight", " g");
+		configParam(DUST, 0.f, 1.f, 0.f, "Dust", "%", 0.f, 100.f);
+		configParam(SCRATCH, 0.f, 1.f, 0.f, "Scratch depth", "%", 0.f, 100.f);
+		configParam(CUE, 0.f, 1.f, 0.f, "Cue burn (start of the side)", "%", 0.f, 100.f);
+		configButton(CLEAN, "Clean the stylus");
+		configButton(ADD, "Add a scratch at the needle");
+		configSwitch(ON, 0.f, 1.f, 1.f, "Pressing", {"Bypassed", "On"});
+		configInput(NOISE_CV, "Roughness CV");
+		configInput(DUST_CV, "Dust CV");
+		configInput(STAMPER_CV, "Stamper age CV");
+		configInput(CLEAN_IN, "Clean trigger");
+		configInput(ADD_IN, "Add scratch trigger");
+		configOutput(ROT_OUT, "Rotation (one trigger per turn)");
+		configOutput(SKIP_OUT, "Skip (stylus has left the groove)");
+	}
+	bool linked() { return leftExpander.module && leftExpander.module->model == modelVinylizerFable; }
+	void process(const ProcessArgs& args) override {
+		using namespace PressId;
+		int st = (int) params[STOCK].getValue();
+		for (int i = 0; i < 5; i++) lights[STOCK_LIGHT + i].setBrightness(i == st ? 1.f : 0.f);
+		lights[ON_LIGHT].setBrightness(params[ON].getValue());
+		bool link = linked();
+		lights[LINK_LIGHT].setBrightness(link ? 1.f : 0.f);
+		if (!link) {
+			lights[FLUFF_LIGHT].setBrightness(0.f); lights[NONFILL_LIGHT].setBrightness(0.f);
+			outputs[ROT_OUT].setVoltage(0.f); outputs[SKIP_OUT].setVoltage(0.f);
+		}
+	}
+	void applyPreset(int i) {
+		using namespace PressId;
+		const PressPreset& p = PRESS_PRESETS[i];
+		params[STOCK].setValue(p.stock); params[NOISE].setValue(p.noise); params[NONFILL].setValue(p.nonfill);
+		params[STAMPER].setValue(p.stamper); params[WEIGHT].setValue(p.weight); params[DUST].setValue(p.dust);
+		params[SCRATCH].setValue(p.scratch); params[CUE].setValue(p.cue);
+	}
+};
+
+struct VinylPressingWidget : ModuleWidget {
+	VinylPressingWidget(VinylPressing* module) {
+		using namespace PressId;
+		setModule(module);
+		setPanel(createPanel(asset::plugin(pluginInstance, "res/VinylPressing.svg")));
+		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
+		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		const float X[3] = {12.f, 35.56f, 59.12f};
+		addParam(createParamCentered<RoundBlackSnapKnob>(mm2px(Vec(12.f, 30.f)), module, STOCK));
+		for (int i = 0; i < 5; i++)
+			addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(25.f, 22.f + 4.f * i)), module, STOCK_LIGHT + i));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[0], 54.f)), module, NOISE));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[1], 54.f)), module, NONFILL));
+		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(X[1] + 6.5f, 49.f)), module, NONFILL_LIGHT));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[2], 54.f)), module, STAMPER));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[0], 72.f)), module, WEIGHT));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[1], 72.f)), module, DUST));
+		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(X[1] + 6.5f, 67.f)), module, FLUFF_LIGHT));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[2], 72.f)), module, SCRATCH));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(X[0], 90.f)), module, CUE));
+		addParam(createParamCentered<VCVBezel>(mm2px(Vec(X[1], 90.f)), module, CLEAN));
+		addParam(createParamCentered<VCVBezel>(mm2px(Vec(X[2], 90.f)), module, ADD));
+		const float JX[5] = {9.f, 22.28f, 35.56f, 48.84f, 62.12f};
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(JX[0], 105.f)), module, NOISE_CV));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(JX[1], 105.f)), module, DUST_CV));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(JX[2], 105.f)), module, STAMPER_CV));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(JX[3], 105.f)), module, CLEAN_IN));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(JX[4], 105.f)), module, ADD_IN));
+		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(JX[0], 118.f)), module, ON, ON_LIGHT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(JX[3], 118.f)), module, ROT_OUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(JX[4], 118.f)), module, SKIP_OUT));
+		addChild(createLightCentered<SmallLight<GreenLight>>(mm2px(Vec(65.6f, 9.f)), module, LINK_LIGHT));
+	}
+	void appendContextMenu(Menu* menu) override {
+		VinylPressing* m = getModule<VinylPressing>();
+		if (!m) return;
+		menu->addChild(new MenuSeparator);
+		menu->addChild(createSubmenuItem("Pressing preset", "", [=](Menu* sub) {
+			for (int i = 0; i < 6; i++) sub->addChild(createMenuItem(PRESS_PRESETS[i].name, "", [=]() { m->applyPreset(i); }));
+		}));
+		menu->addChild(createMenuItem("Remove added scratches", "", [=]() {
+			if (m->linked()) static_cast<VinylizerFable*>(m->leftExpander.module)->engine.clearScratches();
+		}));
+	}
+};
+
+Model* modelVinylPressing = createModel<VinylPressing, VinylPressingWidget>("VinylPressing");
