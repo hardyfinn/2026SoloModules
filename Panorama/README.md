@@ -5,6 +5,11 @@ Every note area is a set of tuned modes (fundamental, octave, fifth above the
 octave, plus untuned pings) that rings into the areas around it. Patch a poly
 GATE + V/OCT (Peal works), or click a note on the screen.
 
+The stick is physical (2.1): a rubber tip on a stiffening spring lands on the
+moving note and is pushed back off it, so harder hits are shorter and
+brighter and light top notes give way under it. BLOOM is the note's own conservative 1:2:3 shell nonlinearity,
+and NEIGHBOURS an energy-correct spring through the steel.
+
 Real pans are never perfectly in tune: DETUNE and PARTIALS scale each note's
 own fixed random error, RE-ROLL gives a different pan, and FUND / OCT / 5TH
 hand-tune the note picked on the screen. Set both to 0 for exact tuning.

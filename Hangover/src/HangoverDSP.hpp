@@ -7,6 +7,23 @@
 //     higher shell-ish modes), each split into a slowly beating pair
 //   - the shell has a few knock modes, and the air inside is a Helmholtz
 //     resonator that the gu (bottom port) lets out: the deep bass "boom"
+//   - physical excitation: the finger is a small mass on a soft, lossy
+//     (Hunt-Crossley) spring that lands on the moving surface, so a harder
+//     hit is shorter and brighter by itself, a soft pad lingers and damps,
+//     and striking a field that is already swinging feels (and sounds)
+//     different. Where it lands sets how much of each mode it reaches:
+//     the octave and the compound fifth have nodal lines through the
+//     centre, so a dead-centre hit is almost a pure fundamental
+//   - the shell is nonlinear: a quadratic coupling between fundamental,
+//     octave and fifth (the 1:2:3 internal resonances the tuner sets up)
+//     pumps energy upwards after the hit, so the octave blooms in, more for
+//     harder hits and less when the octave is out of tune. The coupling is
+//     conservative (energy moves, it is not made), so it cannot run away
+//   - the cavity air is a Helmholtz resonator coupled both ways to every
+//     field's fundamental (the only modes that change the volume), so the
+//     ding pumps the gu and the gu pushes back on the ding
+//   - fields couple to each other through the shell with a symmetric,
+//     energy-correct spring coupling (sympathetic ringing)
 //   - the dirt: tuning errors, beating, a rattler + a loose field that buzz,
 //     fields bleeding into each other, air through the port, skin noise,
 //     sloppy hands (late, uneven, bounced, grazed strikes), a small room
@@ -58,7 +75,14 @@ static const char* HG_NOTE_NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G
 
 // partial layout of one tone field
 static const float HG_RATIO[NP] = {1.f, 2.f, 3.f, 4.1f, 5.43f, 6.8f};
+// how strongly each mode radiates (the fundamental is a monopole and pumps
+// the most air; the octave and fifth are dipoles; the upper shell modes less)
 static const float HG_AMP[NP] = {1.f, 0.6f, 0.38f, 0.12f, 0.08f, 0.05f};
+static const float HG_RAD[NP] = {1.f, 0.55f, 0.42f, 0.2f, 0.14f, 0.1f};
+// how strongly each mode is tied to the rest of the shell (sympathetic bleed)
+static const float HG_CPL[NP] = {1.f, 0.8f, 0.6f, 0.3f, 0.2f, 0.15f};
+static const float HG_FINGER_MASS = 0.6f;   // relative to a 220 Hz field
+static const float HG_NL = 0.012f;          // strength of the 1:2:3 shell coupling
 static const float HG_DECAYF[NP] = {1.f, 0.7f, 0.5f, 0.28f, 0.18f, 0.12f};
 
 struct HgParams {
@@ -83,6 +107,9 @@ struct HgMode {
 	float gain = 1.f;   // output gain
 	float inW = 0.f;    // weight of the current finger pulse
 	float cw = 0.f;     // weight of sympathetic input
+	float fr = 0.f, fi = 0.f;   // free-running prediction for this sample
+	inline void prep() { fr = c * re - s * im; fi = s * re + c * im; }
+	inline float commit(float x) { re = fr + x; im = fi; return im; }
 	inline float tick(float x) {
 		float nr = c * re - s * im + x;
 		float ni = s * re + c * im;
@@ -110,6 +137,60 @@ struct HgPulse {
 		return v;
 	}
 	bool active() const { return pos < len; }
+};
+
+// integral used to size a power-law contact spring: int_0^1 (1-x^(a+1))^-1/2 dx
+static inline float hgContactIntegral(float alpha) {
+	const int N = 64;
+	float n = alpha + 1.f, sum = 0.f;
+	for (int i = 0; i < N; i++) {
+		float y = (i + 0.5f) / N;  // x = 1 - y^2
+		float d = 1.f - std::pow(1.f - y * y, n);
+		sum += 2.f * y / std::sqrt(std::max(d, 1e-12f));
+	}
+	return sum / N;
+}
+
+// a finger (or palm) landing on the steel: a mass on a power-law spring with
+// Hunt-Crossley damping, F = K d^a (1 + lam d'), pushing against the surface
+// displacement at the contact point. Runs until the finger has lifted away.
+struct HgContact {
+	bool on = false;
+	float xs = 0.f, vs = 0.f;     // finger position (into the steel) and velocity
+	float K = 0.f, alpha = 2.f, lam = 0.f, ms = 0.6f, ret = 50.f, dRef = 1e-3f;
+	float ucPrev = 0.f;
+	int sepN = 0, life = 0, sepMax = 100, lifeMax = 2000;
+	float phi[NP];                // how much of each mode this spot reaches
+	// size the spring so a hit at unit speed on rigid steel lasts T seconds
+	void start(float uc, float v, float T, float a, float lambda, float mass, float retract, float sr) {
+		alpha = a; lam = lambda; ms = mass; ret = retract;
+		static float I2 = hgContactIntegral(2.f);
+		float Ia = (std::fabs(a - 2.f) < 1e-3f) ? I2 : hgContactIntegral(a);
+		dRef = T / (2.f * Ia);
+		K = (a + 1.f) * ms / (2.f * std::pow(dRef, a + 1.f));
+		xs = uc; vs = v; ucPrev = uc;
+		sepN = 0; life = 0;
+		sepMax = (int) (0.004f * sr);
+		lifeMax = (int) (0.06f * sr);
+		on = true;
+	}
+	inline float step(float uc, float dt) {
+		float d = xs - uc;
+		float F = 0.f;
+		if (d > 0.f) {
+			float dd = vs - (uc - ucPrev) / dt;
+			F = K * std::pow(d, alpha) * (1.f + lam * dd);
+			if (F < 0.f) F = 0.f;
+			sepN = 0;
+		}
+		else sepN++;
+		ucPrev = uc;
+		vs -= F / ms * dt;
+		if (vs < 0.f) vs -= ret * dt;  // the hand lifts away
+		xs += vs * dt;
+		if ((sepN > sepMax && d < -0.3f * dRef) || ++life > lifeMax) on = false;
+		return F;
+	}
 };
 
 // TPT state-variable filter (bandpass / lowpass / highpass)
@@ -143,7 +224,17 @@ struct HgNote {
 	float flash = 0.f;            // strike flash for the display
 	float last = 0.f;             // last output (drives the neighbours)
 	bool idle = true;
-	float rFund = 0.f;            // pole radius of the fundamental (coupling scale)
+	float rFund = 0.f;            // pole radius of the fundamental
+	HgContact con[NPULSE];        // fingers on this field
+	int conNext = 0;
+	float M = 1.f;                // modal mass (big low fields are heavy)
+	float wk[NP];                 // nominal angular frequency of each partial (rad/s)
+	float invMw[NP];              // state -> physical displacement
+	float sqMw[NP], invSqMw[NP];  // for energy-symmetric coupling
+	float u[NP];                  // predicted displacement of each partial this sample
+	float ut = 0.f;               // normalised displacement seen by the neighbours
+	float eps = 0.f;              // quadratic shell nonlinearity
+	float aRef = 1e-3f;           // fundamental displacement of a full-force hit
 	// this instrument's imperfections (seeded)
 	float tuneErr[NP];            // -1..1
 	float beatHz[NP];             // pair split in Hz at BEAT = 1
@@ -168,6 +259,7 @@ struct HangoverEngine {
 	int nNotes = 9;
 	HgNote note[MAXN];
 	float adj[MAXN][MAXN];
+	float adjN[MAXN][MAXN];
 	HgQueued queue[NQ];
 
 	HgMode body[NBODY];
@@ -176,6 +268,8 @@ struct HangoverEngine {
 	int bodyNext = 0;
 
 	HgMode helm;
+	static constexpr float HELM_M = 1.f;
+	float helmSqMw = 1.f;
 	float helmFreq = 75.f;
 	HgPulse helmPulse[NPULSE];
 	int helmNext = 0;
@@ -285,6 +379,8 @@ struct HangoverEngine {
 				n.px = 0.7f * std::cos(a);
 				n.py = 0.7f * std::sin(a);
 			}
+			// bigger, lower fields carry more steel; the ding is the biggest
+			n.M = std::max(0.4f, std::min(2.5f, std::pow(220.f / n.freq, 0.6f))) * (i == 0 ? 1.5f : 1.f);
 			float pan = 0.6f * n.px;
 			float ang = (pan + 1.f) * HG_PI / 4.f;
 			n.panL = std::cos(ang);
@@ -297,6 +393,16 @@ struct HangoverEngine {
 				float dx = note[i].px - note[j].px, dy = note[i].py - note[j].py;
 				adj[i][j] = 0.15f + 0.85f * std::exp(-(dx * dx + dy * dy) / 0.3f);
 			}
+		// symmetric copy for the energy-correct shell coupling, scaled so no
+		// row sums past 1 (the coupling rate is then set by BLEED alone)
+		float maxRow = 1e-6f;
+		for (int i = 0; i < nNotes; i++) {
+			float r = 0.f;
+			for (int j = 0; j < nNotes; j++) r += adj[i][j];
+			maxRow = std::max(maxRow, r);
+		}
+		for (int i = 0; i < MAXN; i++)
+			for (int j = 0; j < MAXN; j++) adjN[i][j] = adj[i][j] / maxRow;
 		helmFreq = std::max(55.f, std::min(115.f, note[0].freq * helmRatio));
 		if (looseNote >= nNotes) looseNote = nNotes - 1;
 	}
@@ -329,6 +435,19 @@ struct HangoverEngine {
 				float a = HG_AMP[k] * (i == 0 && k == 1 ? 0.8f : 1.f);
 				n.m[2 * k].cw = a;
 				n.m[2 * k + 1].cw = a;
+				float w = 2.f * HG_PI * f;
+				n.wk[k] = w;
+				n.invMw[k] = 1.f / (n.M * w);
+				n.sqMw[k] = std::sqrt(n.M * w);
+				n.invSqMw[k] = 1.f / n.sqMw[k];
+			}
+			// quadratic shell term, sized so a full-force hit sets off a clear bloom:
+			// eps = eta M w0^2 / A with A the displacement of a unit-impulse fundamental
+			{
+				float w0 = n.wk[0];
+				float Iref = HG_FINGER_MASS * 1.5f;
+				n.eps = HG_NL * n.M * n.M * w0 * w0 * w0 / Iref;
+				n.aRef = Iref / (n.M * w0);
 			}
 			n.rFund = std::sqrt(n.m[0].c * n.m[0].c + n.m[0].s * n.m[0].s);
 		}
@@ -338,6 +457,7 @@ struct HangoverEngine {
 			body[b].gain = 1.f / (1.f + b * 0.6f);
 		}
 		helm.setCoef(helmFreq, 0.42f / (1.f + muteAmt), sr);
+		helmSqMw = std::sqrt(HELM_M * 2.f * HG_PI * helmFreq);
 		click[0].setCoef(clickFreq[0], 0.03f, sr);
 		click[1].setCoef(clickFreq[1], 0.018f, sr);
 		click[0].gain = 1.f; click[1].gain = 0.6f;
@@ -426,22 +546,39 @@ struct HangoverEngine {
 			return;
 		}
 		HgNote& n = note[q.note];
-		float contact = (0.0065f - 0.0058f * touch) * (1.15f - 0.3f * std::min(v, 1.f));
-		int L = std::max(3, (int) (contact * sr));
-		int slot = n.pulseNext;
-		n.pulseNext = (n.pulseNext + 1) % NPULSE;
-		n.pulse[slot].start(L, v);
-		float pos = q.pos;
-		const float posW[NP] = {1.f - 0.5f * pos, 0.5f + 0.5f * pos, 0.35f + 0.65f * pos,
-		                        0.3f + 0.7f * pos, 0.25f + 0.75f * pos, 0.2f + 0.8f * pos};
-		for (int k = 0; k < NP; k++)
-			n.pulseW[slot][k] = HG_AMP[k] * posW[k] * (q.note == 0 && k == 1 ? 0.8f : 1.f);
+		// the finger: soft pad (long, lossy contact) .. hard slap (short, springy)
+		// (real finger strikes on a handpan last about 0.5 to 2.5 ms; any longer
+		// and the force pulse itself cancels the upper fields' fundamentals)
+		float contact = 0.0022f - 0.00175f * touch;  // at unit speed on rigid steel
+		int L = std::max(3, (int) (contact * (1.15f - 0.3f * std::min(v, 1.f)) * sr));
+		int slot = n.conNext;
+		n.conNext = (n.conNext + 1) % NPULSE;
+		HgContact& c = n.con[slot];
+		// where it lands: r from the centre of the field towards its rim, and an
+		// angle from the field's long axis. The octave's nodal line runs across
+		// the centre one way and the fifth's the other, so both vanish at r = 0
+		float r = 0.08f + 0.86f * q.pos;
+		float th = (0.6f + (0.15f + 0.35f * p.slop) * rng.bi());
+		float sr1 = std::sin(HG_PI * std::min(r, 0.95f));
+		c.phi[0] = std::cos(0.5f * HG_PI * r);
+		c.phi[1] = sr1 * std::fabs(std::cos(th)) * (q.note == 0 ? 0.8f : 1.f);
+		c.phi[2] = sr1 * std::fabs(std::sin(th));
+		c.phi[3] = 0.25f + 0.75f * std::fabs(std::sin(1.6f * HG_PI * r + 0.4f));
+		c.phi[4] = 0.2f + 0.8f * std::fabs(std::sin(2.3f * HG_PI * r + 0.9f));
+		c.phi[5] = 0.2f + 0.8f * std::fabs(std::sin(3.1f * HG_PI * r + 1.7f));
+		float uc = 0.f;
+		for (int k = 0; k < NP; k++) uc += c.phi[k] * (n.m[2 * k].im + n.m[2 * k + 1].im) * n.invMw[k];
+		float alpha = 1.5f + 0.5f * touch;             // flesh stiffens as it compresses
+		float lam = 0.35f + 1.6f * (1.f - touch);      // a soft pad soaks up energy
+		float mass = HG_FINGER_MASS * (0.8f + 0.5f * (1.f - touch));
+		c.start(uc, v, contact, alpha, lam, mass, 40.f + 60.f * touch, sr);
+		n.idle = false;
 		n.flash = std::max(n.flash, std::min(1.f, v));
 
 		bodyPulse[bodyNext].start(L, v * (0.12f + 0.3f * touch));
 		bodyNext = (bodyNext + 1) % NPULSE;
 		// the shell flexes and pumps a little air through the gu
-		helmPulse[helmNext].start((int) (0.006f * sr), v * 0.16f);
+		helmPulse[helmNext].start((int) (0.006f * sr), v * 0.06f);
 		helmNext = (helmNext + 1) % NPULSE;
 		airEnv += v * (0.3f + 0.5f * touch);
 
@@ -503,32 +640,86 @@ struct HangoverEngine {
 
 		float wn = noise.bi();
 
-		// tone fields
+		// tone fields, in two passes so every coupling sees the same instant:
+		// 1) predict where every mode is going this sample (no input yet)
+		const float dt = 1.f / sr;
 		float dryL = 0.f, dryR = 0.f, mono = 0.f;
 		float bleed = p.bleed;
 		float dingOut = 0.f;
+		helm.prep();
+		float uH = helm.fi / helmSqMw;  // cavity, normalised
+		bool live[MAXN];
 		for (int i = 0; i < nNotes; i++) {
 			HgNote& n = note[i];
-			float pv[NPULSE];
-			bool any = false;
-			for (int s = 0; s < NPULSE; s++) {
-				pv[s] = n.pulse[s].next();
-				any = any || pv[s] != 0.f;
+			bool con = false, pul = false;
+			for (int s = 0; s < NPULSE; s++) { con = con || n.con[s].on; pul = pul || n.pulse[s].active(); }
+			live[i] = !n.idle || con || pul;
+			n.ut = 0.f;
+			if (!live[i]) { for (int k = 0; k < NP; k++) n.u[k] = 0.f; continue; }
+			for (int k = 0; k < NM; k++) n.m[k].prep();
+			for (int k = 0; k < NP; k++) {
+				float st = n.m[2 * k].fi + n.m[2 * k + 1].fi;
+				n.u[k] = st * n.invMw[k];
+				n.ut += HG_CPL[k] * st * n.invSqMw[k];
 			}
+		}
+		// 2) forces: fingers, the shell's own nonlinearity, the neighbours, the air
+		const float bleedRate = 2.f * (2.f * HG_PI * 1.6f) * bleed * dt;   // coupling rate up to 1.6 Hz
+		float helmDrive = 0.f;
+		for (int i = 0; i < nNotes; i++) {
+			HgNote& n = note[i];
 			float sym = 0.f;
-			if (bleed > 0.f) {
-				for (int j = 0; j < nNotes; j++) sym += adj[j][i] * note[j].last;
-				sym *= bleed * 1.1f * (1.f - n.rFund);
+			if (bleed > 0.f)
+				for (int j = 0; j < nNotes; j++) sym += adjN[i][j] * note[j].ut;
+			sym *= bleedRate;
+			if (!live[i]) {
+				if (std::fabs(sym) < 1e-10f) { n.last = 0.f; continue; }
+				for (int k = 0; k < NM; k++) n.m[k].prep();  // all zero, wakes up
+				n.idle = false;
 			}
-			// nothing ringing and nothing arriving: skip the maths
-			if (!any && n.idle && std::fabs(sym) < 1e-9f) { n.last = 0.f; continue; }
+			float F[NP];
+			for (int k = 0; k < NP; k++) F[k] = 0.f;
+			// fingers in contact
+			for (int s = 0; s < NPULSE; s++) {
+				HgContact& c = n.con[s];
+				if (!c.on) continue;
+				float uc = 0.f;
+				for (int k = 0; k < NP; k++) uc += c.phi[k] * n.u[k];
+				float f = c.step(uc, dt);
+				for (int k = 0; k < NP; k++) F[k] += c.phi[k] * f;
+			}
+			// 1:2:3 internal resonance, from H = eps (u0^2 u1 + 0.7 u0 u1 u2)
+			{
+				// (displacements are softly limited at a few times a full-force hit:
+				// a pure cubic potential has no floor, and a pile of slaps could
+				// otherwise throw the shell over the top of it)
+				float lim = 1.f / (3.f * n.aRef);
+				float u0 = n.u[0] / (1.f + std::fabs(n.u[0]) * lim);
+				float u1 = n.u[1] / (1.f + std::fabs(n.u[1]) * lim);
+				float u2 = n.u[2] / (1.f + std::fabs(n.u[2]) * lim);
+				float e = n.eps;
+				F[0] -= e * (2.f * u0 * u1 + 0.7f * u1 * u2);
+				F[1] -= e * (u0 * u0 + 0.7f * u0 * u2);
+				F[2] -= e * 0.7f * u0 * u1;
+			}
+			float x[NP];
+			for (int k = 0; k < NP; k++) x[k] = F[k] * dt + sym * HG_CPL[k] * n.sqMw[k];
+			// knocks carried through the shell from a strike next door
+			for (int s = 0; s < NPULSE; s++) {
+				float pv = n.pulse[s].next();
+				if (pv != 0.f) for (int k = 0; k < NP; k++) x[k] += pv * n.pulseW[s][k];
+			}
+			// the cavity: fundamentals change the volume, the pressure pushes back
+			float hc = 2.f * (2.f * HG_PI * (i == 0 ? 5.f : 1.5f)) * dt;
+			x[0] -= hc * n.sqMw[0] * uH;
+			helmDrive -= hc * helmSqMw * (n.m[0].fi + n.m[1].fi) * n.invSqMw[0];
 			float y = 0.f;
 			for (int k = 0; k < NP; k++) {
-				float x = sym * n.m[2 * k].cw;
-				if (any) for (int s = 0; s < NPULSE; s++) x += pv[s] * n.pulseW[s][k];
-				y += n.m[2 * k].tick(x);
-				y += n.m[2 * k + 1].tick(x);
+				float st = n.m[2 * k].commit(x[k]) + n.m[2 * k + 1].commit(x[k] * n.m[2 * k + 1].gain);
+				y += HG_RAD[k] * st;
 			}
+			// radiated ~ surface velocity x area; the heavy fields are the big ones,
+			// so the 1/M of the velocity and the area cancel to first order
 			// the loose field buzzes against itself when it swings hard
 			if (i == looseNote && p.rattle > 0.f) {
 				float th = 0.45f * (1.f - 0.85f * p.rattle);
@@ -539,8 +730,10 @@ struct HangoverEngine {
 				y += looseHp * p.rattle * 1.6f;
 			}
 			n.last = y;
+			bool con = false;
+			for (int s = 0; s < NPULSE; s++) con = con || n.con[s].on || n.pulse[s].active();
 			float a = std::fabs(n.m[0].im) + std::fabs(n.m[0].re) + std::fabs(n.m[1].im) + std::fabs(n.m[1].re);
-			n.idle = !any && a < 1e-6f && std::fabs(y) < 1e-6f;
+			n.idle = !con && a < 1e-6f && std::fabs(y) < 1e-6f;
 			if (n.idle) for (int k = 0; k < NM; k++) n.m[k].re = n.m[k].im = 0.f;
 			n.env += (a - n.env) * 0.002f;
 			n.flash *= 0.9995f;
@@ -563,7 +756,7 @@ struct HangoverEngine {
 		hissF.tick(wn);
 		floorF.tick(wn);
 		helmIn += airF.bp * air * airEnv * 0.08f;
-		float helmOut = helm.tick(helmIn) * p.gu * 1.4f;
+		float helmOut = helm.commit(helmIn + helmDrive) * p.gu * 1.4f;
 		float airOut = hissF.bp * air * airEnv * 0.14f + floorF.lp * air * air * 0.0015f;
 
 		// skin and nail
@@ -587,7 +780,7 @@ struct HangoverEngine {
 		if (p.rattle > 0.f) {
 			float w0 = 2.f * HG_PI * rattleFreq;
 			float dt = 1.f / sr;
-			float acc = w0 * w0 * ((mono + bodyOut) * 0.5f - rp) - 2.f * 0.12f * w0 * rv;
+			float acc = w0 * w0 * ((mono + bodyOut) * 0.4f - rp) - 2.f * 0.12f * w0 * rv;
 			rv += acc * dt;
 			rp += rv * dt;
 			float gap = 0.62f * (1.f - 0.92f * p.rattle);

@@ -12,6 +12,13 @@ through the **gu** (the port underneath): the deep bass boom.
 - **DECAY**, **FORCE** (velocity when VEL is unpatched), **TOUCH** (soft pad to hard slap), **STRIKE** (centre of the field = fundamental, edge = octave + fifth).
 - **MUTE** palm damping, **GU** bass level, **ROLL** speed for thumb rolls.
 
+**The physics** (2.1): the finger is a mass on a soft, lossy spring that lands
+on the moving steel (harder = shorter and brighter, soft pads linger); the
+octave and fifth have nodal lines through the field's centre; a conservative
+1:2:3 shell nonlinearity makes the octave bloom in after hard hits; the cavity
+air is coupled both ways to every fundamental; fields share energy through an
+energy-correct spring through the shell (BLEED).
+
 **The dirt** (each knob, scaled by the big **DIRT** knob: middle = as set, right = double):
 
 - **TUNING**: fields and their octaves / fifths drift off true; hard hits start a touch sharp.
