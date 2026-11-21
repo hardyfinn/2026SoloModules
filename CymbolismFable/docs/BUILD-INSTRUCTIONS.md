@@ -1,6 +1,6 @@
 # Cymbolism Fable: build instructions
 
-A single VCV Rack module that physically models one cymbal at a time (crash, ride, china, splash, flat ride, bell and more; no hi-hats) for the most realistic sound we can get on a CPU. Written on 2026-11-21 by Opus 5.5 (this thread ran on Opus throughout, not Fable) for the build.
+A single VCV Rack module that physically models one cymbal at a time (crash, ride, china, splash, flat ride, bell and more; no hi-hats) for the most realistic sound we can get on a CPU. Written on 2026-11-21 by Opus 5.5, then reviewed and revised by Fable 5.2 (section 0).
 
 Hardy's decisions (2026-11-21):
 - One module. Mono output. Monophonic (one cymbal ringing at a time).
@@ -19,6 +19,137 @@ House conventions (from the repo README and Hardy's other plugins):
 - `make test` builds and runs `test/render.cpp`, which runs the engine offline (no Rack) and writes the checks and demo WAVs below.
 - Add a row for Cymbolism Fable to the repo `README.md` table.
 - Branch: this design thread's branch is `claude/project-thread-fjq3bu`. The repo has no `main` yet; every other module lives on its own branch. Build on `claude/project-thread-fjq3bu` unless Hardy says otherwise.
+
+---
+
+## 0. Revision 2: changes from Fable's review (these override anything below)
+
+Added 2026-11-21 by Fable 5.2 after reviewing the original spec (`03-fable-review.md` has the reasoning). Hardy approved folding these in. Where this section and a later section disagree, this section wins. Sections 2.3, 2.4, 2.5, 2.6, 2.10, 4, 6, 8 and 10 are the ones affected.
+
+### 0.1 Linear modes: a true shell of revolution (replaces 2.3 steps 1 and the "bending-only basis" rule)
+
+- The modal basis is the **true linear shell modes**: bending plus linearised membrane stiffness plus prestress (0.6). Frequencies `ω_i` and shapes `φ_i` of every mode, core and upper, come from this solve and are stepped exactly. No linear stiffness lives in the nonlinear stepper.
+- Use a **general shell-of-revolution element**, not the shallow (Marguerre) one, for the linear modes, because the bell wall is too steep for shallow theory. Meridian arc length `s` as the coordinate, the profile's true principal curvatures, three displacement fields (meridional `u`, circumferential `v`, normal `w`), thin-shell strains (Sanders or Novozhilov; Soedel, "Vibrations of Shells and Plates", has them for shells of revolution), Fourier in θ, one problem per angular order m. Cubic Hermite in `s` for all three fields with 4-point Gauss is a safe start; check for membrane locking with the tests in 0.9 (if thin-shell frequencies fail to converge from above as elements are added, use reduced integration on the membrane terms).
+- Statically condense `u` and `v` (neglect in-plane inertia) so each eigenproblem stays at 2 unknowns per node. Pin the in-plane rigid motions with small in-plane mount springs at the hole (the sleeve does this physically), so the condensation is non-singular. Say in the README that in-plane resonances (above roughly 4 kHz on large cymbals) are not modelled.
+- Only modes below `fMax` are wanted; use whatever eigen-solver is fastest (dense is fine up to a few hundred unknowns; a banded or shift-invert subspace solver if not). Build-time target for HIGH: under 1.5 s on an M1, in the background. The model cache makes this acceptable.
+- The work-in-progress `CyModes.cpp` on the branch uses shallow theory with an Airy stress function for the linear part. Keep its Airy machinery for the **nonlinear** coupling (0.2), where shallow theory is valid (the nonlinearity lives in the bow; the bell barely moves). Replace its linear solve.
+- MOUNT does not trigger a rebuild. Apply the mount springs and dampers as a first-order correction to the existing modes: `Δω_i² = k_m φ_i(r0)² (2π r0 factor) + c_m φ_i'(r0)²`, and likewise for loss. Remove `mount` from the rebuild key.
+
+### 0.2 Nonlinear potential (replaces 2.3 step 4)
+
+With stress-mode amplitudes `η_n(q) = A_n·q + qᵀ B_n q` computed in the shell-mode basis (project the shell modes' normal displacement `w` onto the reference surface for these integrals), the nonlinear potential is everything in the membrane energy beyond the linear part:
+
+```
+V_nl(q) = 1/2 Σ_n [ η_n(q)^2 − (A_n·q)^2 ] = Σ_n [ (A_n·q) ζ_n + 1/2 ζ_n^2 ],    ζ_n = qᵀ B_n q
+∇V_nl   = Σ_n [ ζ_n A_n + 2 (A_n·q + ζ_n) B_n q ]
+```
+
+Total potential `U = 1/2 Σ ω_i² q_i² + V_nl` must be non-negative. Check at build time that `diag(ω²) − AᵀA` is positive semi-definite on the core (smallest eigenvalue ≥ 0 within rounding); if the general-shell linear modes and the shallow `A` disagree enough to break this, scale `A` down by the smallest factor that restores it and report the factor in the test output (it should be within a few percent of 1).
+
+BLOOM scales `V_nl` (so `B → sqrt(BLOOM)·B` is wrong; scale the force `∇V_nl` by BLOOM, which keeps a consistent energy `BLOOM·V_nl` and stays non-negative for BLOOM ≤ 1; for BLOOM in (1, 2] accept that `U` is no longer guaranteed non-negative and rely on the guard in 0.3).
+
+### 0.3 Time stepping: validated against a reference (replaces 2.5)
+
+1. **Reference first.** `tools/shell_ref.py` gets a time stepper for the core: Störmer-Verlet with exact-frequency linear part at 16x oversampling, convergence-checked against 32x (band-energy curves agree within 0.5 dB). This is the ground truth for crash-amplitude behaviour. No real-time code is trusted until it is compared with this.
+2. **Primary real-time scheme: Störmer-Verlet with the exact-frequency linear update**, engine running at **2x the host rate** (88.2 or 96 kHz) with a half-band decimator at the output (linear-phase FIR or elliptic IIR, at least 80 dB stopband), ECO at 1x. It is explicit, symplectic (no long-term energy drift, no auxiliary variable to wander), and this is the scheme Ducceschi and Touzé used for their modal gong and cymbal model. It is conditionally stable; at 2x the core (below about 2 to 4 kHz) and the upper modes (below 20 kHz, `ωk ≤ 1.4`) sit well inside the limit even with amplitude hardening.
+
+   ```
+   (1 + σ_i k) q_i^{n+1} = 2cos(ω_i k) q_i^n − (1 − σ_i k) q_i^{n−1} + k²_eff,i ( f_i^n − BLOOM·∂V_nl/∂q_i (q^n) )
+   k²_eff,i = 2(1 − cos(ω_i k)) / ω_i²
+   ```
+3. **Alternative to evaluate: SAV.** Scalar SAV needs a non-negative potential, which `V_nl` alone is not. If you find a sound formulation (for example with the constraint technique of Russo, Webb, Ducceschi and Bilbao 2025) and it matches the reference at 1x for less CPU than Verlet at 2x, use it; otherwise do not.
+4. **Contacts** (beaters, rivets) have non-negative potentials, so either treat them in the same explicit update at 2x, or with one SAV variable per active contact as section 2.5 describes. Choose by tests T6 and T9; stiff TIP contacts at maximum HARDNESS are the hard case.
+5. **Energy guard.** Track the discrete energy every 32 samples. If it rises by more than the work done by the forces plus 1% (or anything is non-finite), apply strong damping to the top 10% of core modes for 5 ms and count the event; test T9 requires zero guard events at BLOOM ≤ 1.
+6. Drop the "re-anchor ρ" step.
+
+Pass/fail accuracy test **T5b**: CRASH at HIGH, initial displacement giving peak edge deflection of 3 thicknesses, lossless: third-octave band energies of the core over the first 500 ms within 1.5 dB of the reference; and with loss on, 6 to 12 kHz band rise time within 20% of the reference when the reference is run with the same extended coupling (0.4).
+
+### 0.4 Extended coupling: real physics in the highs (replaces the noise cascade of 2.6 as the main mechanism)
+
+The low-order membrane stress modes are what scatter energy between high modes. So the first `NL` stress modes (by ascending λ; HIGH 8, ULTRA 16, ECO 0) also receive quadratic terms from upper modes:
+
+```
+ζ_n = q_cᵀ B_n q_c  +  Σ_(i,j) in P_n  2 B_n,ij q_i q_j  +  Σ_i B_n,ii q_i²      (i, j upper modes)
+```
+
+- `P_n` is a sparse pair list. For each upper mode `i` and each low stress mode `n` (angular order `s`), candidates `j` are upper or core modes with `m_j = |m_i ± s|`, matching parity, and `|f_j − f_i| < 2·fTopCore`. Keep the `K` candidates with the largest `|B_n,ij|` (HIGH K = 2, ULTRA K = 4). Each pair is stored once and applied symmetrically, so the scheme stays a gradient of one potential and energy is conserved.
+- The diagonal terms `B_n,ii` give the stiffness modulation (the shimmer) that 2.6 item 4 approximated; drop that item.
+- `B_n,ij` for upper modes is computed with the same radial integrals as the core (precompute the stress modes' radial fields once; each `B_n,ij` is then one radial quadrature).
+- Store pairs in structure-of-arrays form sorted by `n`, use NEON/SSE via Rack's `simd` or plain auto-vectorised loops, float32.
+- The statistical band cascade of 2.6 items 1 to 3 remains only as (a) the whole mechanism in ECO and (b) a weak residual in HIGH and ULTRA standing for pairs that were not kept. Scale its constants so that with extended coupling on it carries at most about a quarter of the flux (measure by switching it off in a test render), and say what you chose in the README.
+- Measure CPU before fixing `NL`, `K` and the core size. Budget: the engine may use most of one M1 performance core at HIGH because it runs on its own thread (0.8).
+
+### 0.5 Decay (replaces the single loss factor in 2.1 and 4)
+
+Per-mode loss `σ_i = DECAY⁻¹ · [σ_te(f_i, h) + σ_ve(f_i) + σ_rad(f_i, h)] + mount + damp + choke`, using the three-mechanism plate damping model of Chaigne and Lambourg (JASA 2001, part I; read it for the functional forms): thermoelastic, viscoelastic and radiation. `h` is the mode's energy-weighted mean thickness. ALLOY sets the constants. Calibrate the constants so these decay times (T60, soft strike, MOUNT at centre, estimates to be tuned by ear within ±30%) come out:
+
+| Type | 250 Hz | 1 kHz | 4 kHz | 10 kHz |
+|---|---|---|---|---|
+| RIDE 21" | 12 s | 8 s | 4 s | 1.8 s |
+| CRASH 18" | 7 s | 5 s | 2.5 s | 1.2 s |
+| SPLASH 10" | 2.5 s | 2 s | 1.2 s | 0.6 s |
+| CHINA 18" | 4 s | 3 s | 1.5 s | 0.8 s |
+| BELL 8" | n/a | 10 s | 6 s | 2.5 s |
+
+Test **T11** checks B20 CRASH and RIDE against this table within ±30%.
+
+### 0.6 TENSION (new control) and HAMMER
+
+- **TENSION** (bipolar knob with CV, rebuilds): the residual stress hammering leaves. Model it as an in-plane inelastic expansion (eigenstrain) `ε*` applied uniformly over the bow between `rb` and `0.8a`; solve the axisymmetric membrane problem for the self-equilibrated residual stresses `N0_rr(r)`, `N0_θθ(r)`; add the geometric stiffness `∫ [N0_rr w,r² + N0_θθ (w,θ / r)²] dA` to the linear solve. Range `ε*` from −3e-4 to +3e-4 as a start; clamp at build time so the lowest eigenvalue stays above 20 Hz (no buckled cymbals). Expect: one direction tightens and brightens (glassy, pingy), the other loosens toward dark, trashy and "dead". Label the ends LOOSE and TIGHT once you hear which is which.
+- **HAMMER** stays as irregularity (pair splitting, jitter, symmetry-breaking couplings), no rebuild of the FEM needed: apply as perturbations to the built model.
+
+### 0.7 SIZE is a uniform scale, with no rebuild (changes 4 and 5)
+
+- The model is built at the type's reference size. SIZE scales diameter, profile and thickness together by `λ`. Then frequencies scale by `1/λ` exactly, and the coupling terms and modal masses scale by fixed powers of `λ`: derive them and verify with test **T12** (a model built at `λ = 1.3` matches the `λ = 1` model rescaled, frequencies and a struck render's band energies, within 1e-3 and 0.5 dB).
+- SIZE therefore responds instantly and can be modulated. Give the SIZE CV a 1 V/oct-style law (0 V = knob value, +1 V = half the size, one octave up) so it can be played from a sequencer, with a smoothing time of 5 ms.
+- WEIGHT becomes thickness relative to the type's reference (0.5x to 2.5x) and still rebuilds. The display shows the resulting diameter in inches and edge thickness in mm.
+- Loss (0.5) and pickup weights (0.9) depend on absolute size: recompute losses at control rate and pickup weights on the background thread; neither needs the mode solve.
+- Remove `sizeIn` from the rebuild key.
+
+### 0.8 Engine on its own thread
+
+The cymbal engine runs on a dedicated real-time thread in 32-sample blocks (host rate), exchanging audio, the EXCITE input and timestamped events (strikes, choke, parameter snapshots) with `process()` through lock-free ring buffers. Added latency is one block, constant, and stated in the manual. Context-menu option "Run on its own thread" (default on); when off, the engine runs inline in `process()`. The offline test calls the engine directly. Set the thread's QoS to user-interactive on macOS and flush denormals on it.
+
+### 0.9 Pickup by Rayleigh integral (replaces the point-sum and `R(f)` of 2.10)
+
+For each mode, once per build (and when SIZE or MIC changes, on the background thread):
+
+```
+W_i = ∫ φ_i(x) · G(x, x_mic; k_i) dS,     k_i = ω_i / c
+G = dipole kernel of an unbaffled thin disc:  cosγ · (1 + i k R) e^{−ikR} / R²    (R from surface point to mic, γ from the surface normal)
+out = Σ_i [ Re(W_i) · a_i + Im(W_i) · ω_i · v_i ]       (a_i modal acceleration, v_i modal velocity)
+```
+
+Quadrature on a 48 x 96 polar grid. Mic positions are realistic and off-axis: BELL 6 cm above the bell, 30 degrees off axis; BOW 8 cm above mid-bow; EDGE 6 cm above the rim; OVERHEAD 0.9 m up and 0.4 m to the side; ROOM 3 m away at 35 degrees elevation plus air absorption. Morph by interpolating the weights. Normalise each position to equal loudness on a reference medium hit. Stand swing (built last) rotates and tilts the cymbal under a fixed mic.
+
+Also **stick click**: three stick modes (about 1.1, 2.9 and 5.4 kHz for a 5B hickory stick, T60 20 to 40 ms; nylon tips a little brighter) driven by the contact force, added to the output at a level set by the mic distance (clear at close mics, faint at ROOM). TIP, SHOULDER and RODS only.
+
+### 0.10 Controls and panel
+
+- New: **TENSION** knob and CV. **PLAY** CV input (0 to 10 V over the six beaters, sampled at each strike; the switch position is added). SIZE CV is 1 V/oct-style (0.7).
+- Panel is **40 HP**. Rows as in section 6 with TENSION in the CYMBAL row.
+- Context menu adds "Run on its own thread".
+
+### 0.11 Tests (adds to section 8)
+
+- T1 runs with mount springs off and the hole as small as the mesh allows.
+- **T1b** A clamped-free and a free hemispherical or deep spherical cap against published shell frequencies (Soedel or Leissa "Vibration of Shells"), to validate the general shell element where shallow theory fails. Within 3%.
+- **T5** becomes: lossless, unforced, energy drift below 1e-4 relative over 10 s at HIGH for the Verlet scheme (symplectic schemes oscillate around the true energy; check the bound, not exact constancy).
+- **T5b**, **T11**, **T12** as defined above.
+- **T13** Real cymbal check: the first ten or so mode frequencies of the model closest to the cymbal measured by Perrin et al. ("The normal modes of cymbals") within 15%. If the paper's geometry is not given fully, say what was assumed.
+- T7 (bloom) must pass with the statistical cascade switched off at HIGH, so the bloom is shown to come from the real coupling.
+
+### 0.12 Build order (replaces section 10)
+
+1. Python reference: general shell modes, Airy stress modes, `A`, `B`, Verlet reference stepper. T1, T1b, T3, T13.
+2. C++ solver. T2.
+3. C++ engine: core + upper + extended coupling at 2x. T4, T5, T5b, T7.
+4. **First audio to Hardy**: with only a simple contact strike and a provisional pickup, render soft, medium and hard hits of CRASH, RIDE, CHINA and SPLASH, and post them in the thread with a short honest description. Carry on building while waiting, but treat Hardy's reaction as able to change the plan.
+5. Decay law (T11), Rayleigh pickup, stick click, beaters (T6), rivets, choke (T8), damp, mount, TENSION, SIZE scaling (T12).
+6. Background rebuild, cache, swap, engine thread.
+7. Rack module, 40 HP panel, display. T9, T10, demo WAVs.
+8. Guide and PDF, README rows, push, CI green.
+9. Last, if time allows: bow, stand swing. If they are not done, ship without them, remove BOW from the PLAY switch, and tell Hardy.
 
 ---
 
