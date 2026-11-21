@@ -76,6 +76,14 @@ struct Model {
 	double Eref = 1e-6;             // energy where the nonlinearity gets strong
 	double buildMs = 0;
 
+	// Rayleigh pickup table at the reference size (mic positions scale with the cymbal,
+	// so the table is exact at any SIZE): complex weight of the cos twin of each radial
+	// shape for NMIC mic positions; the sin twin and any rotation follow analytically.
+	static const int NMIC = 5;     // BELL, BOW, EDGE, OVERHEAD, ROOM
+	std::vector<float> micRe, micIm;   // [p * shapes.size() + shape]
+	double micNorm[NMIC] = {1, 1, 1, 1, 1};
+	double pickupMs = 0;
+
 	// value of mode i's radial shape at radius r (linear interpolation)
 	double W(int i, double r) const;
 	// full shape at (r, th), with an orientation offset for the mode pair

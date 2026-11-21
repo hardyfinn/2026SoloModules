@@ -399,6 +399,7 @@ double Model::phi(int i, double r, double th, double thOff) const {
 	return w * (md.par ? std::sin(a) : std::cos(a));
 }
 
+void buildPickup(Model& M);
 std::shared_ptr<Model> buildModel(const GeomParams& gp) { return buildModel(gp, SolverOpts()); }
 
 
@@ -1141,9 +1142,115 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 		}
 	}
 
+	buildPickup(M);
 	auto t1 = std::chrono::steady_clock::now();
 	M.buildMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
 	return mdl;
+}
+
+// Rayleigh-integral pickup for an unbaffled thin shell (dipole kernel):
+//   W = int phi cos(gamma) (1 + i k R) e^{-i k R} / R^2 dS
+// Mic positions sit in the plane theta = 0, so the kernel is even in theta and only
+// the cos twin needs integrating (over half the circle, doubled).
+void buildPickup(Model& M) {
+	auto t0 = std::chrono::steady_clock::now();
+	const Shape& sh = M.sh;
+	double a = sh.a;
+	struct P { double x, z; };
+	auto zAt = [&](double rf) { double zz, zp; sh.z(sh.r0 + rf * (sh.a - sh.r0), zz, zp); return zz; };
+	P pos[Model::NMIC] = {
+		{0.05 * a + 0.03, zAt(0.05) + 0.06},          // BELL: 6 cm above the bell, a little off axis
+		{0.50 * a, zAt(0.50) + 0.08},                  // BOW: 8 cm above mid-bow
+		{0.98 * a, zAt(0.98) + 0.06},                  // EDGE: 6 cm above the rim
+		{0.40, 0.90},                                  // OVERHEAD: 0.9 m up, 0.4 m aside
+		{3.0 * std::cos(0.6109), 3.0 * std::sin(0.6109)},   // ROOM: 3 m at 35 degrees
+	};
+	const int NR = 48, NT = 48;   // NT over half the circle
+	const double c0 = 343.0;
+	int NS = (int)M.shapes.size();
+	// frequency and angular order of each shape (cos twin)
+	std::vector<double> fS(NS, 0.0);
+	std::vector<int> mS(NS, 0);
+	for (const Mode& md : M.modes)
+		if (fS[md.shape] == 0) { fS[md.shape] = md.f; mS[md.shape] = md.m; }
+	std::vector<double> pr(NR), pz(NR), pnr(NR), pnz(NR), pA(NR), rabs(NR);
+	for (int j = 0; j < NR; j++) {
+		double rf = (j + 0.5) / NR;
+		double r = sh.r0 + rf * (sh.a - sh.r0);
+		double zz, zp;
+		sh.z(r, zz, zp);
+		double nrm = std::sqrt(1 + zp * zp);
+		rabs[j] = r;
+		pr[j] = r;
+		pz[j] = zz;
+		pnr[j] = -zp / nrm;
+		pnz[j] = 1.0 / nrm;
+		pA[j] = 2.0 * r * ((sh.a - sh.r0) / NR) * nrm * (CY_PI / NT);   // x2: other half circle
+	}
+	// shape values on the rings
+	std::vector<float> Wr((size_t)NS * NR);
+	{
+		int n = (int)M.gridR.size();
+		double g0 = M.gridR[0], g1 = M.gridR[n - 1];
+		for (int j = 0; j < NR; j++) {
+			double t = (rabs[j] - g0) / (g1 - g0) * (n - 1);
+			int k = std::max(0, std::min(n - 2, (int)t));
+			double fr = std::min(1.0, std::max(0.0, t - k));
+			for (int s = 0; s < NS; s++) Wr[(size_t)s * NR + j] = (float)(M.shapes[s].W[k] + fr * (M.shapes[s].W[k + 1] - M.shapes[s].W[k]));
+		}
+	}
+	std::vector<double> th(NT);
+	for (int t = 0; t < NT; t++) th[t] = CY_PI * (t + 0.5) / NT;
+	M.micRe.assign((size_t)Model::NMIC * NS, 0.f);
+	M.micIm.assign((size_t)Model::NMIC * NS, 0.f);
+	std::vector<double> R(NR * NT), K(NR * NT);
+	std::vector<double> cmt(NT);
+	for (int p = 0; p < Model::NMIC; p++) {
+		for (int j = 0; j < NR; j++)
+			for (int t = 0; t < NT; t++) {
+				double ct = std::cos(th[t]), st = std::sin(th[t]);
+				double dx = pos[p].x - pr[j] * ct, dy = -pr[j] * st, dz = pos[p].z - pz[j];
+				double Rv = std::sqrt(dx * dx + dy * dy + dz * dz);
+				double cg = (dx * pnr[j] * ct + dy * pnr[j] * st + dz * pnz[j]) / Rv;
+				R[j * NT + t] = Rv;
+				K[j * NT + t] = cg / (Rv * Rv) * pA[j];
+			}
+		double pw = 0;
+		for (int s = 0; s < NS; s++) {
+			double kk = 2 * CY_PI * fS[s] / c0;
+			int m = mS[s];
+			for (int t = 0; t < NT; t++) cmt[t] = std::cos(m * th[t]);
+			double re = 0, im = 0;
+			for (int j = 0; j < NR; j++) {
+				double w = Wr[(size_t)s * NR + j];
+				if (w == 0) continue;
+				double rr = 0, ii = 0;
+				for (int t = 0; t < NT; t++) {
+					double kr = kk * R[j * NT + t];
+					double c = std::cos(kr), sn = std::sin(kr);
+					// (1 + i kr) (c - i sn) = (c + kr sn) + i (kr c - sn)
+					double kw = K[j * NT + t] * cmt[t];
+					rr += kw * (c + kr * sn);
+					ii += kw * (kr * c - sn);
+				}
+				re += w * rr;
+				im += w * ii;
+			}
+			M.micRe[(size_t)p * NS + s] = (float)re;
+			M.micIm[(size_t)p * NS + s] = (float)im;
+			// loudness reference: unit impulse near the edge, |W| w phi(0.8) per mode
+			if (fS[s] < 12000) {
+				double wv = 2 * CY_PI * fS[s];
+				double ph = M.shapes[s].W[(int)(0.8 * (M.gridR.size() - 1))];
+				pw += (re * re + im * im) * wv * wv * ph * ph;
+			}
+		}
+		M.micNorm[p] = pw;
+	}
+	double ref = M.micNorm[1];
+	for (int p = 0; p < Model::NMIC; p++) M.micNorm[p] = M.micNorm[p] > 0 ? std::sqrt(ref / M.micNorm[p]) : 1.0;
+	auto t1 = std::chrono::steady_clock::now();
+	M.pickupMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
 }
 
 } // namespace cy

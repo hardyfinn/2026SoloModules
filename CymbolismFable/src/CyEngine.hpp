@@ -36,7 +36,7 @@ struct Controls {
 	double force = 3.0;      // m/s for EXCITE scaling and BOW
 	double rate = 8.0;       // roll / sweep / bow speed
 	bool choke = false;
-	bool roll = false;
+	bool roll = false;       // ROLL gate: roll (contact beaters), sweep (BRUSH), bow (BOW)
 	uint64_t seed = 1;       // hammering pattern
 };
 
@@ -84,7 +84,7 @@ public:
 	std::vector<double> firBuf;
 	int firPos = 0;
 	double dcX = 0, dcY = 0;
-	double outGain = 0.004;  // pickup units -> volts (medium crash hit ~2 V peak, hard ~7 V)
+	double outGain = 0.0008;  // pickup units -> volts (medium crash hit at BOW ~3 V peak)
 	double lp = 0, lpA = 1.0;         // ROOM air absorption
 	double lastEnergy = 0;
 	int guardEvents = 0;
@@ -220,7 +220,7 @@ public:
 			for (int j = 0; j < 7; j++) tuneKey[j] = key[j];
 			retune();
 		}
-		if (force || std::fabs(ctl.mic - micCache) > 1e-3 || std::fabs(lam - sizeCache) > 1e-4) {
+		if (force || changed || std::fabs(ctl.mic - micCache) > 1e-3 || std::fabs(lam - sizeCache) > 1e-4) {
 			computeMic();
 			micCache = ctl.mic;
 			sizeCache = lam;
@@ -359,93 +359,35 @@ public:
 		return edgeSq0Cache;
 	}
 
-	// Rayleigh-integral pickup for an unbaffled thin disc (dipole kernel), per mode:
-	//   W_i = int phi_i cos(gamma) (1 + i k R) e^{-i k R} / R^2 dS
-	// out = Re(W_i) a_i - Im(W_i) w_i v_i
+	// Pickup: interpolate the model's precomputed Rayleigh weights between the two
+	// neighbouring mic positions, rotate by each pair's orientation and the swing angle,
+	// and scale to the current SIZE (mic distances scale with the cymbal).
+	double swingAng = 0;
 	void computeMic() {
-		const Shape& sh = M->sh;
-		double a = sh.a * lam;
-		struct MicPos { double x, yv, z; };
-		auto micAt = [&](double u) -> MicPos {
-			// close positions are relative to the cymbal (height above the surface)
-			double zc, zp;
-			if (u <= 1.0) {   // BELL .. BOW
-				double rf = 0.05 + 0.45 * u;
-				sh.z(sh.r0 + rf * (sh.a - sh.r0), zc, zp);
-				return {rf * a + 0.03 * (1 - u), 0.0, zc * lam + 0.06 + 0.02 * u};
-			}
-			if (u <= 2.0) {   // BOW .. EDGE
-				double t = u - 1.0;
-				double rf = 0.5 + 0.48 * t;
-				sh.z(sh.r0 + rf * (sh.a - sh.r0), zc, zp);
-				return {rf * a, 0.0, zc * lam + 0.08 - 0.02 * t};
-			}
-			if (u <= 3.0) {   // EDGE .. OVERHEAD
-				double t = u - 2.0;
-				return {a * 0.98 * (1 - t) + 0.4 * t, 0.0, 0.06 * (1 - t) + 0.9 * t};
-			}
-			double t = std::min(1.0, u - 3.0);   // OVERHEAD .. ROOM
-			double ang = 35.0 * CY_PI / 180.0;
-			return {0.4 * (1 - t) + 3.0 * std::cos(ang) * t, 0.0, 0.9 * (1 - t) + 3.0 * std::sin(ang) * t};
-		};
-		MicPos mp = micAt(std::min(4.0, std::max(0.0, ctl.mic)));
-		const int NR = 48, NT = 96;
-		const double c0 = 343.0;
-		// surface points (on the scaled cymbal), with normals and area
-		std::vector<double> pr(NR), pz(NR), pnr(NR), pnz(NR), pA(NR);
-		for (int j = 0; j < NR; j++) {
-			double rf = (j + 0.5) / NR;
-			double r = sh.r0 + rf * (sh.a - sh.r0);
-			double zz, zp;
-			sh.z(r, zz, zp);
-			double nrm = std::sqrt(1 + zp * zp);
-			pr[j] = r * lam;
-			pz[j] = zz * lam;
-			pnr[j] = -zp / nrm;
-			pnz[j] = 1.0 / nrm;
-			pA[j] = pr[j] * ((sh.a - sh.r0) * lam / NR) * nrm * (2 * CY_PI / NT);
-		}
-		std::vector<std::complex<double>> W(N);
-		std::vector<double> ct(NT), st(NT);
-		for (int t = 0; t < NT; t++) {
-			ct[t] = std::cos(2 * CY_PI * (t + 0.5) / NT);
-			st[t] = std::sin(2 * CY_PI * (t + 0.5) / NT);
-		}
-		// precompute geometry per surface point
-		std::vector<double> Rr(NR * NT), cg(NR * NT);
-		for (int j = 0; j < NR; j++)
-			for (int t = 0; t < NT; t++) {
-				double px = pr[j] * ct[t], py = pr[j] * st[t], pzz = pz[j];
-				double dx = mp.x - px, dy = mp.yv - py, dz = mp.z - pzz;
-				double R = std::sqrt(dx * dx + dy * dy + dz * dz);
-				double nx = pnr[j] * ct[t], ny = pnr[j] * st[t], nz = pnz[j];
-				Rr[j * NT + t] = R;
-				cg[j * NT + t] = (dx * nx + dy * ny + dz * nz) / R;
-			}
-		for (int i = 0; i < NA; i++) {
-			const Mode& md = M->modes[i];
-			double kk = (om0[i] / lam) / c0;
-			std::complex<double> acc(0, 0);
-			for (int j = 0; j < NR; j++) {
-				double rabs = M->sh.r0 + (j + 0.5) / NR * (sh.a - sh.r0);
-				double Wr = M->W(i, rabs) * sPhi;
-				if (Wr == 0) continue;
-				for (int t = 0; t < NT; t++) {
-					double th = 2 * CY_PI * (t + 0.5) / NT;
-					double a1 = md.m * (th - thOff[i]);
-					double ph = Wr * (md.par ? std::sin(a1) : std::cos(a1));
-					double R = Rr[j * NT + t];
-					std::complex<double> e = std::polar(1.0, -kk * R);
-					acc += ph * cg[j * NT + t] * std::complex<double>(1.0, kk * R) * e / (R * R) * pA[j];
-				}
-			}
-			W[i] = acc;
-		}
+		double u = std::min(4.0, std::max(0.0, ctl.mic));
+		int p0 = std::min(3, (int)u);
+		double t = u - p0;
+		int NS = (int)M->shapes.size();
+		const float* r0 = &M->micRe[(size_t)p0 * NS];
+		const float* i0 = &M->micIm[(size_t)p0 * NS];
+		const float* r1 = &M->micRe[(size_t)(p0 + 1) * NS];
+		const float* i1 = &M->micIm[(size_t)(p0 + 1) * NS];
+		double n0 = (1 - t) * M->micNorm[p0], n1 = t * M->micNorm[p0 + 1];
 		for (int i = 0; i < N; i++) {
 			if (i >= NA) { micW[i] = micV[i] = 0; continue; }
+			const Mode& md = M->modes[i];
+			int s = md.shape;
+			double re = n0 * r0[s] + n1 * r1[s];
+			double im = n0 * i0[s] + n1 * i1[s];
+			double fac = 1.0;
+			if (md.m > 0) {
+				double ang = md.m * (thOff[i] + swingAng);
+				fac = md.par ? -std::sin(ang) : std::cos(ang);
+			}
+			fac *= sPhi;
 			double w = om0[i] / lam;
-			micW[i] = W[i].real();
-			micV[i] = -W[i].imag() * w;
+			micW[i] = re * fac;
+			micV[i] = -im * fac * w;
 		}
 	}
 
@@ -462,6 +404,14 @@ public:
 
 	// strike with speed v (m/s), using the current PLAY / HARDNESS / POSITION
 	void strike(double v) {
+		int play = ctl.play;
+		// swing kick: impulse x distance from the centre (loose MOUNT swings more)
+		swingKick(0.04 * v * ctl.position * (0.3 + 0.7 * ctl.mount));
+		if (play == BRUSH) { brushTap(v, ctl.position, 0.0); return; }
+		if (play == BOW) { bowTimer = 0.25 + 0.1 * v; return; }
+		strikeRaw(v);
+	}
+	void strikeRaw(double v) {
 		int play = ctl.play;
 		double hd = std::min(1.0, std::max(0.0, ctl.hardness));
 		auto launch = [&](double mass, double K, double alpha, double lam_, double r, double th, double vv, int delaySteps) {
@@ -488,17 +438,14 @@ public:
 		double pos = ctl.position;
 		if (play == TIP) launch(0.008, 3e7 * std::pow(10.0, hd), 1.5, 0.2, pos, 0.0, v, 0);
 		else if (play == SHOULDER) launch(0.025, 1e7 * std::pow(10.0, hd), 1.5, 0.3, pos, 0.0, v, 0);
-		else if (play == MALLET) launch(0.03, 1e4 * std::pow(100.0, hd), 2.8, 0.9, pos, 0.0, v, 0);
+		else if (play == MALLET) launch(0.03, 1e9 * std::pow(100.0, hd), 2.5, 0.5, pos, 0.0, v, 0);   // felt: soft, strongly nonlinear
 		else if (play == RODS) {
 			for (int j = 0; j < 7; j++) {
 				double dr = (j - 3) * 0.004 / std::max(0.05, M->sh.a * lam);
 				launch(0.002, 1e7, 1.5, 0.3, pos + dr, 0.01 * rng.bi(), v * (0.85 + 0.3 * rng.uni()), (int)(rng.uni() * 1.5e-3 * fs));
 			}
 		}
-		else {
-			// BRUSH and BOW: provisional (grains / friction come later): a soft wide contact
-			launch(0.02, 3e5, 2.0, 1.0, pos, 0.0, v * 0.5, 0);
-		}
+		else launch(0.008, 3e7 * std::pow(10.0, hd), 1.5, 0.2, pos, 0.0, v, 0);
 	}
 
 	// implicit scalar contact solve: delta + C_tot * F(delta) = delta_pred
@@ -677,6 +624,8 @@ public:
 			}
 		}
 		for (auto& c : rivets) solveContact(c);
+		if (!grainQ.empty()) fireGrains();
+		if (bowOn) bowStep();
 		// stick click
 		double click = 0;
 		if (ctl.play == TIP || ctl.play == SHOULDER || ctl.play == RODS) {
@@ -716,7 +665,9 @@ public:
 				updateCoefficients();
 				setRivets((int)std::lround(ctl.sizzle * 12));
 				cascadeBlock(32.0 / fsHost);
-				energyGuard(excIn != nullptr && ctl.excite > 0);
+				exciterBlock(32.0 / fsHost);
+				energyGuard((excIn != nullptr && ctl.excite > 0) || bowOn || !grainQ.empty() || grainFired);
+				grainFired = false;
 			}
 			double e = excIn ? excIn[s] : 0.0;
 			double acc = 0;
@@ -724,6 +675,7 @@ public:
 				// keep q^{n-1} for the pickup
 				for (int i = 0; i < NA; i++) qpp[i] = qp[i];
 				double v = step(e);
+				if (OS == 1) { acc = v; break; }
 				// FIR decimator
 				int L = (int)firH.size();
 				firBuf[firPos] = v;
@@ -738,7 +690,7 @@ public:
 			dcX = acc;
 			dcY = yv;
 			lp += lpA * (yv - lp);
-			double o = lp * outGain;
+			double o = lp * outGain * typeTrim();
 			if (!std::isfinite(o)) {
 				reset();
 				o = 0;
@@ -748,6 +700,164 @@ public:
 			double ao = std::fabs(o);
 			if (ao > 8.0) o = (o > 0 ? 1 : -1) * (8.0 + 2.0 * std::tanh((ao - 8.0) / 2.0));
 			out[s] = (float)o;
+		}
+	}
+
+	// per-type output trim (equal loudness across the type table at a medium hit)
+	double typeTrim() const {
+		static const double T[NUM_TYPES] = {1.2, 1.0, 1.1, 1.0, 1.0, 0.8, 1.0, 1.15, 1.0, 0.45};
+		return T[M->gp.type] * (ctl.play == BOW ? 4.0 : 1.0);   // bowing is far quieter than striking
+	}
+
+	// ---- brush grains: short half-sine wire impacts, applied as shaped impulses ----
+	struct Grain { uint64_t at; double J, T, r, th; };
+	std::vector<Grain> grainQ;
+	bool grainFired = false;
+	double sweepTh = 0;
+	void queueGrain(uint64_t at, double J, double T, double r, double th) {
+		if (grainQ.size() < 512) grainQ.push_back({at, J, T, r, th});
+	}
+	void fireGrains() {
+		for (size_t gi = 0; gi < grainQ.size();) {
+			Grain& gr = grainQ[gi];
+			if (gr.at > stepCount) { gi++; continue; }
+			// impulse J over a half-sine of length T: spectrum cos(pi f T) / (1 - (2 f T)^2)
+			double rr = std::min(0.995, std::max(0.0, gr.r));
+			for (int i = 0; i < NA; i++) {
+				double fT = wS[i] / (2 * CY_PI) * gr.T;
+				double x = 2 * fT;
+				double H = std::fabs(1 - x * x) < 1e-6 ? CY_PI / 4 : std::cos(CY_PI * fT) / (1 - x * x);
+				q[i] += g[i] / k * gr.J * H * phiAt(i, rr, gr.th);
+			}
+			grainFired = true;
+			grainQ[gi] = grainQ.back();
+			grainQ.pop_back();
+		}
+	}
+	// a brush tap: 30 to 60 wires over 5 to 25 ms inside a 25 mm patch
+	void brushTap(double v, double r0, double th0) {
+		double hd = std::min(1.0, std::max(0.0, ctl.hardness));
+		int n = 30 + (int)(30 * hd);
+		double T = 150e-6 - 110e-6 * hd;
+		double spread = 0.025 - 0.02 * hd;
+		double Jtot = 0.004 * v;
+		double aS = M->sh.a * lam;
+		for (int j = 0; j < n; j++) {
+			double J = Jtot / n * (-std::log(std::max(1e-6, rng.uni())));
+			double dr = 0.0125 * rng.bi() / aS;
+			double rr = std::max(0.05, r0 + dr);
+			double dth = 0.0125 * rng.bi() / std::max(0.02, rr * aS);
+			uint64_t at = stepCount + (uint64_t)(rng.uni() * spread * fs);
+			queueGrain(at, J, T * (0.8 + 0.4 * rng.uni()), rr, th0 + dth);
+		}
+	}
+
+	// ---- bow: smooth friction at the edge, solved implicitly per step ----
+	bool bowOn = false;
+	double bowTimer = 0, bowFN = 0, bowVr = 0, bowR = -1, bowCB = 0;
+	std::vector<double> bowPhi;
+	void bowSetup() {
+		double r = 0.99 - 0.08 * (1.0 - std::min(1.0, std::max(0.0, ctl.position)));
+		bowPhi.resize(NA);
+		double C = 0;
+		// sub-audio rocking / sleeve modes are left out: the bow would just push the cymbal around
+		for (int i = 0; i < NA; i++) {
+			// the hair ribbon (about 15 mm along the edge) averages short waves, and its
+			// compliance rolls off what it can drive above a few kHz
+			double fi = wS[i] / (2 * CY_PI);
+			double x = 0.5 * M->modes[i].m * 0.015 / (M->sh.a * lam);
+			double avg = x < 1e-6 ? 1.0 : std::sin(x) / x;
+			double hair = 1.0 / (1.0 + (fi / 4000.0) * (fi / 4000.0));
+			bowPhi[i] = fi < 40.0 ? 0.0 : phiAt(i, r, 0.0) * avg * hair;
+			C += bowPhi[i] * bowPhi[i] * g[i];
+		}
+		bowCB = C;
+		bowR = r;
+	}
+	void bowStep() {
+		if ((int)bowPhi.size() != NA) bowSetup();
+		// predicted velocity at the bow point (q holds the predicted new state, qp the old)
+		double vp = 0;
+		for (int i = 0; i < NA; i++) vp += bowPhi[i] * (q[i] - qp[i]);
+		vp /= k;
+		double vb = 0.02 * std::min(30.0, std::max(2.0, ctl.rate));
+		const double beta = 100.0, s2b = std::sqrt(2 * beta);
+		double A = bowCB / k * bowFN;
+		double vr = bowVr;
+		for (int it = 0; it < 4; it++) {
+			double e = std::exp(-beta * vr * vr + 0.5);
+			double ph = s2b * vr * e, dph = s2b * e * (1 - 2 * beta * vr * vr);
+			double h = vr - vb + vp + A * ph;
+			double d = 1 + A * dph;
+			if (std::fabs(d) < 0.2) d = d < 0 ? -0.2 : 0.2;
+			vr -= h / d;
+		}
+		bowVr = vr;
+		double F = bowFN * s2b * vr * std::exp(-beta * vr * vr + 0.5);
+		for (int i = 0; i < NA; i++) q[i] += g[i] * bowPhi[i] * F;
+	}
+
+	// ---- swing on the stand: a damped rotation of the cymbal under the mic ----
+	double swPsi = 0, swDpsi = 0, swMicPsi = 0;
+	void swingKick(double J) { swDpsi += J; }
+
+	// ---- roll / sweep / bow scheduling (control rate) ----
+	double rollTimer = 0;
+	int rollHand = 0;
+	double clickKick = 0;
+	void exciterBlock(double dt) {
+		int play = ctl.play;
+		double rate = std::min(30.0, std::max(2.0, ctl.rate));
+		double v = std::max(0.0, ctl.force);
+		// roll for the contact beaters
+		if (ctl.roll && play != BRUSH && play != BOW) {
+			rollTimer -= dt;
+			if (rollTimer <= 0) {
+				rollHand ^= 1;
+				double pos0 = ctl.position;
+				ctl.position = pos0 + (rollHand ? 0.015 : -0.015);
+				strikeRaw(v * (1.0 + 0.15 * rng.bi()));
+				ctl.position = pos0;
+				rollTimer += (1.0 / rate) * (1.0 + 0.08 * rng.bi());
+				if (rollTimer < 0) rollTimer = 0;
+			}
+		}
+		else rollTimer = 0;
+		// brush sweep: a grain stream moving round the cymbal
+		if (ctl.roll && play == BRUSH) {
+			double aS = M->sh.a * lam;
+			double rr = std::max(0.1, ctl.position);
+			sweepTh += 0.05 * rate * dt / std::max(0.02, rr * aS);
+			double gps = 300 + 60 * rate;
+			int n = (int)(gps * dt + rng.uni());
+			double hd = std::min(1.0, std::max(0.0, ctl.hardness));
+			for (int j = 0; j < n; j++) {
+				double J = 2.5e-5 * v * (-std::log(std::max(1e-6, rng.uni())));
+				double dr = 0.0125 * rng.bi() / aS;
+				uint64_t at = stepCount + (uint64_t)(rng.uni() * dt * fs);
+				queueGrain(at, J, (150e-6 - 110e-6 * hd) * (0.8 + 0.4 * rng.uni()), rr + dr, sweepTh + 0.0125 * rng.bi() / (rr * aS));
+			}
+		}
+		// bow: pressure ramps in while bowing (gate or a stroke after STRIKE)
+		bool bowing = play == BOW && (ctl.roll || bowTimer > 0);
+		if (bowTimer > 0) bowTimer -= dt;
+		double target = bowing ? 0.4 + 0.45 * v : 0.0;
+		bowFN += (target - bowFN) * std::min(1.0, dt / 0.03);
+		if (bowing && !bowOn) { bowSetup(); bowVr = 0.02 * rate; }
+		bowOn = bowFN > 1e-3 || bowing;
+		if (!bowOn) bowFN = 0;
+		// swing: rotation pendulum, 1.5 to 4 Hz, damping from MOUNT
+		double mnt = std::min(1.0, std::max(0.0, ctl.mount));
+		double wsw = 2 * CY_PI * 2.6 / std::sqrt(lam);
+		double zeta = 0.02 + 0.25 * (1 - mnt);
+		double acc = -wsw * wsw * swPsi - 2 * zeta * wsw * swDpsi;
+		swDpsi += acc * dt;
+		swPsi += swDpsi * dt;
+		swPsi = std::max(-0.3, std::min(0.3, swPsi));
+		if (std::fabs(swPsi - swMicPsi) > 0.002 && (ctlCounter & 127) == 1) {
+			swingAng = swPsi;
+			swMicPsi = swPsi;
+			computeMic();
 		}
 	}
 
@@ -778,6 +888,9 @@ public:
 		rivets.clear();
 		dcX = dcY = lp = 0;
 		for (auto& r : clk) r[0] = r[1] = 0;
+		grainQ.clear();
+		bowOn = false; bowFN = 0; bowTimer = 0;
+		swPsi = swDpsi = 0;
 	}
 
 	// total energy of the modes (kinetic + linear potential), for tests and the guard
