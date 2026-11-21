@@ -6,7 +6,7 @@ without stepping on each other.
 
 | Folder | Module | What it is |
 |---|---|---|
-| [CymbolismFable](CymbolismFable/) | Cymbolism | Physical cymbal: ten types computed from their geometry, nonlinear crash bloom, stick, mallet, rods, brush and bow |
+| [CymbolismFable](CymbolismFable/) | Cymbolism, Cymbolism Extended | Physical cymbal: ten types computed from their geometry, nonlinear crash bloom, stick, mallet, rods, brush and bow; Extended adds morph, warp, tuning to scales, sustain, freeze, stereo and more |
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch

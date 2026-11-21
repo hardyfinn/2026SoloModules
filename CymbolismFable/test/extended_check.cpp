@@ -317,6 +317,40 @@ int main(int argc, char** argv) {
 			check(mult < 1 ? a1 < a0 : a1 > 3 * a0, msg);
 		}
 	}
+	if (want("x10")) {
+		printf("X10 the new types and materials build\n");
+		for (int t = NUM_TYPES; t < NUM_TYPES_EXT; t++) {
+			auto M = model(t);
+			char msg[200];
+			double fLow = 1e9;
+			for (auto& md : M->modes) if (md.f > 20) fLow = std::min(fLow, md.f);
+			snprintf(msg, sizeof msg, "%-6s %4d modes (%3d core), lowest %.1f Hz, minEigCore %.3g, aScale %.3f, build %.0f ms", CY_TYPES[t].name, (int)M->modes.size(), M->nCore,
+			         fLow, M->minEigCore, M->aScale, M->buildMs);
+			// stable core: the matrix is PSD as built, or the build scaled A until it is
+			check(M->nCore > 0 && (M->minEigCore >= 0 || M->aScale < 1) && M->buildMs < 3000, msg);
+			Run r = run(t, defaults(t), 2.0, hitAt0(3.0));
+			snprintf(msg, sizeof msg, "%-6s medium hit with its own beater: peak %.2f V, guard %d", CY_TYPES[t].name, r.peak, r.guard);
+			check(std::isfinite(r.peak) && r.peak > 0.3 && r.peak < 10.5 && r.guard == 0, msg);
+		}
+		for (int a = NUM_ALLOYS; a < NUM_ALLOYS_EXT; a++) {
+			GeomParams gp;
+			gp.fromType(1);
+			gp.alloy = a;
+			gp.sampleRate = 48000;
+			auto M = buildModel(gp);
+			Engine E;
+			E.ctl = defaults(1);
+			E.init(M, 48000);
+			E.strike(3.0);
+			std::vector<float> o(48000 * 2);
+			for (size_t s = 0; s < o.size(); s += 32) E.process(nullptr, o.data() + s, 32);
+			double pk = 0;
+			for (float v : o) pk = std::max(pk, (double)std::fabs(v));
+			char msg[160];
+			snprintf(msg, sizeof msg, "CRASH in %-9s: minEigCore %.3g, peak %.2f V, guard %d", CY_MATERIALS[a].name, M->minEigCore, pk, E.guardEvents);
+			check(M->minEigCore > 0 && std::isfinite(pk) && E.guardEvents == 0, msg);
+		}
+	}
 	if (want("x9")) {
 		printf("X9 retunes during a contact, a roll and a bow stroke\n");
 		for (int play : {SHOULDER, RODS, MALLET, BRUSH, BOW}) {

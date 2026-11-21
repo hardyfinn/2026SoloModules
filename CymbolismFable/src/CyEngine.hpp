@@ -190,15 +190,16 @@ public:
 
 	// T60 law per type (calibrated: constant + viscoelastic linear term), x alloy and weight
 	double lossAt(double fHz, int i) const {
-		static const double A0[NUM_TYPES] = {2.5, 0.9, 1.1, 0.6, 0.5, 0.4, 0.8, 1.5, 1.3, 0.33};
-		static const double B1[NUM_TYPES] = {9e-4, 4.8e-4, 5.0e-4, 4.0e-4, 3.3e-4, 2.8e-4, 4.0e-4, 7e-4, 6e-4, 2.4e-4};
+		static const double A0[NUM_TYPES_EXT] = {2.5, 0.9, 1.1, 0.6, 0.5, 0.4, 0.8, 1.5, 1.3, 0.33, 0.25, 0.8, 0.15, 0.3, 0.5, 0.4};
+		static const double B1[NUM_TYPES_EXT] = {9e-4, 4.8e-4, 5.0e-4, 4.0e-4, 3.3e-4, 2.8e-4, 4.0e-4, 7e-4, 6e-4, 2.4e-4, 2.0e-4, 4.0e-4, 1.5e-4, 2.0e-4, 3.0e-4, 2.5e-4};
 		int t = M->gp.type;
 		double etaRel = M->sh.mat.eta / CY_MATERIALS[B20].eta;
 		double wRel = std::pow(std::max(0.3, M->gp.weight), -0.5);
-		double a = A0[t] * wRel * std::pow(lam, -0.5);
-		double b = B1[t] * (0.5 + 0.5 * etaRel) * wRel;
+		const Material& mt = M->sh.mat;
+		double a = A0[t] * wRel * std::pow(lam, -0.5) * mt.aMul;
+		double b = B1[t] * (0.5 + 0.5 * etaRel) * wRel * mt.bMul;
 		(void)i;
-		return a + b * fHz;
+		return a + b * fHz + mt.f2 * fHz * fHz;
 	}
 
 	double phiAt(int i, double rFrac, double th) const {
@@ -273,7 +274,7 @@ public:
 	double mkTarget = 1.0, mk = 1.0;     // level make-up for bent spectra
 
 	void retune() {
-		lam = std::max(0.3, ctl.size);
+		lam = std::max(0.15, ctl.size);
 		sA = 1.0 / lam;
 		sB = std::pow(lam, -3.5);
 		sPhi = std::pow(lam, -1.5);
@@ -358,6 +359,7 @@ public:
 		updateColour();
 		computeMakeup();
 		if (unrealFreq || wasUnreal) guardE = 0;   // the energy's yardstick moved with the frequencies
+		if (unrealFreq || tripScaled) scaleTrips();
 		if (unrealFreq || wasUnreal) {
 			exciteDirty = true;
 			if (bowOn) bowSetup();
@@ -678,6 +680,20 @@ public:
 	//   zeta_n = sB * sum c q_i q_j      (core blocks and extended pairs alike)
 	struct Trip { int32_t i, j; float c; };
 	std::vector<Trip> trips;
+	// under a bent law the quadratic strain moves with the frequencies too (B_ij x r_i r_j), so the
+	// coupled core keeps the same shape in energy-normalised coordinates and stays as stable
+	std::vector<Trip> tripsU;
+	bool tripScaled = false;
+	void scaleTrips() {
+		if (!unrealFreq) { tripScaled = false; return; }
+		if (tripOff.size() != M->stress.size() + 1) prepareNonlinear();
+		tripsU = trips;
+		for (Trip& t : tripsU) {
+			double ri = wU[t.i] / (om0[t.i] / lam), rj = wU[t.j] / (om0[t.j] / lam);
+			t.c = (float)(t.c * ri * rj);
+		}
+		tripScaled = true;
+	}
 	std::vector<int> tripOff;            // per stress mode, start in trips (size nStress + 1)
 	std::vector<double> zbuf, abuf;
 	int tripLimit = -1;                  // optional cap on extended pairs (quality)
@@ -715,7 +731,7 @@ public:
 		if (tripOff.size() != M->stress.size() + 1) prepareNonlinear();
 		const double* qd = q.data();
 		double* gd = grad.data();
-		const Trip* T = trips.data();
+		const Trip* T = tripScaled ? tripsU.data() : trips.data();
 		size_t NS = M->stress.size();
 		for (size_t n = 0; n < NS; n++) {
 			const StressMode& sm = M->stress[n];
@@ -1022,7 +1038,7 @@ public:
 
 	// per-type output trim (equal loudness across the type table at a medium hit)
 	double typeTrim() const {
-		static const double T[NUM_TYPES] = {1.2, 1.0, 1.1, 1.0, 1.0, 0.8, 1.0, 1.15, 1.0, 0.45};
+		static const double T[NUM_TYPES_EXT] = {1.2, 1.0, 1.1, 1.0, 1.0, 0.8, 1.0, 1.15, 1.0, 0.45, 1.6, 2.2, 1.0, 2.5, 0.9, 0.35};
 		return ctl.play == BOW ? 6.0 : T[M->gp.type];   // bowing is far quieter than striking
 	}
 
@@ -1193,7 +1209,7 @@ public:
 	double hitE = -1, hitLam = -1, hitKE = 0.1;
 	double hitEnergy() {
 		if (hitE < 0 || hitLam != lam) {
-			double pos = CY_TYPES[std::min(M->gp.type, NUM_TYPES - 1)].position;
+			double pos = CY_TYPES[std::min(M->gp.type, NUM_TYPES_EXT - 1)].position;
 			double J = 0.025 * 8.0, Tc = 0.0006, s = 0;
 			for (int i = 0; i < NA; i++) {
 				if (frozen[i]) continue;
@@ -1287,7 +1303,10 @@ public:
 			for (int i = 0; i < NA; i++) { q[i] *= sc; qp[i] *= sc; }
 			E *= sc * sc;
 		}
-		guardE = E;
+		// under a bent law the measured energy wobbles from block to block (the coupled core sits
+		// where the discrete invariant is less exact), so hold the recent peak as the reference:
+		// a real runaway still outgrows it within a few blocks
+		guardE = unrealFreq ? std::max(E, guardE * 0.995) : E;
 	}
 
 	void reset() {

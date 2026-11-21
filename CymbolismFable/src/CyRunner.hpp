@@ -25,7 +25,11 @@ public:
 		float exc[B];
 		float strike[B];           // strike velocity (m/s), 0 = none
 		float out[B];
+		// Cymbolism Extended
+		float pump[B];
+		float outR[B], core[B], wash[B], env[B];
 	};
+	bool extended = false;         // set once by Cymbolism Extended before the first tick
 
 	// ---- audio-thread side ----
 	Controls ctl;                  // set by the module before each sample
@@ -33,7 +37,11 @@ public:
 	std::atomic<bool> threaded{true};
 
 	Runner() {
-		for (auto& b : ring) { std::fill(b.exc, b.exc + B, 0.f); std::fill(b.strike, b.strike + B, 0.f); std::fill(b.out, b.out + B, 0.f); }
+		for (auto& b : ring) {
+			std::fill(b.exc, b.exc + B, 0.f); std::fill(b.strike, b.strike + B, 0.f); std::fill(b.out, b.out + B, 0.f);
+			std::fill(b.pump, b.pump + B, 0.f);
+			for (float* x : {b.outR, b.core, b.wash, b.env}) std::fill(x, x + B, 0.f);
+		}
 		builder = std::thread([this] { builderLoop(); });
 		worker = std::thread([this] { workerLoop(); });
 	}
@@ -49,16 +57,23 @@ public:
 	}
 
 	// one sample: returns the output (volts), delayed by the block latency
-	float tick(float excite, float strikeVel) {
+	// (Extended: pump in, and R, CORE, WASH, ENV out through ext[4])
+	float tick(float excite, float strikeVel, float pumpIn = 0.f, float* ext = nullptr) {
 		Block& w = ring[wIdx % NB];
 		if (wPos == 0) w.ctl = ctl;
 		w.exc[wPos] = excite;
 		w.strike[wPos] = strikeVel;
+		w.pump[wPos] = pumpIn;
 		// output from an older block
 		float y = 0.f;
+		if (ext) ext[0] = ext[1] = ext[2] = ext[3] = 0.f;
 		int64_t r = wIdx - latency();
 		if (r >= 0) {
-			if (done.load(std::memory_order_acquire) > r) y = ring[r % NB].out[wPos];
+			if (done.load(std::memory_order_acquire) > r) {
+				const Block& rb = ring[r % NB];
+				y = rb.out[wPos];
+				if (ext) { ext[0] = rb.outR[wPos]; ext[1] = rb.core[wPos]; ext[2] = rb.wash[wPos]; ext[3] = rb.env[wPos]; }
+			}
 			else if (wPos == 0) {
 				// Rack runs modules in bursts of one audio buffer, so the latency has to
 				// cover the buffer: grow it until the engine thread keeps up
@@ -174,6 +189,7 @@ private:
 		}
 		if (!active) {
 			std::fill(b.out, b.out + B, 0.f);
+			for (float* x : {b.outR, b.core, b.wash, b.env}) std::fill(x, x + B, 0.f);
 			done.store(idx + 1, std::memory_order_release);
 			return;
 		}
@@ -182,18 +198,33 @@ private:
 			fading->ctl = b.ctl;
 			fading->ctl.roll = false;
 		}
-		float tmp[B];
+		float tmp[B], tR[B], tC[B], tW[B], tE[B];
 		int s = 0;
 		while (s < B) {
 			int e = s;
 			if (b.strike[s] > 0) { active->strike(b.strike[s]); }
 			e = s + 1;
 			while (e < B && !(b.strike[e] > 0)) e++;
-			active->process(b.exc + s, b.out + s, e - s);
+			if (extended) {
+				Engine::Extra ex;
+				ex.R = b.outR + s; ex.core = b.core + s; ex.wash = b.wash + s; ex.env = b.env + s; ex.pump = b.pump + s;
+				active->process(b.exc + s, b.out + s, e - s, &ex);
+			}
+			else active->process(b.exc + s, b.out + s, e - s);
 			if (fading) {
-				fading->process(nullptr, tmp, e - s);
+				if (extended) {
+					Engine::Extra ex;
+					ex.R = tR; ex.core = tC; ex.wash = tW; ex.env = tE;
+					fading->process(nullptr, tmp, e - s, &ex);
+				}
+				else fading->process(nullptr, tmp, e - s);
 				for (int i = 0; i < e - s; i++) {
 					b.out[s + i] += (float)(tmp[i] * fadeGain);
+					if (extended) {
+						b.outR[s + i] += (float)(tR[i] * fadeGain);
+						b.core[s + i] += (float)(tC[i] * fadeGain);
+						b.wash[s + i] += (float)(tW[i] * fadeGain);
+					}
 					fadeGain -= fadeStep;
 					if (fadeGain < 0) fadeGain = 0;
 				}

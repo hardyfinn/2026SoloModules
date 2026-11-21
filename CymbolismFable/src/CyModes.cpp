@@ -726,7 +726,7 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 	static const double FOUT[3] = {16000, 20000, 20000};
 	int q = std::max(0, std::min(2, gp.quality));
 	// build up to 1.5x the output band so SIZE can grow the cymbal without a rebuild
-	double fMax = opt.fMax > 0 ? opt.fMax : FOUT[q] * CY_SIZE_MAX;
+	double fMax = opt.fMax > 0 ? opt.fMax : FOUT[q] * (gp.band > 0 ? gp.band : CY_SIZE_MAX);
 	int nCoreWanted = opt.coreModes >= 0 ? opt.coreModes : CORE_N[q];
 	int nStressWanted = opt.stressModes >= 0 ? opt.stressModes : STRESS_N[q];
 	int nLowWanted = opt.lowStress >= 0 ? opt.lowStress : LOW_N[q];

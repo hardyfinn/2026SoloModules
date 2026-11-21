@@ -1,6 +1,7 @@
 // Cymbolism Fable: cymbal geometry, materials and the type table.
 // Pure C++ (no Rack), shared by the module and test/render.cpp.
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -20,21 +21,27 @@ struct CyRng {
 	double gauss() { return (uni() + uni() + uni() + uni() - 2.0) * 1.7320508; }
 };
 
-enum Alloy { B20 = 0, B12, B8, BRASS, NICKEL, STEEL, NUM_ALLOYS };
+// Cymbolism uses the first NUM_ALLOYS; Cymbolism Extended adds aluminium, glass and wood.
+enum Alloy { B20 = 0, B12, B8, BRASS, NICKEL, STEEL, NUM_ALLOYS, ALUMINIUM = NUM_ALLOYS, GLASS, WOOD, NUM_ALLOYS_EXT };
 
 struct Material {
 	const char* name;
 	double E, rho, nu;
 	double eta;   // internal loss factor (sigma = pi f eta)
+	// loss law: sigma = aMul * a + bMul * b * f + f2 * f^2 (a, b from the type table)
+	double aMul = 1.0, bMul = 1.0, f2 = 0.0;
 };
 
-static const Material CY_MATERIALS[NUM_ALLOYS] = {
+static const Material CY_MATERIALS[NUM_ALLOYS_EXT] = {
 	{"B20", 1.04e11, 8600.0, 0.34, 1.6e-4},
 	{"B12", 1.08e11, 8700.0, 0.34, 2.6e-4},
 	{"B8", 1.10e11, 8800.0, 0.34, 3.6e-4},
 	{"BRASS", 1.00e11, 8500.0, 0.34, 6.5e-4},
 	{"NICKEL SILVER", 1.25e11, 8700.0, 0.33, 4.0e-4},
 	{"STEEL", 2.00e11, 7850.0, 0.29, 1.1e-4},
+	{"ALUMINIUM", 0.69e11, 2700.0, 0.33, 4.0e-4, 1.2, 1.0, 0.0},   // lighter and brighter, moderate loss
+	{"GLASS", 0.70e11, 2500.0, 0.22, 2.0e-5, 0.35, 0.08, 0.0},     // very low loss, nearly flat with frequency
+	{"WOOD", 0.12e11, 600.0, 0.30, 1.0e-2, 2.0, 1.0, 8e-5},        // highs die in milliseconds
 };
 
 enum Play { TIP = 0, SHOULDER, MALLET, RODS, BRUSH, BOW, NUM_PLAYS };
@@ -56,10 +63,13 @@ struct CymbalType {
 	int play;           // default beater
 	double position;    // default strike position 0 bell .. 1 edge
 	int rivets;         // default rivet count
+	double hole = 0.0;  // centre hole, fraction of the radius (0 = the usual 6.5 mm)
 };
 
+// Cymbolism uses the first NUM_TYPES; Cymbolism Extended adds six more.
 static const int NUM_TYPES = 10;
-static const CymbalType CY_TYPES[NUM_TYPES] = {
+static const int NUM_TYPES_EXT = 16;
+static const CymbalType CY_TYPES[NUM_TYPES_EXT] = {
 	{"SPLASH", 10, 0.55, 1.6, 0.060, 0.30, 12, 0, SHOULDER, 0.92, 0},
 	{"CRASH", 18, 0.85, 1.7, 0.070, 0.25, 18, 0, SHOULDER, 0.95, 0},
 	{"THIN CRASH", 17, 0.65, 1.5, 0.060, 0.24, 16, 0, SHOULDER, 0.95, 0},
@@ -70,6 +80,13 @@ static const CymbalType CY_TYPES[NUM_TYPES] = {
 	{"CHINA", 18, 0.75, 1.5, 0.050, 0.22, 22, 20, SHOULDER, 0.95, 0},
 	{"SWISH", 20, 0.90, 1.5, 0.050, 0.20, 18, 15, TIP, 0.60, 6},
 	{"BELL", 8, 3.00, 1.2, 0.250, 0.60, 25, 0, TIP, 0.10, 0},
+	// Extended
+	{"GONG", 24, 1.60, 1.0, 0.010, 0.0, 0, -60, MALLET, 0.45, 0},   // (smaller than a real tam-tam so it builds in time)
+	{"SHEET", 20, 0.80, 1.0, 0.0, 0.0, 0, 0, MALLET, 0.75, 0},
+	{"BOWL", 8, 3.00, 1.2, 0.90, 0.0, 0, 0, BOW, 0.95, 0},
+	{"PLATE", 12, 4.00, 1.0, 0.0, 0.0, 0, 0, MALLET, 0.60, 0},
+	{"RING", 14, 2.00, 1.0, 0.0, 0.0, 0, 0, TIP, 0.50, 0, 0.60},
+	{"DOME", 10, 1.50, 1.3, 0.050, 0.75, 40, 0, TIP, 0.30, 0},
 };
 
 // Everything that changes the mode set (a "rebuild"). SIZE and MOUNT are not
@@ -85,6 +102,8 @@ struct GeomParams {
 	double flangeDeg = 0.0;
 	int alloy = B20;
 	double tension = 0.0;    // -1 .. +1 residual hammering stress
+	double hole = -1.0;      // centre hole, fraction of radius (-1 = the type's)
+	double band = 0.0;       // build the modes up to this x the audio band (0 = CY_SIZE_MAX), so a large SIZE keeps its top octave
 	int quality = 1;         // 0 ECO, 1 HIGH, 2 ULTRA
 	double sampleRate = 48000.0;   // engine rate (host rate x oversampling)
 	double overrideSizeIn = 0.0;   // tests only: build at this diameter instead of the type's
@@ -94,8 +113,8 @@ struct GeomParams {
 
 	std::string key() const {
 		char buf[256];
-		snprintf(buf, sizeof(buf), "%d|%.3f|%.2f|%.4f|%.2f|%.1f|%d|%.3f|%d|%.0f|%.3f|%.3f|%.4f", type, weight, taper, rise, bell,
-		         flangeDeg, alloy, tension, quality, sampleRate, overrideSizeIn, overrideEdgeMm, overrideR0 + overrideSphereR * 1000.0);
+		snprintf(buf, sizeof(buf), "%d|%.3f|%.2f|%.4f|%.2f|%.1f|%d|%.3f|%d|%.0f|%.3f|%.3f|%.4f|%.3f|%.2f", type, weight, taper, rise, bell,
+		         flangeDeg, alloy, tension, quality, sampleRate, overrideSizeIn, overrideEdgeMm, overrideR0 + overrideSphereR * 1000.0, hole, band);
 		return buf;
 	}
 	void fromType(int t) {
@@ -106,6 +125,7 @@ struct GeomParams {
 		rise = ct.rise;
 		bell = 1.0;
 		flangeDeg = ct.flangeDeg;
+		hole = -1.0;
 	}
 };
 
@@ -126,6 +146,8 @@ struct Shape {
 		const CymbalType& ct = CY_TYPES[g.type];
 		a = (g.overrideSizeIn > 0 ? g.overrideSizeIn : ct.sizeIn) * 0.0254 * 0.5;
 		r0 = g.overrideR0 > 0 ? g.overrideR0 : 0.0065;
+		double holeF = g.hole >= 0 ? g.hole : ct.hole;
+		if (g.overrideR0 <= 0 && holeF > 0) r0 = std::max(0.0065, std::min(0.8, holeF) * a);
 		double bellFrac = ct.bellDia * g.bell;
 		if (bellFrac > 0.75) bellFrac = 0.75;
 		rb = bellFrac * a;

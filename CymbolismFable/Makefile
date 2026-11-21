@@ -4,6 +4,7 @@ RACK_DIR ?= ../Rack-SDK
 FLAGS += -O3
 SOURCES += $(wildcard src/*.cpp)
 DISTRIBUTABLES += res/Cymbolism.svg
+DISTRIBUTABLES += res/CymbolismExtended.svg
 DISTRIBUTABLES += $(wildcard LICENSE*)
 
 ifeq ($(filter test test/%,$(MAKECMDGOALS)),)
