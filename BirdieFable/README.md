@@ -1,7 +1,10 @@
 # Birdie Fable
 
-One VCV Rack module, **Birdie**: a single bird's voice by physical model, with a phrase generator, stretchable into drones and bass.
+One VCV Rack module, **Birdie**: a single bird's voice by physical model (a two-sided syrinx driven by pressure and tension, then windpipe, throat and beak), with a phrase generator, NOTE and PHRASE triggers, clock lock, AUTO and HOLD. Mono, 36 HP, 20 factory presets.
 
-Status: designed, not built. The build instructions are in `docs/BUILD-INSTRUCTIONS.md` and the reference engine is in `tools/proto/`.
+- Manual: `docs/Birdie-Manual.pdf` (source `docs/MANUAL.md`)
+- Design: `docs/BUILD-INSTRUCTIONS.md`, research in `docs/RESEARCH.md`
+- Reference engine: `tools/proto/` (C). `src/dsp/birdie_ref.*` is an unchanged copy; `make test` checks that.
 
-To hear the reference: `cd tools/proto && cc -O2 -o render_ref render_ref.c birdie_ref.c -lm && mkdir -p out && ./render_ref out`
+Build: `make RACK_DIR=path/to/Rack-SDK dist`. Mac arm64 builds come from CI on the preview release.
+Offline checks and demo WAVs, no Rack needed: `make test`. Presets: `make presets`. Panel: `python3 res/make_panel.py`.

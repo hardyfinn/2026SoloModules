@@ -1,0 +1,23 @@
+{
+  "slug": "BirdieFable",
+  "name": "Birdie Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Birdie",
+      "name": "Birdie",
+      "description": "One bird by physical model: whistles, trills, buzzes, two-voice song and harsh calls, with a phrase generator, stretchable into drones and bass",
+      "tags": ["Synth voice", "Physical modeling", "Sequencer", "Random", "Drone"]
+    }
+  ]
+}
