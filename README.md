@@ -7,6 +7,7 @@ without stepping on each other.
 | Folder | Module | What it is |
 |---|---|---|
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
+| [Krka](Krka/) | Krka | Four function generators with 260 shapes, 16 chain algorithms, assignable CV and 18 presets (Zadar-style, no menus) |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
