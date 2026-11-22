@@ -141,16 +141,21 @@ def wire(bid, name, outlet=0):
     return pre
 
 
+GREY, WHITE = [0.78, 0.78, 0.8, 1.0], [1.0, 1.0, 1.0, 1.0]
+TEXTCOL = [GREY]   # label and dial-name colour for the section being built
+
+
 def label(text, pres, w=None):
     return box("comment", [px[0], 560, 80, 18], text=text, nin=1, nout=0, pres=pres,
-               textcolor=[0.78, 0.78, 0.8, 1.0], **FONT)
+               textcolor=TEXTCOL[0], **FONT)
 
 
 def dial(name, long, short, pres, lo, hi, init, unit=1, ptype=0, **kw):
     v = valueof(long, short, ptype, parameter_mmin=float(lo), parameter_mmax=float(hi),
                 parameter_initial=[init], parameter_initial_enable=1, parameter_unitstyle=unit)
     b = box("live.dial", [px[0], 500, 41, 48], nin=1, nout=2, otype=["", "float"], pres=pres,
-            parameter_enable=1, saved_attribute_attributes=v, varname=long, **kw)
+            parameter_enable=1, saved_attribute_attributes=v, varname=long,
+            **dict({"textcolor": TEXTCOL[0]} if TEXTCOL[0] is WHITE else {}, **kw))
     param(b, long, short)
     wire(b, name)
     return b
@@ -262,7 +267,8 @@ for i in range(8):
     button("pad%d" % (i + 1), "Pad %d" % (i + 1), "Pad %d" % (i + 1), [662 + c * 24, 22 + r * 30, 20, 20])
 label("A: KICK, SNARE, KICK 2, SNARE 2.  B: THE SAME ON THE OTHER COPY.", [660, 84, 96, 60])
 
-# HANDS
+# HANDS, PLAY and OUT: white text (Hardy, 2026-11-22)
+TEXTCOL[0] = WHITE
 label("HANDS", [764, 4, 60, 14])
 hands = dial("hands", "Hands", "HANDS", [764, 18, 44, 48], 0, 100, 50, unit=5)
 dials = {}
@@ -299,6 +305,8 @@ label("OUT", [1018, 4, 40, 14])
 dial("straight", "Straight Level", "STRAIGHT", [1018, 18, 41, 48], 0, 100, 100, unit=5)
 dial("level", "Level", "LEVEL", [1018, 72, 41, 48], -70, 6, 0, unit=4)
 toggle("brake", "Brake", "BRAKE", "BRAKE", [1018, 126, 44, 18], init=1)
+
+TEXTCOL[0] = GREY
 
 # ROUTINE window: a subpatcher with the 16 slots
 sub_boxes, sub_lines = [], []

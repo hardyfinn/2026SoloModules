@@ -3365,9 +3365,9 @@
 						14.0
 					],
 					"textcolor": [
-						0.78,
-						0.78,
-						0.8,
+						1.0,
+						1.0,
+						1.0,
 						1.0
 					],
 					"fontname": "Ableton Sans Medium",
@@ -3412,7 +3412,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Hands"
+					"varname": "Hands",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3471,7 +3477,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Timing"
+					"varname": "Timing",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3530,7 +3542,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Weight"
+					"varname": "Weight",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3589,7 +3607,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Slop"
+					"varname": "Slop",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3648,7 +3672,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Risk"
+					"varname": "Risk",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3707,7 +3737,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Copy"
+					"varname": "Copy",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3749,9 +3785,9 @@
 						24.0
 					],
 					"textcolor": [
-						0.78,
-						0.78,
-						0.8,
+						1.0,
+						1.0,
+						1.0,
 						1.0
 					],
 					"fontname": "Ableton Sans Medium",
@@ -3779,9 +3815,9 @@
 						14.0
 					],
 					"textcolor": [
-						0.78,
-						0.78,
-						0.8,
+						1.0,
+						1.0,
+						1.0,
 						1.0
 					],
 					"fontname": "Ableton Sans Medium",
@@ -3893,7 +3929,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Density"
+					"varname": "Density",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3952,7 +3994,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Funk"
+					"varname": "Funk",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -3994,9 +4042,9 @@
 						14.0
 					],
 					"textcolor": [
-						0.78,
-						0.78,
-						0.8,
+						1.0,
+						1.0,
+						1.0,
 						1.0
 					],
 					"fontname": "Ableton Sans Medium",
@@ -4156,9 +4204,9 @@
 						14.0
 					],
 					"textcolor": [
-						0.78,
-						0.78,
-						0.8,
+						1.0,
+						1.0,
+						1.0,
 						1.0
 					],
 					"fontname": "Ableton Sans Medium",
@@ -4203,7 +4251,13 @@
 							"parameter_unitstyle": 5
 						}
 					},
-					"varname": "Straight Level"
+					"varname": "Straight Level",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
@@ -4262,7 +4316,13 @@
 							"parameter_unitstyle": 4
 						}
 					},
-					"varname": "Level"
+					"varname": "Level",
+					"textcolor": [
+						1.0,
+						1.0,
+						1.0,
+						1.0
+					]
 				}
 			},
 			{
