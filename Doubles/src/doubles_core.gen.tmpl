@@ -120,9 +120,6 @@ History h_idl$(0);
 History h_pcs$(0);    // 1 when the pending close ends a slot of the current play
 #ENDDECK
 
-gauss() {
-	return (noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678;
-}
 
 // ---------------- per sample ----------------
 NONE = 1000000000;
@@ -356,7 +353,7 @@ if (need_next > 0.5) {
 		keep = 1;
 		if (e_gen < curgen) {
 			cut = NONE;
-			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg += 1) {
+			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg = gg + 1) {
 				cut = min(cut, peek(gcut, wrap(gg, 0, 256), 0));
 			}
 			if (e_bs >= cut) {
@@ -376,8 +373,8 @@ if (need_next > 0.5) {
 			if (kind$ == 2) {
 				p0$ = e_dist;
 			}
-			latej = (fadlate + gauss() * fadjit) / spb;
-			earlyj = (fadearly + gauss() * fadjit) / spb;
+			latej = (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			earlyj = (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 			gap = max((bs$ - B) * spb, 0);
 			if (cont > 0.5) {
 				// carry on: no cue; the fader follows the new play from where it is
@@ -443,14 +440,14 @@ if (need_next > 0.5) {
 					d0 = abs(wrap(p0$ - adv - pos$, -L / 2, L / 2));
 					cerr = 0;
 					if (d0 > 8) {
-						cerr = gauss() * min(cuebase + cueper * d0, 0.03 * SR);
+						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
 					}
 					prel = p0$ - adv + cerr;
 					fast = min(0.25 * SR / max(gap, 1), 2);
-					e$ = 0.6 * e$ + gauss() * reljit * 0.8;
+					e$ = 0.6 * e$ + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
 					jit = e$ * (1 + 0.5 * fast) - rush * fast;
 					if (noise() * 0.5 + 0.5 < flubp) {
-						jit = jit + gauss() * flubsd;
+						jit = jit + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * flubsd;
 						flub$ = flub$ + 1;
 					}
 					tlen = max((be$ - B) * spb, 1);
@@ -484,7 +481,7 @@ if (need_next > 0.5) {
 						mode$ = 1;
 					}
 					trrem$ = tr;
-					push$ = gauss() * pushsd;
+					push$ = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
 					exp$ = wrap(p0$ - rate$ * rate0 * gap, 0, L);
 					expok$ = 1;
 				} else {
@@ -578,7 +575,7 @@ if (mode$ == 5) {
 	}
 }
 if (mode$ == 4) {
-	trem$ = trema * trem$ + tremb * gauss();
+	trem$ = trema * trem$ + tremb * ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678);
 	v$ = v$ * dks + trem$ * tremsd;
 	if (B >= be$) {
 		mode$ = 0;
@@ -671,7 +668,7 @@ if (B >= popen$ && waitrel < 0.5) {
 		if (str$ > 0.5) {
 			a = a * strlev;
 		}
-		gamp$ = a * min(1 + gauss() * lvl, 1.12);
+		gamp$ = a * min(1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * lvl, 1.12);
 		gend = be$;
 		if (gm$ > 0.5) {
 			gend = min(be$, g0$ + (slot$ + 1) * gd$);
@@ -679,7 +676,7 @@ if (B >= popen$ && waitrel < 0.5) {
 		if (kind$ == 2) {
 			gend = min(be$, bs$ + (be$ - bs$) * 0.85);
 		}
-		pclose$ = gend + (fadlate + gauss() * fadjit) / spb;
+		pclose$ = gend + (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 		pcs$ = 1;
 	}
 }
@@ -690,7 +687,7 @@ if (B >= pclose$) {
 		slot$ = slot$ + 2;
 		s0 = g0$ + slot$ * gd$;
 		if (s0 < be$) {
-			popen$ = s0 - (fadearly + gauss() * fadjit) / spb;
+			popen$ = s0 - (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 		}
 	}
 }

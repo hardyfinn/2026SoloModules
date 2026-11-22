@@ -12,11 +12,9 @@ function makeCore(BUF, SRATE, rnd) {
   function poke(b, v, i, ch) { i = Math.floor(i); if (i < 0 || i >= b.frames) return; b.ch[(ch | 0)][i] = v; }
   var P = {tempo: 120.0, playing: 0.0, songbeat: 0.0, sbseq: 0.0, reccmd: 0.0, recmode: 0.0, reclen: 8.0, recstop: 0.0, haverec: 0.0, L: 1.0, Lb: 8.0, anchor: 0.0, timing: 0.5, weight: 0.5, slop: 0.5, risk: 0.5, wear: 0.5, level: 1.0, strlev: 1.0, brake: 1.0, qt0: 0.0, qt1: 0.0, fgen: 0.0, fbeat: 0.0, bootb: -1000000000.0, dragseq: 0.0, dragdepth: 0.35};
   var H = {h_beatint: 0.0, h_prevph: 0.0, h_sbseq: 0.0, h_wasplay: 0.0, h_curgen: 0.0, h_flushb: 0.0, h_reccmd: 0.0, h_recstate: 0.0, h_wi: 0.0, h_recstart: 0.0, h_recb: 0.0, h_prevb: 0.0, h_statc: 0.0, h_live: 0.0, h_dragseq: 0.0, h_alive: 0.0, h_pos0: 0.0, h_v0: 0.0, h_vb0: 0.0, h_mode0: 0.0, h_k0: 0.0, h_has0: 0.0, h_bs0: 0.0, h_be0: 1000000000.0, h_p00: 0.0, h_rate0: 1.0, h_kind0: 0.0, h_gm0: 0.0, h_gd0: 1.0, h_g00: 0.0, h_amp0: 1.0, h_str0: 0.0, h_gen0: 0.0, h_cued0: 0.0, h_pdc0: 0.0, h_pa0: 0.0, h_pdv0: 0.0, h_trrem0: 0.0, h_push0: 0.0, h_rk0: 0.0, h_exp0: 0.0, h_expok0: 0.0, h_cuchk0: 0.0, h_culen0: 0.0, h_cuk0: 0.0, h_cua0: 0.0, h_spm0: 1.0, h_spa0: 0.0, h_spdv0: 0.0, h_trem0: 0.0, h_gt0: 0.0, h_g0: 0.0, h_gamp0: 1.0, h_popen0: 1000000000.0, h_pclose0: 1000000000.0, h_slot0: 0.0, h_drk0: 0.0, h_drlen0: 0.0, h_drd0: 0.0, h_late0: 0.0, h_flub0: 0.0, h_e0: 0.0, h_wl0: 0.0, h_wr0: 0.0, h_head0: 0.0, h_brk0: 0.0, h_idl0: 0.0, h_pcs0: 0.0, h_pos1: 0.0, h_v1: 0.0, h_vb1: 0.0, h_mode1: 0.0, h_k1: 0.0, h_has1: 0.0, h_bs1: 0.0, h_be1: 1000000000.0, h_p01: 0.0, h_rate1: 1.0, h_kind1: 0.0, h_gm1: 0.0, h_gd1: 1.0, h_g01: 0.0, h_amp1: 1.0, h_str1: 0.0, h_gen1: 0.0, h_cued1: 0.0, h_pdc1: 0.0, h_pa1: 0.0, h_pdv1: 0.0, h_trrem1: 0.0, h_push1: 0.0, h_rk1: 0.0, h_exp1: 0.0, h_expok1: 0.0, h_cuchk1: 0.0, h_culen1: 0.0, h_cuk1: 0.0, h_cua1: 0.0, h_spm1: 1.0, h_spa1: 0.0, h_spdv1: 0.0, h_trem1: 0.0, h_gt1: 0.0, h_g1: 0.0, h_gamp1: 1.0, h_popen1: 1000000000.0, h_pclose1: 1000000000.0, h_slot1: 0.0, h_drk1: 0.0, h_drlen1: 0.0, h_drd1: 0.0, h_late1: 0.0, h_flub1: 0.0, h_e1: 0.0, h_wl1: 0.0, h_wr1: 0.0, h_head1: 0.0, h_brk1: 0.0, h_idl1: 0.0, h_pcs1: 0.0};
-  function gauss() {
-	return (noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678;
-}
   function step(in1, in2, in3) {
     var out1 = 0, out2 = 0, NONE = 0, SR = 0, beatint = 0, prevph = 0, curgen = 0, flushb = 0, recstate = 0, wi = 0, recstart = 0, recb = 0, prevb = 0, live = 0, pos0 = 0, v0 = 0, vb0 = 0, mode0 = 0, k0 = 0, has0 = 0, bs0 = 0, be0 = 0, p00 = 0, rate0 = 0, kind0 = 0, gm0 = 0, gd0 = 0, g00 = 0, amp0 = 0, str0 = 0, gen0 = 0, cued0 = 0, pdc0 = 0, pa0 = 0, pdv0 = 0, trrem0 = 0, push0 = 0, rk0 = 0, exp0 = 0, expok0 = 0, cuchk0 = 0, culen0 = 0, cuk0 = 0, cua0 = 0, spm0 = 0, spa0 = 0, spdv0 = 0, trem0 = 0, gt0 = 0, g0 = 0, gamp0 = 0, popen0 = 0, pclose0 = 0, slot0 = 0, drk0 = 0, drlen0 = 0, drd0 = 0, late0 = 0, flub0 = 0, e0 = 0, wl0 = 0, wr0 = 0, head0 = 0, brk0 = 0, idl0 = 0, pcs0 = 0, pos1 = 0, v1 = 0, vb1 = 0, mode1 = 0, k1 = 0, has1 = 0, bs1 = 0, be1 = 0, p01 = 0, rate1 = 0, kind1 = 0, gm1 = 0, gd1 = 0, g01 = 0, amp1 = 0, str1 = 0, gen1 = 0, cued1 = 0, pdc1 = 0, pa1 = 0, pdv1 = 0, trrem1 = 0, push1 = 0, rk1 = 0, exp1 = 0, expok1 = 0, cuchk1 = 0, culen1 = 0, cuk1 = 0, cua1 = 0, spm1 = 0, spa1 = 0, spdv1 = 0, trem1 = 0, gt1 = 0, g1 = 0, gamp1 = 0, popen1 = 0, pclose1 = 0, slot1 = 0, drk1 = 0, drlen1 = 0, drd1 = 0, late1 = 0, flub1 = 0, e1 = 0, wl1 = 0, wr1 = 0, head1 = 0, brk1 = 0, idl1 = 0, pcs1 = 0, ph = 0, jumped = 0, cand = 0, B = 0, spb = 0, started = 0, stopped = 0, tau = 0, taus = 0, dk = 0, dks = 0, pre0 = 0, pushsd = 0, vmax = 0, reach = 0, reljit = 0, rush = 0, fadjit = 0, fadearly = 0, fadlate = 0, cuebase = 0, cueper = 0, tremsd = 0, lvl = 0, fade = 0, flubp = 0, flubsd = 0, recspb = 0, trema = 0, tremb = 0, done = 0, active = 0, flushed = 0, dragnew = 0, rbs = 0, boot = 0, qt = 0, need_next = 0, base = 0, e_bs = 0, e_be = 0, e_p0 = 0, e_kind = 0, e_cm = 0, e_rate = 0, e_gm = 0, e_gd = 0, e_g0 = 0, e_amp = 0, e_dist = 0, e_gen = 0, e_str = 0, keep = 0, cut = 0, gg = 0, cont = 0, oldbe = 0, latej = 0, earlyj = 0, gap = 0, j = 0, s0 = 0, pre = 0, adv = 0, d0 = 0, cerr = 0, prel = 0, fast = 0, jit = 0, tlen = 0, tr = 0, dist = 0, need = 0, dc = 0, sd = 0, nb = 0, w = 0, u = 0, rate_e = 0, vv = 0, err = 0, vplay = 0, waitrel = 0, a = 0, gend = 0, gain0 = 0, yl0 = 0, yr0 = 0, ip = 0, fr = 0, i0 = 0, i1 = 0, i2 = 0, i3 = 0, xm = 0, x0 = 0, x1 = 0, x2 = 0, c1 = 0, c2 = 0, c3 = 0, hw = 0, ja = 0, jb = 0, wa = 0, gain1 = 0, yl1 = 0, yr1 = 0, mixl = 0, mixr = 0, kn = 0, statc = 0;
+
 
 
 
@@ -319,7 +317,7 @@ if (need_next > 0.5) {
 		keep = 1;
 		if (e_gen < curgen) {
 			cut = NONE;
-			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg += 1) {
+			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg = gg + 1) {
 				cut = min(cut, peek(BUF.gcut, wrap(gg, 0, 256), 0));
 			}
 			if (e_bs >= cut) {
@@ -339,8 +337,8 @@ if (need_next > 0.5) {
 			if (kind0 == 2) {
 				p00 = e_dist;
 			}
-			latej = (fadlate + gauss() * fadjit) / spb;
-			earlyj = (fadearly + gauss() * fadjit) / spb;
+			latej = (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			earlyj = (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 			gap = max((bs0 - B) * spb, 0);
 			if (cont > 0.5) {
 				
@@ -406,14 +404,14 @@ if (need_next > 0.5) {
 					d0 = abs(wrap(p00 - adv - pos0, -P.L / 2, P.L / 2));
 					cerr = 0;
 					if (d0 > 8) {
-						cerr = gauss() * min(cuebase + cueper * d0, 0.03 * SR);
+						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
 					}
 					prel = p00 - adv + cerr;
 					fast = min(0.25 * SR / max(gap, 1), 2);
-					e0 = 0.6 * e0 + gauss() * reljit * 0.8;
+					e0 = 0.6 * e0 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
 					jit = e0 * (1 + 0.5 * fast) - rush * fast;
 					if (noise() * 0.5 + 0.5 < flubp) {
-						jit = jit + gauss() * flubsd;
+						jit = jit + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * flubsd;
 						flub0 = flub0 + 1;
 					}
 					tlen = max((be0 - B) * spb, 1);
@@ -447,7 +445,7 @@ if (need_next > 0.5) {
 						mode0 = 1;
 					}
 					trrem0 = tr;
-					push0 = gauss() * pushsd;
+					push0 = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
 					exp0 = wrap(p00 - rate0 * rate0 * gap, 0, P.L);
 					expok0 = 1;
 				} else {
@@ -541,7 +539,7 @@ if (mode0 == 5) {
 	}
 }
 if (mode0 == 4) {
-	trem0 = trema * trem0 + tremb * gauss();
+	trem0 = trema * trem0 + tremb * ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678);
 	v0 = v0 * dks + trem0 * tremsd;
 	if (B >= be0) {
 		mode0 = 0;
@@ -634,7 +632,7 @@ if (B >= popen0 && waitrel < 0.5) {
 		if (str0 > 0.5) {
 			a = a * P.strlev;
 		}
-		gamp0 = a * min(1 + gauss() * lvl, 1.12);
+		gamp0 = a * min(1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * lvl, 1.12);
 		gend = be0;
 		if (gm0 > 0.5) {
 			gend = min(be0, g00 + (slot0 + 1) * gd0);
@@ -642,7 +640,7 @@ if (B >= popen0 && waitrel < 0.5) {
 		if (kind0 == 2) {
 			gend = min(be0, bs0 + (be0 - bs0) * 0.85);
 		}
-		pclose0 = gend + (fadlate + gauss() * fadjit) / spb;
+		pclose0 = gend + (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 		pcs0 = 1;
 	}
 }
@@ -653,7 +651,7 @@ if (B >= pclose0) {
 		slot0 = slot0 + 2;
 		s0 = g00 + slot0 * gd0;
 		if (s0 < be0) {
-			popen0 = s0 - (fadearly + gauss() * fadjit) / spb;
+			popen0 = s0 - (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 		}
 	}
 }
@@ -786,7 +784,7 @@ if (need_next > 0.5) {
 		keep = 1;
 		if (e_gen < curgen) {
 			cut = NONE;
-			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg += 1) {
+			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg = gg + 1) {
 				cut = min(cut, peek(BUF.gcut, wrap(gg, 0, 256), 0));
 			}
 			if (e_bs >= cut) {
@@ -806,8 +804,8 @@ if (need_next > 0.5) {
 			if (kind1 == 2) {
 				p01 = e_dist;
 			}
-			latej = (fadlate + gauss() * fadjit) / spb;
-			earlyj = (fadearly + gauss() * fadjit) / spb;
+			latej = (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			earlyj = (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 			gap = max((bs1 - B) * spb, 0);
 			if (cont > 0.5) {
 				
@@ -873,14 +871,14 @@ if (need_next > 0.5) {
 					d0 = abs(wrap(p01 - adv - pos1, -P.L / 2, P.L / 2));
 					cerr = 0;
 					if (d0 > 8) {
-						cerr = gauss() * min(cuebase + cueper * d0, 0.03 * SR);
+						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
 					}
 					prel = p01 - adv + cerr;
 					fast = min(0.25 * SR / max(gap, 1), 2);
-					e1 = 0.6 * e1 + gauss() * reljit * 0.8;
+					e1 = 0.6 * e1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
 					jit = e1 * (1 + 0.5 * fast) - rush * fast;
 					if (noise() * 0.5 + 0.5 < flubp) {
-						jit = jit + gauss() * flubsd;
+						jit = jit + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * flubsd;
 						flub1 = flub1 + 1;
 					}
 					tlen = max((be1 - B) * spb, 1);
@@ -914,7 +912,7 @@ if (need_next > 0.5) {
 						mode1 = 1;
 					}
 					trrem1 = tr;
-					push1 = gauss() * pushsd;
+					push1 = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
 					exp1 = wrap(p01 - rate1 * rate0 * gap, 0, P.L);
 					expok1 = 1;
 				} else {
@@ -1008,7 +1006,7 @@ if (mode1 == 5) {
 	}
 }
 if (mode1 == 4) {
-	trem1 = trema * trem1 + tremb * gauss();
+	trem1 = trema * trem1 + tremb * ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678);
 	v1 = v1 * dks + trem1 * tremsd;
 	if (B >= be1) {
 		mode1 = 0;
@@ -1101,7 +1099,7 @@ if (B >= popen1 && waitrel < 0.5) {
 		if (str1 > 0.5) {
 			a = a * P.strlev;
 		}
-		gamp1 = a * min(1 + gauss() * lvl, 1.12);
+		gamp1 = a * min(1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * lvl, 1.12);
 		gend = be1;
 		if (gm1 > 0.5) {
 			gend = min(be1, g01 + (slot1 + 1) * gd1);
@@ -1109,7 +1107,7 @@ if (B >= popen1 && waitrel < 0.5) {
 		if (kind1 == 2) {
 			gend = min(be1, bs1 + (be1 - bs1) * 0.85);
 		}
-		pclose1 = gend + (fadlate + gauss() * fadjit) / spb;
+		pclose1 = gend + (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 		pcs1 = 1;
 	}
 }
@@ -1120,7 +1118,7 @@ if (B >= pclose1) {
 		slot1 = slot1 + 2;
 		s0 = g01 + slot1 * gd1;
 		if (s0 < be1) {
-			popen1 = s0 - (fadearly + gauss() * fadjit) / spb;
+			popen1 = s0 - (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
 		}
 	}
 }
