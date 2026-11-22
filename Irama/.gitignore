@@ -10,3 +10,4 @@ __pycache__/
 test/render
 *.wav
 test/events.csv
+docs/gamelan-sequencing.html
