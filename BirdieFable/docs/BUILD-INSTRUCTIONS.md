@@ -2,7 +2,7 @@
 
 Design by Fable, 2026-11-22, for an Opus build. One VCV Rack 2 module, **Birdie**: a physical model of a single bird's voice with a built-in phrase generator. It sings whistles, trills, chirps, buzzes, two-note chords, coos and harsh calls, and every control can be pushed past what a bird can do, down to drones and bass. No samples. Mono.
 
-The reference for every number is the C engine in `tools/proto/`: `birdie_ref.h`, `birdie_ref.c` (engine and phrase generator), `presets.h` (the 16 factory presets in engine units), `render_ref.c` (renders every preset) and `probe.c` (steady-tone measurements). It is plain C99 that also compiles as C++. **Use it as the engine: copy it into `src/dsp/` and wrap it. Do not rewrite the arithmetic or change the order of random draws.** Where this document and the reference disagree, the reference wins. `first_sketch.c` is the earlier sketch and is background only.
+The reference for every number is the C engine in `tools/proto/`: `birdie_ref.h`, `birdie_ref.c` (engine and phrase generator), `presets.h` (the 20 factory presets in engine units), `render_ref.c` (renders every preset) and `probe.c` (steady-tone measurements). It is plain C99 that also compiles as C++. **Use it as the engine: copy it into `src/dsp/` and wrap it. Do not rewrite the arithmetic or change the order of random draws.** Where this document and the reference disagree, the reference wins. `first_sketch.c` is the earlier sketch and is background only.
 
 Background and research: `docs/RESEARCH.md`. Note that the tension scale changed after that document was written (section 0, point 2).
 
@@ -30,7 +30,7 @@ BirdieFable/
   src/Birdie.cpp         Module + ModuleWidget only
   src/dsp/birdie_ref.h, birdie_ref.c   the engine, copied from tools/proto (no Rack includes)
   res/Birdie.svg, res/make_panel.py
-  presets/Birdie/*.vcvm  the 16 factory presets
+  presets/Birdie/*.vcvm  the 20 factory presets
   test/render.cpp        offline checks and demo WAVs, no Rack needed
   docs/MANUAL.md, docs/Birdie-Manual.pdf, docs/BUILD-INSTRUCTIONS.md, docs/RESEARCH.md
   tools/proto/           the C reference (already here)
@@ -117,9 +117,9 @@ The engine provides `bd_note`, `bd_phrase` and `bd_process`. The module adds the
 
 ## 6. Factory presets (`presets/Birdie/`)
 
-Sixteen, from `presets.h`, converted back to knob positions with the table in section 3 and written as `.vcvm` files by a small script: Whistler, Triller, Chirper, Buzzer, Thrush, Dove, Crow, Honker, Songster, Warbler, Giant, Drone, Bass Bird, Robot, Tiny, Owl. Store each preset's seed. Bass Bird expects CLOCK at LOCK (the reference fixes its slot at a 16th note at 124 bpm); Drone has HOLD on.
+**Twenty**, from `presets.h`, converted back to knob positions with the table in section 3 and written as `.vcvm` files by a small script: Whistler, Triller, Chirper, Buzzer, Thrush, Dove, Crow, Honker, Songster, Warbler, Giant, Drone, Bass Bird, Robot, Tiny, Owl, Churr, Gull, Siren, Glitch. All twenty must ship. Store each preset's seed. Bass Bird expects CLOCK at LOCK (the reference fixes its slot at a 16th note at 124 bpm); Drone has HOLD on.
 
-Reference renders of all sixteen are in `/mnt/project-files/birdsong-vcv/reference/` with `spectrograms.png`.
+Reference renders of all twenty are in `/mnt/project-files/birdsong-vcv/reference/` with `spectrograms.png`.
 
 ## 7. Tests (`make test`, no Rack)
 

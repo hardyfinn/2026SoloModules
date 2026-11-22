@@ -30,4 +30,9 @@ static int bd_presets(BdPreset* o){ int n=0; BdParams p;
   p=bd_default(); p.size=2; p.tension=-14; p.slide=12; p.shape=SH_SWOOP; p.buzzRate=60; p.buzz=0.4; p.chop=0.5; p.rough=0.1; p.length=0.15; p.notes=8; p.rate=6; p.pattern=PT_CALL; p.vary=0.9; PRE("Robot",14)
   p=bd_default(); p.size=0.5; p.tension=-3; p.slide=-2.5; p.shape=SH_LINE; p.length=0.012; p.pressure=0.35; p.attack=0.3; p.notes=32; p.rate=40; p.pattern=PT_REPEAT; p.vary=0; p.swell=0.6; PRE("Tiny",15)
   p=bd_default(); p.size=10; p.tension=-1.5; p.pressure=0.12; p.slide=-1; p.length=0.45; p.attack=0.15; p.release=0.5; p.breath=0.2; p.throat=0.9; p.beak=2500; p.tube=0.3; p.notes=5; p.rate=1.6; p.pattern=PT_MOTIF; p.vary=0.2; p.swell=-0.3; PRE("Owl",16)
+  p=bd_default(); p.size=1.6; p.tension=-9; p.slide=-1; p.shape=SH_LINE; p.length=1.6; p.attack=0.1; p.release=0.15; p.buzzRate=28; p.buzz=0.06; p.chop=1.0; p.breath=0.4; p.throat=0.4; p.notes=2; p.rate=0.5; p.pattern=PT_PAIR; p.vary=0.35; PRE("Churr",17)
+  p=bd_default(); p.size=2.4; p.tension=-15; p.slide=7; p.shape=SH_ARCH; p.pressure=0.36; p.rough=0.08; p.breath=0.5; p.length=0.42; p.attack=0.12; p.release=0.35; p.throat=0.5; p.follow=0; p.tune=0.78;
+                  p.trachea=0.035; p.tube=0.5; p.beak=14000; p.notes=6; p.rate=2.0; p.pattern=PT_TAIL; p.vary=0.4; p.accel=0.5; p.drift=-2; PRE("Gull",18)
+  p=bd_default(); p.size=3; p.tension=-10; p.slide=22; p.shape=SH_DOUBLE; p.length=1.2; p.pressure=0.3; p.breath=0.05; p.attack=0.05; p.release=0.15; p.throat=0.3; p.notes=4; p.rate=0.8; p.pattern=PT_PAIR; p.vary=0.3; PRE("Siren",19)
+  p=bd_default(); p.size=1.5; p.tension=-10; p.slide=9; p.shape=SH_LINE; p.length=0.02; p.pressure=0.35; p.rough=0.2; p.attack=0.1; p.release=0.2; p.throat=0.3; p.notes=32; p.rate=30; p.pattern=PT_SHUFFLE; p.vary=1.0; p.accel=-0.5; PRE("Glitch",20)
   return n; }
