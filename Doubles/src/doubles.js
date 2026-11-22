@@ -641,7 +641,7 @@ var ready = false, initAt = 0, handsGuard = true;
 var reccmd = 0, sbseq = 0, recArmed = false, lastRecState = 0;
 var apiPlay = null, apiTempo = null, apiTime = null;
 var restoreState = null;
-var IN_MAX = typeof module === 'undefined';
+var IN_MAX = (typeof outlet === 'function') && (typeof post === 'function') && (typeof Task !== 'undefined');
 var tick = null;
 if (IN_MAX) {
 	tick = new Task(onTick, this);
@@ -967,7 +967,7 @@ function anything() {
 function bang() {}
 
 
-if (typeof module !== 'undefined') {
+if (!IN_MAX && typeof module !== 'undefined' && module) {
 	module.exports = {
 		S: S, HOST: HOST, plan: plan, movePress: movePress, padPress: padPress, cutAt: cutAt,
 		setRecord: _setRecord, findStickers: findStickers, TL: function () { return TL; },
