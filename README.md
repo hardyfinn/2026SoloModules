@@ -13,3 +13,7 @@ builds go to the **preview** release, `main` builds to **latest**.
 
 Conventions: plugin versions stay 2.x (Rack 2 skips 3.x), control labels 3.2 mm,
 jack labels 2.9 mm, Hær logo on the bottom rail (`res/haer_logo.py`).
+
+## Licences
+
+Each plugin folder carries its own `LICENSE.txt`. Our own modules are MIT, so anyone may port them to other formats, platforms or hardware as long as the copyright notice comes along. The exception is **Ectoplasm**, which contains the GPL-3 Ectocore firmware and must stay GPL-3.0-only.
