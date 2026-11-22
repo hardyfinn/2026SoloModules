@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "dsp/BirdieCore.hpp"
+#include "dsp/presets.h"
 
 using namespace birdie;
 
@@ -256,7 +257,7 @@ struct BirdieWidget : ModuleWidget {
 		d->box.size = mm2px(Vec(DISP_W, DISP_H));
 		d->module = module;
 		addChild(d);
-		addChild(createLightCentered<MediumLight<OrangeLight>>(mm2px(Vec(LIGHT_X, LIGHT_Y)), module, BirdieModule::PRESS_LIGHT));
+		addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(LIGHT_X, LIGHT_Y)), module, BirdieModule::PRESS_LIGHT));
 
 		const int rows[4][8] = {
 			{SIZE_P, TENSION_P, PRESSURE_P, BREATH_P, ROUGH_P, V2MIX_P, V2INT_P, V2SLIDE_P},

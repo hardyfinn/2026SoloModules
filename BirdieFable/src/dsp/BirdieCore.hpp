@@ -217,10 +217,13 @@ struct Core {
 		if (!conn[CLOCK_I]) { lastClockT = -1.0; clockPeriod = 0.0; }
 		buildParams(kv, in, conn);
 
-		bool newHit = newB.process(kv[NEW_P] * 10.f) | (conn[NEW_I] && newT.process(in[NEW_I]));
+		bool newBtn = newB.process(kv[NEW_P] * 10.f), newJack = conn[NEW_I] && newT.process(in[NEW_I]);
+		bool newHit = newBtn || newJack;
 		if (newHit) seed = freshSeed();
-		bool noteHit = noteB.process(kv[NOTE_P] * 10.f) | (conn[NOTE_I] && noteT.process(in[NOTE_I]));
-		bool phraseHit = phraseB.process(kv[PHRASE_P] * 10.f) | (conn[PHRASE_I] && phraseT.process(in[PHRASE_I]));
+		bool noteBtn = noteB.process(kv[NOTE_P] * 10.f), noteJack = conn[NOTE_I] && noteT.process(in[NOTE_I]);
+		bool noteHit = noteBtn || noteJack;
+		bool phraseBtn = phraseB.process(kv[PHRASE_P] * 10.f), phraseJack = conn[PHRASE_I] && phraseT.process(in[PHRASE_I]);
+		bool phraseHit = phraseBtn || phraseJack;
 		double gap = mapGap(kv[GAP_P]) * P.time;
 		bool autoOn = kv[AUTO_P] > 0.5f;
 		if (autoOn && !autoWas) autoWait = 0.0;
