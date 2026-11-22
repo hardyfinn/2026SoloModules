@@ -13,7 +13,7 @@ static const float RY[3] = {30.0f, 48.5f, 67.0f};
 static const float JX0 = 7.62f, JDX = 15.24f;
 static const float JA_Y = 103.0f, JB_Y = 116.5f;
 
-struct Birdie : Module {
+struct BirdieModule : Module {
 	enum LightIds { PRESS_LIGHT, HOLD_LIGHT, NUM_LIGHTS };
 
 	Core core;
@@ -27,7 +27,7 @@ struct Birdie : Module {
 	bool dispPlaying = false, dispLock = false, dispClock = false;
 	uint32_t dispSeed = 0;
 
-	Birdie() {
+	BirdieModule() {
 		config(NUM_P, NUM_I, NUM_O, NUM_LIGHTS);
 		BdParams d = bd_default();
 		float def[NUM_P];
@@ -217,7 +217,7 @@ struct Birdie : Module {
 };
 
 struct BirdieDisplay : Widget {
-	Birdie* module = nullptr;
+	BirdieModule* module = nullptr;
 	void drawLayer(const DrawArgs& args, int layer) override {
 		if (layer != 1) { Widget::drawLayer(args, layer); return; }
 		int pat = module ? module->dispPattern : PT_MOTIF;
@@ -244,7 +244,7 @@ struct BirdieDisplay : Widget {
 };
 
 struct BirdieWidget : ModuleWidget {
-	BirdieWidget(Birdie* module) {
+	BirdieWidget(BirdieModule* module) {
 		setModule(module);
 		setPanel(createPanel(asset::plugin(pluginInstance, "res/Birdie.svg")));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
@@ -256,7 +256,7 @@ struct BirdieWidget : ModuleWidget {
 		d->box.size = mm2px(Vec(DISP_W, DISP_H));
 		d->module = module;
 		addChild(d);
-		addChild(createLightCentered<MediumLight<OrangeLight>>(mm2px(Vec(LIGHT_X, LIGHT_Y)), module, Birdie::PRESS_LIGHT));
+		addChild(createLightCentered<MediumLight<OrangeLight>>(mm2px(Vec(LIGHT_X, LIGHT_Y)), module, BirdieModule::PRESS_LIGHT));
 
 		const int rows[4][8] = {
 			{SIZE_P, TENSION_P, PRESSURE_P, BREATH_P, ROUGH_P, V2MIX_P, V2INT_P, V2SLIDE_P},
@@ -267,7 +267,7 @@ struct BirdieWidget : ModuleWidget {
 			for (int i = 0; i < 8; i++)
 				if (rows[r][i] >= 0) addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(COLS[i], ROW_Y[r])), module, rows[r][i]));
 		addParam(createParamCentered<CKSS>(mm2px(Vec(COLS[4] - 2.0f, ROW_Y[2])), module, FOLLOW_P));
-		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(COLS[7], ROW_Y[2])), module, HOLD_P, Birdie::HOLD_LIGHT));
+		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(COLS[7], ROW_Y[2])), module, HOLD_P, BirdieModule::HOLD_LIGHT));
 
 		addParam(createParamCentered<VCVButton>(mm2px(Vec(RX[0], RY[0])), module, NOTE_P));
 		addParam(createParamCentered<VCVButton>(mm2px(Vec(RX[1], RY[0])), module, PHRASE_P));
@@ -284,13 +284,13 @@ struct BirdieWidget : ModuleWidget {
 	}
 
 	void appendContextMenu(Menu* menu) override {
-		Birdie* m = dynamic_cast<Birdie*>(module);
+		BirdieModule* m = dynamic_cast<BirdieModule*>(module);
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createBoolPtrMenuItem("New seed every phrase", "", &m->core.newEachPhrase));
 		menu->addChild(createSubmenuItem("Seed", string::f("%u", (unsigned)m->core.seed), [=](Menu* sub) {
 			struct SeedField : ui::TextField {
-				Birdie* m;
+				BirdieModule* m;
 				void onSelectKey(const SelectKeyEvent& e) override {
 					if (e.action == GLFW_PRESS && (e.key == GLFW_KEY_ENTER || e.key == GLFW_KEY_KP_ENTER)) {
 						try { m->core.seed = (uint32_t)std::stoul(text); } catch (...) {}
@@ -311,4 +311,4 @@ struct BirdieWidget : ModuleWidget {
 	}
 };
 
-Model* modelBirdie = createModel<Birdie, BirdieWidget>("Birdie");
+Model* modelBirdie = createModel<BirdieModule, BirdieWidget>("Birdie");
