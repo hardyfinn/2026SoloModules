@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Draws res/Cymbolism.svg (40 HP). Rack can't draw SVG <text>, so labels become paths.
 # Positions are in mm; the LAYOUT block numbers are shared with src/Cymbolism.cpp.
-#   pip install fonttools ; python3 res/make_panel.py
+#   pip install fonttools ; python3 res/make_panel.py [lite]
+# "lite" draws res/CymbolismLite.svg: the same panel with the Lite title and ranges.
 import os
+import sys
 from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
@@ -12,6 +14,8 @@ FONT_BOLD = os.environ.get("PANEL_FONT_BOLD", "/usr/share/fonts/opentype/inter/I
 FONT_MED = os.environ.get("PANEL_FONT_MED", "/usr/share/fonts/opentype/inter/Inter-Medium.otf")
 
 W, H = 203.2, 128.5  # 40 HP
+LITE = len(sys.argv) > 1 and sys.argv[1] == "lite"
+OUT_NAME = "CymbolismLite.svg" if LITE else "Cymbolism.svg"
 
 BG = "#2A2418"        # dark patinated bronze
 BG_ROW = "#221D13"
@@ -67,8 +71,8 @@ for i in range(26):
     add(f'<circle cx="{W + 10}" cy="-30" r="{r:.1f}" fill="none" stroke="#000" stroke-opacity="0.07" stroke-width="0.6"/>')
 
 # ---- title + screen
-add(text("Cymbolism Fable", 5.0, 10.6, 5.4, FONT_BOLD, GOLD, anchor="start", spacing=0.02))
-add(text("a physical cymbal · nothing sampled", W - 5.0, 10.4, 2.7, FONT_MED, BRONZE, anchor="end"))
+add(text("Cymbolism Lite" if LITE else "Cymbolism Fable", 5.0, 10.6, 5.4, FONT_BOLD, GOLD, anchor="start", spacing=0.02))
+add(text("a physical cymbal on a CPU budget" if LITE else "a physical cymbal · nothing sampled", W - 5.0, 10.4, 2.7, FONT_MED, BRONZE, anchor="end"))
 add(f'<rect x="{DISP_X - 0.6}" y="{DISP_Y - 0.6}" width="{DISP_W + 1.2}" height="{DISP_H + 1.2}" '
     f'rx="1.2" fill="#0D0B07" stroke="{GOLD}" stroke-opacity="0.5" stroke-width="0.35"/>')
 
@@ -96,6 +100,8 @@ add(f'<rect x="2.6" y="{ROWA_Y - 11.4}" width="{W - 5.2}" height="0.5" fill="{GO
 namesA = ["SIZE", "WEIGHT", "TAPER", "PROFILE", "BELL", "FLANGE", "ALLOY", "HAMMER", "TENSION"]
 marksA = [("6\"", "24\""), ("THIN", "HEAVY"), None, ("FLAT", "HIGH"), None,
           ("DOWN", "UP"), None, ("SPUN", "HAND"), ("-", "+")]
+if LITE:
+    marksA[0] = ("0.6x", "1.2x")
 for i, n in enumerate(namesA):
     x = ROWA_X0 + ROWA_DX * i
     add(text(n, x, ROWA_Y - 7.0, CONTROL, fill=GOLD))
@@ -107,6 +113,8 @@ add(f'<rect x="2.6" y="{ROWB_Y - 10.4}" width="{W - 5.2}" height="19.8" rx="1.4"
 namesB = ["DECAY", "BLOOM", "DAMP", "MOUNT", "SIZZLE", "MIC", "PLAY", "HARDNESS", "RATE", "EXC"]
 marksB = [("SHORT", "LONG"), ("0", "2"), None, ("TIGHT", "LOOSE"), ("0", "12"), ("BELL", "ROOM"),
           None, ("SOFT", "HARD"), ("2", "30"), ("0", "1")]
+if LITE:
+    marksB[4] = ("0", "6")
 for i, n in enumerate(namesB):
     x = ROWB_X0 + ROWB_DX * i
     col = BRONZE if i >= 6 else CREAM
@@ -132,11 +140,11 @@ add(text("OUT", ox, JACK2_Y - 5.0, JACK, FONT_BOLD, BG))
 
 svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}mm" height="{H}mm" viewBox="0 0 {W} {H}">\n'
        + "\n".join(p for p in parts if p) + "\n</svg>\n")
-open(os.path.join(HERE, "Cymbolism.svg"), "w").write(svg)
+open(os.path.join(HERE, OUT_NAME), "w").write(svg)
 print("ok")
 
 # --- Haer maker logo (res/haer_logo.py) on the bottom rail
 import sys as _sys
 _sys.path.insert(0, HERE)
 import haer_logo
-haer_logo.add_to_file(os.path.join(HERE, "Cymbolism.svg"), x=W / 2, y=126.0, cap=3.0, bg=BG)
+haer_logo.add_to_file(os.path.join(HERE, OUT_NAME), x=W / 2, y=126.0, cap=3.0, bg=BG)

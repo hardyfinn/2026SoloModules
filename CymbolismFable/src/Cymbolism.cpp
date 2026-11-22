@@ -4,6 +4,7 @@
 // background rebuilds). This file is the panel, the jacks and the screen.
 #include "plugin.hpp"
 #include "CyRunner.hpp"
+#include "CyLimits.hpp"
 
 using namespace cy;
 
@@ -68,6 +69,7 @@ struct Cymbolism : Module {
 	enum OutputId { OUT_OUTPUT, OUTPUTS_LEN };
 	enum LightId { BUILD_LIGHT, LIGHTS_LEN };
 
+	CyLimits lim;
 	Runner runner;
 	dsp::SchmittTrigger strikeTrig, strikeBtn, newBtn;
 	dsp::ClockDivider ctlDiv;
@@ -90,18 +92,21 @@ struct Cymbolism : Module {
 	int dispPlay = SHOULDER, dispRivets = 0;
 	float strikeFlash = 0.f;
 
-	Cymbolism() {
+	Cymbolism() : Cymbolism(CY_FULL) {}
+	explicit Cymbolism(const CyLimits& l) : lim(l) {
+		quality = lim.defaultQuality;
+		for (int t = 0; t < NUM_TYPES; t++) assert(CY_TYPES[t].rivets <= lim.sizzleMax && CY_TYPES[t].play < lim.numPlays);
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 		std::vector<std::string> types;
 		for (int i = 0; i < NUM_TYPES; i++) types.push_back(CY_TYPES[i].name);
 		configSwitch(TYPE_PARAM, 0.f, NUM_TYPES - 1, 1.f, "Type", types);
 		configButton(NEW_PARAM, "New cymbal (re-roll the hammering pattern)");
 		configParam(POSITION_PARAM, 0.f, 1.f, 0.95f, "Strike position: bell (0) to edge (1)", "%", 0.f, 100.f);
-		configParam(FORCE_PARAM, 0.f, 1.f, 0.661f, "Force: strike speed (VEL patched: speed at 10 V); bow pressure; EXCITE gain", " m/s", 60.f, 0.2f);
+		configParam(FORCE_PARAM, 0.f, 1.f, 0.661f, lim.lite ? "Force: strike speed (VEL patched: speed at 10 V); EXCITE gain" : "Force: strike speed (VEL patched: speed at 10 V); bow pressure; EXCITE gain", " m/s", 60.f, 0.2f);
 		configButton(STRIKE_PARAM, "Strike");
 		configButton(CHOKE_PARAM, "Choke (grab the edge while held)");
-		configParam<SizeQuantity>(SIZE_PARAM, 0.6f, 1.5f, 1.f, "Size (diameter; CV is 1 V/oct: +1 V halves the size)");
-		configParam<WeightQuantity>(WEIGHT_PARAM, 0.5f, 2.5f, 1.f, "Weight (thickness)");
+		configParam<SizeQuantity>(SIZE_PARAM, 0.6f, lim.sizeMax, 1.f, "Size (diameter; CV is 1 V/oct: +1 V halves the size)");
+		configParam<WeightQuantity>(WEIGHT_PARAM, lim.weightMin, 2.5f, 1.f, "Weight (thickness)");
 		configParam(TAPER_PARAM, 1.f, 2.5f, 1.7f, "Taper (centre / edge thickness)", "x");
 		configParam(PROFILE_PARAM, 0.f, 0.14f, 0.07f, "Profile (bow rise)", "% of radius", 0.f, 100.f);
 		configParam(BELL_PARAM, 0.f, 2.f, 1.f, "Bell size", "x");
@@ -113,20 +118,25 @@ struct Cymbolism : Module {
 		configParam(BLOOM_PARAM, 0.f, 2.f, 1.f, "Bloom (nonlinearity: 0 linear, 1 physical, 2 exaggerated)", "x");
 		configParam(DAMP_PARAM, 0.f, 1.f, 0.f, "Damp (tape on the bow)", "%", 0.f, 100.f);
 		configParam(MOUNT_PARAM, 0.f, 1.f, 0.5f, "Mount: tight felt (0) to loose and swinging (1)", "%", 0.f, 100.f);
-		configParam(SIZZLE_PARAM, 0.f, 12.f, 0.f, "Sizzle (rivets)");
+		configParam(SIZZLE_PARAM, 0.f, (float)lim.sizzleMax, 0.f, "Sizzle (rivets)");
 		paramQuantities[SIZZLE_PARAM]->snapEnabled = true;
 		configParam(MIC_PARAM, 0.f, 4.f, 1.f, "Mic: 0 bell, 1 bow, 2 edge, 3 overhead, 4 room");
-		configSwitch(PLAY_PARAM, 0.f, NUM_PLAYS - 1, 1.f, "Play", {"Tip", "Shoulder", "Mallet", "Rods", "Brush", "Bow"});
+		{
+			std::vector<std::string> plays = {"Tip", "Shoulder", "Mallet", "Rods", "Brush", "Bow"};
+			plays.resize(lim.numPlays);
+			configSwitch(PLAY_PARAM, 0.f, lim.numPlays - 1, 1.f, "Play", plays);
+		}
 		configParam(HARDNESS_PARAM, 0.f, 1.f, 0.5f, "Hardness (beater stiffness; brush: wire stiffness)", "%", 0.f, 100.f);
-		configParam(RATE_PARAM, 0.f, 1.f, 0.45f, "Rate: roll speed, brush sweep speed, bow speed", " Hz", 15.f, 2.f);
+		configParam(RATE_PARAM, 0.f, 1.f, 0.45f, lim.lite ? "Rate: roll speed, brush sweep speed" : "Rate: roll speed, brush sweep speed, bow speed", " Hz", 15.f, 2.f);
 		configParam(EXC_PARAM, 0.f, 1.f, 0.f, "Excite level (EXCITE input)", "%", 0.f, 100.f);
 
 		configInput(STRIKE_INPUT, "Strike trigger");
 		configInput(VEL_INPUT, "Velocity 0-10 V (sampled at the strike)");
 		configInput(CHOKE_INPUT, "Choke gate");
-		configInput(ROLL_INPUT, "Roll gate (roll; brush sweep; bow)");
+		configInput(ROLL_INPUT, lim.lite ? "Roll gate (roll; brush sweep)" : "Roll gate (roll; brush sweep; bow)");
 		configInput(EXCITE_INPUT, "Excite (audio pushed into the cymbal at the strike point)");
-		configInput(PLAY_INPUT, "Play CV (0-10 V across the six beaters, added to the switch, read at each strike)");
+		configInput(PLAY_INPUT, lim.lite ? "Play CV (0-10 V across the five beaters, added to the switch, read at each strike)"
+		                                 : "Play CV (0-10 V across the six beaters, added to the switch, read at each strike)");
 		const char* cvNames[] = {"Size (1 V/oct)", "Weight", "Taper", "Profile", "Bell", "Hammer", "Tension", "Decay", "Bloom",
 		                         "Damp", "Mount", "Sizzle", "Mic", "Position", "Force", "Hardness", "Rate"};
 		for (int i = SIZE_INPUT; i <= RATE_INPUT; i++) configInput(i, std::string(cvNames[i - SIZE_INPUT]) + " CV");
@@ -163,7 +173,7 @@ struct Cymbolism : Module {
 			return clamp(v, lo, hi);
 		};
 		// quantised so small CV wobble doesn't rebuild constantly
-		g.weight = std::round(P(WEIGHT_PARAM, WEIGHT_INPUT, 0.5f, 2.5f) * 50.f) / 50.f;
+		g.weight = std::round(P(WEIGHT_PARAM, WEIGHT_INPUT, lim.weightMin, 2.5f) * 50.f) / 50.f;
 		g.taper = std::round(P(TAPER_PARAM, TAPER_INPUT, 1.f, 2.5f) * 40.f) / 40.f;
 		g.rise = std::round(P(PROFILE_PARAM, PROFILE_INPUT, 0.f, 0.14f) * 500.f) / 500.f;
 		g.bell = std::round(P(BELL_PARAM, BELL_INPUT, 0.f, 2.f) * 40.f) / 40.f;
@@ -178,7 +188,7 @@ struct Cymbolism : Module {
 	void readControls(Controls& c) {
 		float lam = params[SIZE_PARAM].getValue();
 		if (inputs[SIZE_INPUT].isConnected()) lam *= std::pow(2.f, -inputs[SIZE_INPUT].getVoltage());
-		c.size = clamp(lam, 0.35f, 2.0f);
+		c.size = clamp(lam, 0.35f, lim.sizeCvMax);
 		float d = clamp(params[DECAY_PARAM].getValue() + cv(DECAY_INPUT, 1.f), 0.f, 1.f);
 		c.decay = 0.25 * std::pow(16.0, d);
 		c.bloom = clamp(params[BLOOM_PARAM].getValue() + cv(BLOOM_INPUT, 2.f), 0.f, 2.f);
@@ -186,7 +196,7 @@ struct Cymbolism : Module {
 		c.mount = clamp(params[MOUNT_PARAM].getValue() + cv(MOUNT_INPUT, 1.f), 0.f, 1.f);
 		c.hammer = clamp(params[HAMMER_PARAM].getValue() + cv(HAMMER_INPUT, 1.f), 0.f, 1.f);
 		c.mic = clamp(params[MIC_PARAM].getValue() + cv(MIC_INPUT, 4.f), 0.f, 4.f);
-		c.sizzle = std::round(clamp(params[SIZZLE_PARAM].getValue() + cv(SIZZLE_INPUT, 12.f), 0.f, 12.f)) / 12.0;
+		c.sizzle = std::round(clamp(params[SIZZLE_PARAM].getValue() + cv(SIZZLE_INPUT, (float)lim.sizzleMax), 0.f, (float)lim.sizzleMax)) / 12.0;
 		c.position = clamp(params[POSITION_PARAM].getValue() + cv(POSITION_INPUT, 1.f), 0.f, 1.f);
 		c.hardness = clamp(params[HARDNESS_PARAM].getValue() + cv(HARDNESS_INPUT, 1.f), 0.f, 1.f);
 		float f = clamp(params[FORCE_PARAM].getValue() + cv(FORCE_INPUT, 1.f), 0.f, 1.f);
@@ -203,8 +213,8 @@ struct Cymbolism : Module {
 
 	int playNow() {
 		float p = params[PLAY_PARAM].getValue();
-		if (inputs[PLAY_INPUT].isConnected()) p += clamp(inputs[PLAY_INPUT].getVoltage(), 0.f, 10.f) * 0.1f * (NUM_PLAYS - 1);
-		return clamp((int)std::round(p), 0, NUM_PLAYS - 1);
+		if (inputs[PLAY_INPUT].isConnected()) p += clamp(inputs[PLAY_INPUT].getVoltage(), 0.f, 10.f) * 0.1f * (lim.numPlays - 1);
+		return clamp((int)std::round(p), 0, lim.numPlays - 1);
 	}
 
 	void onReset(const ResetEvent& e) override {
@@ -280,7 +290,10 @@ struct Cymbolism : Module {
 	void dataFromJson(json_t* root) override {
 		json_t* j;
 		if ((j = json_object_get(root, "seed"))) seed = (uint64_t)json_integer_value(j);
-		if ((j = json_object_get(root, "quality"))) quality = clamp((int)json_integer_value(j), 0, 3);
+		if ((j = json_object_get(root, "quality"))) {
+			quality = clamp((int)json_integer_value(j), 0, 3);
+			if (lim.lite && quality != 0) quality = 3;   // Lite runs MID or ECO only
+		}
 		if ((j = json_object_get(root, "threaded"))) runner.threaded = json_boolean_value(j);
 		if ((j = json_object_get(root, "keepGeometry"))) keepGeometry = json_boolean_value(j);
 		if ((j = json_object_get(root, "rebuildOnCv"))) rebuildOnCv = json_boolean_value(j);
@@ -463,9 +476,9 @@ struct CymbolismDisplay : Widget {
 };
 
 struct CymbolismWidget : ModuleWidget {
-	CymbolismWidget(Cymbolism* module) {
+	CymbolismWidget(Cymbolism* module, const char* panel = "res/Cymbolism.svg") {
 		setModule(module);
-		setPanel(createPanel(asset::plugin(pluginInstance, "res/Cymbolism.svg")));
+		setPanel(createPanel(asset::plugin(pluginInstance, panel)));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
@@ -513,8 +526,14 @@ struct CymbolismWidget : ModuleWidget {
 		Cymbolism* m = getModule<Cymbolism>();
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
+		if (m->lim.lite) {
+			// Lite: MID (code 3) or ECO (code 0)
+			menu->addChild(createIndexSubmenuItem("Quality", {"MID (default)", "ECO (lightest, top end to 16 kHz)"},
+				[=]() { return m->quality == 0 ? 1 : 0; },
+				[=](int i) { m->quality = i == 1 ? 0 : 3; m->geomPending = true; m->lastGeom = GeomParams(); }));
+		}
 		// menu order ECO, MID, HIGH, ULTRA; the saved codes are 0, 3, 1, 2 (MID came later)
-		menu->addChild(createIndexSubmenuItem("Quality", {"ECO (lightest)", "MID", "HIGH (default)", "ULTRA (bigger nonlinear core, heavy)"},
+		else menu->addChild(createIndexSubmenuItem("Quality", {"ECO (lightest)", "MID", "HIGH (default)", "ULTRA (bigger nonlinear core, heavy)"},
 			[=]() { static const int pos[4] = {0, 2, 3, 1}; return pos[clamp(m->quality, 0, 3)]; },
 			[=](int i) { static const int code[4] = {0, 3, 1, 2}; m->quality = code[clamp(i, 0, 3)]; m->geomPending = true; m->lastGeom = GeomParams(); }));
 		menu->addChild(createBoolMenuItem("Run on its own thread", "",
@@ -532,3 +551,12 @@ struct CymbolismWidget : ModuleWidget {
 };
 
 rack::plugin::Model* modelCymbolism = createModel<Cymbolism, CymbolismWidget>("Cymbolism");
+
+// ---- Cymbolism Lite: the same module inside the light ranges
+struct CymbolismLite : Cymbolism {
+	CymbolismLite() : Cymbolism(CY_LITE) {}
+};
+struct CymbolismLiteWidget : CymbolismWidget {
+	CymbolismLiteWidget(CymbolismLite* module) : CymbolismWidget(module, "res/CymbolismLite.svg") {}
+};
+rack::plugin::Model* modelCymbolismLite = createModel<CymbolismLite, CymbolismLiteWidget>("CymbolismLite");

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Writes the factory presets: presets/Cymbolism/*.vcvm and presets/CymbolismExtended/*.vcvm,
+# Writes the factory presets: presets/Cymbolism/*.vcvm, presets/CymbolismExtended/*.vcvm and presets/CymbolismLite/*.vcvm,
 # and test/presets.txt (the same presets as engine values, for test/preset_check).
 #   python3 tools/make_presets.py
 # A preset sets every knob and the hammering pattern (seed). It leaves the quality, threading and
@@ -95,6 +95,22 @@ CYM = [
     P("Giant Roaring Crash", "CRASH", "24 inch, paper thin, in a room", size=1.33, weight=0.6, bloom=2.0, decay=decay(1.6), mic=4.0, force=force(5)),
 ]
 
+# ---------------- Cymbolism Lite ----------------
+# Cymbolism's set inside the Lite ranges (SIZE to 1.2, WEIGHT from 0.8, six rivets, no bow).
+# Two presets that need the full ranges are replaced; the rest carry over, clamped.
+def lite(p, **kw):
+    d = dict(p)
+    d.update(kw)
+    return d
+LITE_NEW = {
+    "Sizzle Ride": lambda p: lite(p, sizzle=6, note="six rivets on a loose, lighter ride"),
+    "Bowed Edge": lambda p: P("Rod Roll", "CRASH RIDE", "hold ROLL: a rod roll that builds; RATE sets the speed",
+                              play=RODS, position=0.9, rate=rate(14), force=force(2.5), bloom=1.3, mic=3.0, gesture="roll"),
+    "Giant Roaring Crash": lambda p: P("Big Dark Crash", "CRASH", "the biggest, thinnest crash Lite allows, in a room",
+                                      size=1.2, weight=0.8, hammer=0.75, bloom=1.8, decay=decay(1.4), mic=4.0, force=force(5)),
+}
+LITE = [LITE_NEW[p["name"]](p) if p["name"] in LITE_NEW else dict(p) for p in CYM]
+
 # ---------------- Cymbolism Extended ----------------
 EXT = [
     P("Tuned Ride", "RIDE", "every mode on D minor pentatonic; try CHORD", tune=1.0, scale=PENTMIN, root=2, force=force(3)),
@@ -128,6 +144,7 @@ EXT_IDS = ["type", "typeb", None, "position", "force", None, None, "freeze",
 # the ranges of Cymbolism's knobs (Extended's are wider)
 CYM_RANGE = dict(size=(0.6, 1.5), weight=(0.5, 2.5), taper=(1, 2.5), profile=(0, 0.14), bell=(0, 2), flange=(-20, 25), alloy=(0, 5),
                  bloom=(0, 2), play=(0, 5), type=(0, 9))
+LITE_RANGE = dict(CYM_RANGE, size=(0.6, 1.2), weight=(0.8, 2.5), sizzle=(0, 6), play=(0, 4))
 
 
 def write(folder, model, ids, presets, lines):
@@ -135,13 +152,13 @@ def write(folder, model, ids, presets, lines):
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out)
     for n, p in enumerate(presets, 1):
-        if model == "Cymbolism":
+        if model in ("Cymbolism", "CymbolismLite"):
             # BELL's own rise (25%) is beyond Cymbolism's PROFILE knob, which the module clamps the same way
             p["profile"] = min(p["profile"], 0.14)
-            for k, (lo, hi) in CYM_RANGE.items():
+            for k, (lo, hi) in (LITE_RANGE if model == "CymbolismLite" else CYM_RANGE).items():
                 assert lo <= p[k] <= hi, (p["name"], k, p[k])
         params = [{"id": i, "value": round(float(p[k]), 5)} for i, k in enumerate(ids) if k]
-        seed = 1000 * (1 if model == "Cymbolism" else 2) + 2 * n + 1
+        seed = 1000 * {"Cymbolism": 1, "CymbolismExtended": 2, "CymbolismLite": 3}[model] + 2 * n + 1
         doc = {"plugin": "CymbolismFable", "model": model, "version": VERSION, "params": params, "data": {"seed": seed}}
         with open(os.path.join(out, f"{n:02d}_{p['name']}.vcvm"), "w") as f:
             json.dump(doc, f, indent=1)
@@ -161,15 +178,18 @@ def write(folder, model, ids, presets, lines):
 lines = []
 write("presets", "Cymbolism", CYM_IDS, CYM, lines)
 write("presets", "CymbolismExtended", EXT_IDS, EXT, lines)
+write("presets", "CymbolismLite", CYM_IDS, LITE, lines)
 open(os.path.join(ROOT, "test", "presets.txt"), "w").write("\n".join(lines) + "\n")
 
 # the preset tables in the manuals (between the PRESETS markers)
 def table(presets):
     rows = "".join(f"<tr><td class=k>{n:02d} {p['name']}</td><td>{TYPES[p['type']][0]}</td><td>{p['note']}</td></tr>\n" for n, p in enumerate(presets, 1))
     return "<table><tr><th>Preset</th><th>Type</th><th>What it is</th></tr>\n" + rows + "</table>"
-for doc, presets in (("guide.html", CYM), ("extended-guide.html", EXT)):
+for doc, presets in (("guide.html", CYM), ("extended-guide.html", EXT), ("lite-guide.html", LITE)):
     path = os.path.join(ROOT, "docs", doc)
+    if not os.path.exists(path):
+        continue
     h = open(path).read()
     a, b = h.index("<!--PRESETS-->") + len("<!--PRESETS-->"), h.index("<!--/PRESETS-->")
     open(path, "w").write(h[:a] + "\n" + table(presets) + "\n" + h[b:])
-print(len(CYM), len(EXT), "presets written")
+print(len(CYM), len(EXT), len(LITE), "presets written")

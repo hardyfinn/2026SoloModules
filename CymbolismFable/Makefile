@@ -5,6 +5,7 @@ FLAGS += -O3
 SOURCES += $(wildcard src/*.cpp)
 DISTRIBUTABLES += res/Cymbolism.svg
 DISTRIBUTABLES += res/CymbolismExtended.svg
+DISTRIBUTABLES += res/CymbolismLite.svg
 DISTRIBUTABLES += presets
 DISTRIBUTABLES += $(wildcard LICENSE*)
 
@@ -24,12 +25,15 @@ test/extended_check: test/extended_check.cpp src/CyEngine.hpp src/CyUnreal.hpp s
 	$(CXX) -O2 -std=c++17 -pthread test/extended_check.cpp $(TESTSRC) -o test/extended_check
 test/preset_check: test/preset_check.cpp src/CyEngine.hpp src/CyUnreal.hpp src/CyModes.hpp src/CyModes.cpp src/CyGeometry.hpp
 	$(CXX) -O2 -std=c++17 -pthread test/preset_check.cpp $(TESTSRC) -o test/preset_check
+test/lite_check: test/lite_check.cpp src/CyLimits.hpp src/CyEngine.hpp src/CyModes.hpp src/CyModes.cpp src/CyGeometry.hpp
+	$(CXX) -O2 -std=c++17 -pthread test/lite_check.cpp $(TESTSRC) -o test/lite_check
 test/runner_check: test/runner_check.cpp src/CyRunner.hpp src/CyEngine.hpp src/CyModes.cpp
 	$(CXX) -O2 -std=c++17 -pthread test/runner_check.cpp $(TESTSRC) -o test/runner_check
 .PHONY: test
-test: test/modes_check test/render test/runner_check test/extended_check test/preset_check
+test: test/modes_check test/render test/runner_check test/extended_check test/preset_check test/lite_check
 	./test/modes_check
 	./test/runner_check
 	./test/extended_check
 	./test/preset_check
+	./test/lite_check
 	./test/render .

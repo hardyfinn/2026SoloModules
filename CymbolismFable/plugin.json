@@ -1,7 +1,7 @@
 {
   "slug": "CymbolismFable",
   "name": "Cymbolism Fable",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "license": "GPL-3.0-or-later",
   "brand": "Haer",
   "author": "Haer",
@@ -32,6 +32,16 @@
         "Physical modeling",
         "Synth voice",
         "Polyphonic"
+      ]
+    },
+    {
+      "slug": "CymbolismLite",
+      "name": "Cymbolism Lite",
+      "description": "Cymbolism on a CPU budget: the same physical cymbal with size, weight, rivets and beaters kept inside a range that stays light however the knobs are set or randomized",
+      "tags": [
+        "Drum",
+        "Physical modeling",
+        "Synth voice"
       ]
     }
   ]

@@ -1,6 +1,6 @@
 // Renders every factory preset (test/presets.txt, written by tools/make_presets.py) through the
 // engine: each must build, stay finite and in range, and make a sound of a sensible level.
-//   ./test/preset_check [out-dir]     writes presets-cymbolism.wav and presets-extended.wav there
+//   ./test/preset_check [out-dir]     writes presets-cymbolism.wav, presets-extended.wav and presets-lite.wav there
 #include "../src/CyEngine.hpp"
 #include <cstdio>
 #include <fstream>
@@ -42,6 +42,7 @@ static void render(Preset& p) {
 	gp.hole = ext ? v["hole"] : -1.0;
 	if (ext && v["size"] > 1.5) gp.band = std::round(v["size"] * 4) / 4;
 	gp.sampleRate = 48000;
+	if (p.model == "CymbolismLite") gp.quality = 3;   // Lite's default engine (MID)
 	auto M = buildModel(gp);
 	Controls c;
 	c.size = v["size"]; c.decay = v["decay"]; c.bloom = v["bloom"]; c.damp = v["damp"]; c.mount = v["mount"]; c.hammer = v["hammer"];
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
 	int fails = 0;
 	for (auto& p : ps) { printf("  %s  %s\n", p.ok ? "ok  " : "FAIL", p.report.c_str()); if (!p.ok) fails++; }
 	if (!dir.empty()) {
-		for (const char* model : {"Cymbolism", "CymbolismExtended"}) {
+		for (const char* model : {"Cymbolism", "CymbolismExtended", "CymbolismLite"}) {
 			std::vector<float> L, R;
 			for (auto& p : ps) {
 				if (p.model != model) continue;
@@ -133,7 +134,8 @@ int main(int argc, char** argv) {
 				L.insert(L.end(), 9600, 0.f);
 				R.insert(R.end(), 9600, 0.f);
 			}
-			writeWav(dir + (std::string(model) == "Cymbolism" ? "/presets-cymbolism.wav" : "/presets-extended.wav"), L, R);
+			std::string m = model;
+			writeWav(dir + (m == "Cymbolism" ? "/presets-cymbolism.wav" : m == "CymbolismLite" ? "/presets-lite.wav" : "/presets-extended.wav"), L, R);
 		}
 	}
 	if (fails) printf("preset_check: %d FAILED\n", fails);

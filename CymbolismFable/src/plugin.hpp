@@ -7,3 +7,4 @@ extern Plugin* pluginInstance;
 
 extern Model* modelCymbolism;
 extern Model* modelCymbolismExtended;
+extern Model* modelCymbolismLite;
