@@ -1,0 +1,23 @@
+{
+  "slug": "CicadaFable",
+  "name": "Cicada Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Cicada",
+      "name": "Cicada",
+      "description": "Singing insects by physical model: cicadas, crickets, katydids, grasshoppers and wingbeats, from a single field cricket to clocked percussion and a formant voice",
+      "tags": ["Synth voice", "Physical modeling", "Percussion", "Polyphonic", "Noise"]
+    }
+  ]
+}
