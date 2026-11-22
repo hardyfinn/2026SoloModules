@@ -15,6 +15,7 @@ a swinging mount and a modelled mic. Nothing is sampled. 40 HP, mono.
 - Extended manual: [docs/Cymbolism-Extended-Manual.pdf](docs/Cymbolism-Extended-Manual.pdf) (source `docs/extended-guide.html`), design in [docs/EXTENDED-SPEC.md](docs/EXTENDED-SPEC.md)
 - Design: [docs/BUILD-INSTRUCTIONS.md](docs/BUILD-INSTRUCTIONS.md), review in `docs/FABLE-REVIEW.md`
 - Offline checks and demo WAVs (no Rack needed): `make test` (writes `test/out/`)
+- Factory presets (20 per module): `python3 tools/make_presets.py` writes `presets/`, `make test` renders each one
 - Panel: `python3 res/make_panel.py`; preview: `python3 tools/preview.py panel-preview.png <Rack/res/ComponentLibrary>`
 - Extended panel: `python3 res/make_panel_extended.py`; preview: `python3 tools/preview_extended.py panel-preview-extended.png <Rack/res/ComponentLibrary>`
 

@@ -10,3 +10,4 @@ res/__pycache__/
 test/extended_check
 test/extended_render
 test/extended_gallery
+test/preset_check
