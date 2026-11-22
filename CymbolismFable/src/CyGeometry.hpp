@@ -104,7 +104,7 @@ struct GeomParams {
 	double tension = 0.0;    // -1 .. +1 residual hammering stress
 	double hole = -1.0;      // centre hole, fraction of radius (-1 = the type's)
 	double band = 0.0;       // build the modes up to this x the audio band (0 = CY_SIZE_MAX), so a large SIZE keeps its top octave
-	int quality = 1;         // 0 ECO, 1 HIGH, 2 ULTRA
+	int quality = 1;         // 0 ECO, 1 HIGH, 2 ULTRA, 3 MID (between ECO and HIGH)
 	double sampleRate = 48000.0;   // engine rate (host rate x oversampling)
 	double overrideSizeIn = 0.0;   // tests only: build at this diameter instead of the type's
 	double overrideEdgeMm = 0.0;   // tests only

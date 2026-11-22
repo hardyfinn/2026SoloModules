@@ -211,6 +211,7 @@ public:
 	// cached tuning (recomputed when size, mount, hammer, decay, damp or choke change)
 	std::vector<double> wS, cw, gw, sigBase, sigX, nz;
 	std::vector<int> band;               // cascade band of each upper mode (-1 none); top-core modes = -2
+	int naPrev = -1;
 	int nBands = 0;
 	std::vector<double> bandF, bandRef;  // centre frequency, reference energy per mode
 	double tuneKey[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
@@ -341,6 +342,11 @@ public:
 			logF[i] = std::log2(std::max(1.0, fHz));
 			applyLoss(i);
 		}
+		if (NA != naPrev) {
+			// the three state buffers rotate, so modes outside the active range must hold nothing
+			for (int i = NA; i < N; i++) { q[i] = qp[i] = 0; if ((int)qpp.size() == N) qpp[i] = 0; }
+			naPrev = NA;
+		}
 		// cascade bands (1/3 octave) above the core, from the built law: coupling follows the
 		// shapes' wavelengths, which the unreal law does not change
 		double fTopCore = M->fTopCore / lam;
@@ -366,6 +372,7 @@ public:
 			for (auto& c : beaters) if (c.active) refreshContact(c);
 			for (auto& c : rivets) refreshContact(c);
 		}
+		rvReady = false;   // size, hammering and the loss all enter the rivets' tables
 	}
 
 	// per-mode tables for the unreal law (built once per model, LOAD's when its position moves)
@@ -464,6 +471,7 @@ public:
 		}
 		double Eref = M->Eref * std::pow(lam, 3.0) / std::pow(lam, 2.0);   // E ~ w^2 q^2: x lam^-2 lam^5
 		double eps = std::pow(std::max(0.0, Ecore / Eref), cascP);
+		nlRatio = Ecore / Eref * ctl.bloom * ctl.bloom;
 		lastEps = eps;
 		double fTopC = M->fTopCore / lam;
 		double bl = std::fabs(ctl.bloom) * ctl.u.flow;   // BLOOM either way; FLOW scales the cascade rates
@@ -601,6 +609,7 @@ public:
 			for (auto& c : beaters) {
 				if (c.active) continue;
 				c = Contact();
+				wake();
 				c.active = true;
 				c.mass = mass;
 				c.K = K;
@@ -640,6 +649,12 @@ public:
 	void solveContact(Contact& c) {
 		double ws = 0;
 		for (int i = 0; i < NA; i++) ws += c.phi[i] * q[i];   // q is already the predicted new state
+		double F = contactForce(c, ws);
+		if (F > 0)
+			for (int i = 0; i < NA; i++) q[i] -= g[i] * c.phi[i] * F;
+	}
+	// the scalar part: the contact force for a predicted surface height ws; advances the beater
+	double contactForce(Contact& c, double ws) {
 		double ypred = 2 * c.y - c.yp - k * k * c.gravity;
 		double dpred = ws - ypred;
 		double F = 0;
@@ -665,14 +680,12 @@ public:
 			c.delta = d;
 		}
 		else c.delta = dpred;
-		// apply
-		if (F > 0)
-			for (int i = 0; i < NA; i++) q[i] -= g[i] * c.phi[i] * F;
 		double yn = ypred + k * k * F / c.mass;
 		c.yp = c.y;
 		c.y = yn;
 		c.force = F;
 		c.age++;
+		return F;
 	}
 
 	// ---- nonlinear membrane force ----
@@ -696,7 +709,9 @@ public:
 	}
 	std::vector<int> tripOff;            // per stress mode, start in trips (size nStress + 1)
 	std::vector<double> zbuf, abuf;
-	int tripLimit = -1;                  // optional cap on extended pairs (quality)
+	double tripKeep = 0.99;              // share of each stress mode's coupling weight that is kept (1 = all)
+	std::vector<double> pruneW, pruneS;
+	int nGrad = 0;                       // modes the nonlinear force reaches: [0, nGrad)
 	void prepareNonlinear() {
 		trips.clear();
 		tripOff.assign(M->stress.size() + 1, 0);
@@ -717,18 +732,80 @@ public:
 					}
 			}
 			for (size_t p = 0; p < sm.pi.size(); p++) trips.push_back({sm.pi[p], sm.pj[p], (float)sm.pc[p]});
+			// Drop the weakest terms of this stress mode. A term's weight is its coefficient times
+			// the two modes' typical amplitudes (~ 1/f at equal energy); the terms kept carry
+			// tripKeep of the summed squared weight. The force stays the exact gradient of
+			// V = (A.q) z + z^2 / 2 for the terms kept, so stability is untouched.
+			if (tripKeep < 1.0) {
+				int t0 = tripOff[n], t1 = (int)trips.size();
+				pruneW.resize(t1 - t0);
+				double tot = 0;
+				for (int t = t0; t < t1; t++) {
+					double w = std::fabs(trips[t].c) / (std::max(1.0, M->modes[trips[t].i].f) * std::max(1.0, M->modes[trips[t].j].f));
+					pruneW[t - t0] = w;
+					tot += w * w;
+				}
+				pruneS = pruneW;
+				std::sort(pruneS.begin(), pruneS.end(), std::greater<double>());
+				double acc = 0, thr = 0;
+				for (double w : pruneS) { acc += w * w; if (acc >= tripKeep * tot) { thr = w; break; } }
+				int o = t0;
+				for (int t = t0; t < t1; t++) if (pruneW[t - t0] >= thr) trips[o++] = trips[t];
+				trips.resize(o);
+			}
 		}
 		tripOff[M->stress.size()] = (int)trips.size();
+		nGrad = NC;
+		for (const Trip& t : trips) nGrad = std::max(nGrad, std::max(t.i, t.j) + 1);
+		nGrad = std::min(nGrad, N);
 		zbuf.assign(M->stress.size(), 0.0);
 		abuf.assign(M->stress.size(), 0.0);
 	}
 
 	double vnl = 0;   // nonlinear potential at the last step
+	// ---- saving work: the bloom is switched off while the ring is too quiet for it to matter,
+	// and the whole engine sleeps once it is silent and nothing drives it ----
+	bool nlOff = false;               // nonlinear force skipped
+	int nlHold = 0;                   // samples the bloom stays on after a strike
+	double nlRatio = 1;               // core energy / Eref x BLOOM^2 (how nonlinear the ring is now)
+	double nlGate = 1e-3;             // below this the bloom is off (0 = never)
+	bool asleep = false;
+	int quietBlocks = 0;
+	double sleepRel = 1e-10;          // kinetic energy under this x a hard hit's energy counts as silent (0 = never sleep)
+	long statSteps = 0, statNl = 0, statSleep = 0;   // for tests
+	void wake() {
+		asleep = false;
+		quietBlocks = 0;
+		nlOff = false;
+		nlHold = (int)(0.1 * fs);
+	}
+	double kinetic() const {
+		double E = 0;
+		for (int i = 0; i < NA; i++) { double v = (q[i] - qp[i]) * fs; E += v * v; }
+		for (const auto& c : rivets) { double v = (c.y - c.yp) * fs; E += c.mass * v * v; }
+		return 0.5 * E;
+	}
+	// decided once per control block
+	void restBlock(bool driven) {
+		bool busy = driven || ctl.roll || bowTimer > 0;
+		for (auto& c : beaters) busy |= c.active;
+		// the bloom
+		if (nlHold > 0) nlHold -= 32;
+		bool off = nlGate > 0 && !busy && nlHold <= 0 && nlRatio < (nlOff ? 2.0 * nlGate : nlGate);
+		if (off && !nlOff) { std::fill(grad.begin(), grad.begin() + nGrad, 0.0); vnl = 0; }
+		nlOff = off;
+		// sleep
+		if (busy || sleepRel <= 0) { quietBlocks = 0; asleep = false; return; }
+		if (asleep) return;
+		if (kinetic() < sleepRel * hitEnergy()) quietBlocks++;
+		else quietBlocks = 0;
+		if (quietBlocks >= 128) asleep = true;   // quiet for 85 ms at 48 kHz: longer than the lowest mode's period
+	}
 	void nonlinearGradient(double bloom) {
-		std::fill(grad.begin(), grad.begin() + std::max(NC, NA), 0.0);
+		if (tripOff.size() != M->stress.size() + 1) prepareNonlinear();
+		std::fill(grad.begin(), grad.begin() + nGrad, 0.0);
 		vnl = 0;
 		if (bloom == 0) return;
-		if (tripOff.size() != M->stress.size() + 1) prepareNonlinear();
 		const double* qd = q.data();
 		double* gd = grad.data();
 		const Trip* T = tripScaled ? tripsU.data() : trips.data();
@@ -787,11 +864,16 @@ public:
 			c.yp = c.y;
 			rivets.push_back(c);
 		}
+		rvReady = false;
 	}
 
 	// one engine step (fs)
+	// The new state is written into the oldest buffer and the three are rotated, so q, qp and qpp
+	// always hold steps n+1, n and n-1 without a copy. When nothing touches the shell after the
+	// update (no beater, rivet, bow or grain), the pickup is summed in the same pass.
 	double step(double excite) {
-		nonlinearGradient(ctl.bloom);
+		statSteps++;
+		if (!nlOff) { nonlinearGradient(ctl.bloom); statNl++; }
 		// external forces: EXCITE at the strike point
 		bool exc = excite != 0.0 && ctl.excite > 0;
 		if (exc) {
@@ -805,14 +887,82 @@ public:
 		double fe = exc ? excite * ctl.excite * ctl.force * 1.0 : 0.0;
 		bool inj = ((stepCount++ & 3) == 0);
 		if (pumpOn) pumpCore();
-		for (int i = 0; i < NA; i++) {
-			double fi = -grad[i];
-			if (exc) fi += fe * phiS[i];
-			if (inj && nz[i] != 0) fi += nz[i] * rng.bi();
-			double qn = c1[i] * q[i] - c2[i] * qp[i] + g[i] * fi;
-			qp[i] = q[i];
-			q[i] = qn;
+		bool touched = !rivets.empty() || bowOn || !grainQ.empty();
+		for (auto& c : beaters) touched |= c.active;
+		const double ik2 = 1.0 / (k * k), i2k = 0.5 / k;
+		const int nA = std::min(nGrad, NA), nc = std::min(NC, NA);
+		const bool pick = !touched, stereo = extraOn;
+		double out = 0, oc = 0, orr = 0;
+		{
+			const double* Q = q.data();
+			const double* QP = qp.data();
+			double* QN = qpp.data();
+			const double* C1 = c1.data();
+			const double* C2 = c2.data();
+			const double* G = g.data();
+			const double* MW = micW.data();
+			const double* MV = micV.data();
+			const double* MW2 = stereo ? micW2.data() : MW;
+			const double* MV2 = stereo ? micV2.data() : MV;
+			// the modes the nonlinear force reaches (the core comes first)
+			for (int i = 0; i < nA; i++) {
+				double fi = -grad[i];
+				if (exc) fi += fe * phiS[i];
+				if (inj && nz[i] != 0) fi += nz[i] * rng.bi();
+				double qn = C1[i] * Q[i] - C2[i] * QP[i] + G[i] * fi;
+				QN[i] = qn;
+				if (pick) {
+					double v = (qn - QP[i]) * i2k, a = (qn - 2 * Q[i] + QP[i]) * ik2;
+					double c = MW[i] * a + MV[i] * v;
+					out += c;
+					if (stereo) { if (i < nc) oc += c; orr += MW2[i] * a + MV2[i] * v; }
+				}
+			}
+			// the rest: free oscillators, apart from EXCITE and the cascade's noise (every 4th step)
+			if (exc || inj) {
+				for (int i = nA; i < NA; i++) {
+					double fi = 0;
+					if (exc) fi += fe * phiS[i];
+					if (inj && nz[i] != 0) fi += nz[i] * rng.bi();
+					QN[i] = C1[i] * Q[i] - C2[i] * QP[i] + G[i] * fi;
+				}
+				if (pick) {
+					for (int i = nA; i < NA; i++) {
+						double v = (QN[i] - QP[i]) * i2k, a = (QN[i] - 2 * Q[i] + QP[i]) * ik2;
+						double c = MW[i] * a + MV[i] * v;
+						out += c;
+						if (stereo) { if (i < nc) oc += c; orr += MW2[i] * a + MV2[i] * v; }
+					}
+				}
+			}
+			else if (pick && !stereo) {
+				double o = 0;
+				for (int i = nA; i < NA; i++) {
+					double qn = C1[i] * Q[i] - C2[i] * QP[i];
+					QN[i] = qn;
+					o += MW[i] * ((qn - 2 * Q[i] + QP[i]) * ik2) + MV[i] * ((qn - QP[i]) * i2k);
+				}
+				out += o;
+			}
+			else if (pick) {
+				double o = 0, o2 = 0;
+				for (int i = nA; i < NA; i++) {
+					double qn = C1[i] * Q[i] - C2[i] * QP[i];
+					QN[i] = qn;
+					double a = (qn - 2 * Q[i] + QP[i]) * ik2, v = (qn - QP[i]) * i2k;
+					o += MW[i] * a + MV[i] * v;
+					o2 += MW2[i] * a + MV2[i] * v;
+				}
+				out += o;
+				orr += o2;
+			}
+			else {
+				for (int i = nA; i < NA; i++) QN[i] = C1[i] * Q[i] - C2[i] * QP[i];
+			}
 		}
+		// rotate: q <- new, qp <- q, qpp <- qp
+		q.swap(qp);
+		q.swap(qpp);
 		// contacts (implicit, on the predicted state)
 		double clickF = 0;
 		for (auto& c : beaters) {
@@ -827,7 +977,7 @@ public:
 				if (c.age > (int)(c.life * fs)) c.active = false;
 			}
 		}
-		for (auto& c : rivets) solveContact(c);
+		if (!rivets.empty()) rivetStep();
 		if (!grainQ.empty()) fireGrains();
 		if (bowOn) bowStep();
 		// stick click
@@ -840,37 +990,106 @@ public:
 				click += x;
 			}
 		}
-		// pickup: acceleration and velocity
-		double out = 0;
-		double ik2 = 1.0 / (k * k), i2k = 0.5 / k;
 		double clickLevel = (ctl.mic < 2.5 ? 1.0 : 0.25) * 2e4;
-		// (acceleration from the central difference of the last three states)
-		if (!extraOn) {
-			for (int i = 0; i < NA; i++) {
-				double v = (q[i] - qPrev2(i)) * i2k;
-				double a = (q[i] - 2 * qp[i] + qPrev2(i)) * ik2;
-				out += micW[i] * a + micV[i] * v;
+		// pickup after the contacts: acceleration and velocity from the last three states
+		if (touched) {
+			const double* Q = q.data();
+			const double* QP = qp.data();
+			const double* QPP = qpp.data();
+			if (!stereo) {
+				for (int i = 0; i < NA; i++) {
+					double v = (Q[i] - QPP[i]) * i2k;
+					double a = (Q[i] - 2 * QP[i] + QPP[i]) * ik2;
+					out += micW[i] * a + micV[i] * v;
+				}
+			}
+			else {
+				for (int i = 0; i < NA; i++) {
+					double v = (Q[i] - QPP[i]) * i2k;
+					double a = (Q[i] - 2 * QP[i] + QPP[i]) * ik2;
+					double c = micW[i] * a + micV[i] * v;
+					out += c;
+					if (i < nc) oc += c;
+					orr += micW2[i] * a + micV2[i] * v;
+				}
 			}
 		}
-		else {
+		if (stereo) {
 			// Extended: right mic, and the left mic split into the core and the wash above it
-			double oc = 0, orr = 0;
-			int nc = std::min(NC, NA);
-			for (int i = 0; i < NA; i++) {
-				double v = (q[i] - qPrev2(i)) * i2k;
-				double a = (q[i] - 2 * qp[i] + qPrev2(i)) * ik2;
-				double c = micW[i] * a + micV[i] * v;
-				out += c;
-				if (i < nc) oc += c;
-				orr += micW2[i] * a + micV2[i] * v;
-			}
 			stepCore = oc;
 			stepWash = out - oc + click * clickLevel;
 			stepR = orr + click * clickLevel * (1.0 - ctl.u.pickup);
 			return out + click * clickLevel * (1.0 - ctl.u.pickup);
 		}
-		rotatePrev2();
 		return out + click * clickLevel;
+	}
+
+	// ---- rivets (SIZZLE) share one radius, so their sums over the modes are shared: per angular
+	// order m, C_m = sum W a q and S_m = sum W b q once, then each rivet reads
+	// w(theta_j) = sum_m C_m cos(m theta_j) + S_m sin(m theta_j). Their forces go back the same way.
+	std::vector<double> rvA, rvB, rvC, rvS, rvFC, rvFS, rvCos, rvSin;
+	std::vector<int> rvM;
+	int rvNM = 0;
+	bool rvReady = false;
+	void rivetTables() {
+		rvReady = true;
+		if (rivets.empty()) return;
+		const Shape& sh = M->sh;
+		double r = sh.r0 + rivets[0].r * (sh.a - sh.r0);
+		rvA.assign(N, 0.0); rvB.assign(N, 0.0); rvM.assign(N, 0);
+		int mMax = 0;
+		for (int i = 0; i < N; i++) {
+			const Mode& md = M->modes[i];
+			double W = sPhi * M->W(i, r), a = md.m * thOff[i];
+			if (md.par) { rvA[i] = -W * std::sin(a); rvB[i] = W * std::cos(a); }
+			else { rvA[i] = W * std::cos(a); rvB[i] = W * std::sin(a); }
+			rvM[i] = md.m;
+			mMax = std::max(mMax, md.m);
+		}
+		rvNM = mMax + 1;
+		rvC.assign(rvNM, 0.0); rvS.assign(rvNM, 0.0); rvFC.assign(rvNM, 0.0); rvFS.assign(rvNM, 0.0);
+		size_t R = rivets.size();
+		rvCos.resize(R * rvNM); rvSin.resize(R * rvNM);
+		for (size_t j = 0; j < R; j++) {
+			for (int m = 0; m < rvNM; m++) { rvCos[j * rvNM + m] = std::cos(m * rivets[j].th); rvSin[j * rvNM + m] = std::sin(m * rivets[j].th); }
+			// the rivet's own compliance
+			double C = 0;
+			for (int i = 0; i < NA; i++) {
+				double ph = rvA[i] * rvCos[j * rvNM + rvM[i]] + rvB[i] * rvSin[j * rvNM + rvM[i]];
+				C += ph * ph * g[i];
+			}
+			rivets[j].C = C;
+		}
+	}
+	void rivetStep() {
+		if (!rvReady || (int)rvA.size() != N || rvCos.size() != rivets.size() * (size_t)rvNM) rivetTables();
+		std::fill(rvC.begin(), rvC.end(), 0.0);
+		std::fill(rvS.begin(), rvS.end(), 0.0);
+		{
+			const double* Q = q.data();
+			const double* A = rvA.data();
+			const double* B = rvB.data();
+			const int* Mo = rvM.data();
+			double* C = rvC.data();
+			double* S = rvS.data();
+			for (int i = 0; i < NA; i++) { C[Mo[i]] += A[i] * Q[i]; S[Mo[i]] += B[i] * Q[i]; }
+		}
+		bool any = false;
+		for (size_t j = 0; j < rivets.size(); j++) {
+			const double* cs = rvCos.data() + j * rvNM;
+			const double* sn = rvSin.data() + j * rvNM;
+			double ws = 0;
+			for (int m = 0; m < rvNM; m++) ws += rvC[m] * cs[m] + rvS[m] * sn[m];
+			double F = contactForce(rivets[j], ws);
+			if (F > 0) {
+				if (!any) { std::fill(rvFC.begin(), rvFC.end(), 0.0); std::fill(rvFS.begin(), rvFS.end(), 0.0); any = true; }
+				for (int m = 0; m < rvNM; m++) { rvFC[m] += F * cs[m]; rvFS[m] += F * sn[m]; }
+			}
+		}
+		if (any) {
+			double* Q = q.data();
+			for (int i = 0; i < NA; i++) Q[i] -= g[i] * (rvA[i] * rvFC[rvM[i]] + rvB[i] * rvFS[rvM[i]]);
+		}
 	}
 
 	// ---- PUMP: an audio-rate modulation of the tension, on the core (parametric excitation) ----
@@ -912,8 +1131,6 @@ public:
 
 	// previous-previous state for the pickup
 	std::vector<double> qpp;
-	double qPrev2(int i) const { return qpp[i]; }
-	void rotatePrev2() {}
 	bool exciteDirty = true;
 	std::vector<double> phiS;   // EXCITE drive shape
 	double excPos = -1;
@@ -953,10 +1170,12 @@ public:
 			if ((ctlCounter++ & 31) == 0) {
 				updateCoefficients();
 				setRivets((int)std::lround(ctl.sizzle * 12));
-				cascadeBlock(32.0 / fsHost);
+				if (!asleep) cascadeBlock(32.0 / fsHost);
 				exciterBlock(32.0 / fsHost);
 				bool thermo = thermostatBlock(32.0 / fsHost);
-				energyGuard((excIn != nullptr && ctl.excite > 0) || bowOn || !grainQ.empty() || grainFired || thermo || pumpOn);
+				bool driven = bowOn || !grainQ.empty() || grainFired || thermo || pumpOn;
+				if (!asleep) energyGuard((excIn != nullptr && ctl.excite > 0) || driven);
+				restBlock(driven);
 				mkStep = (mkTarget - mk) / 32.0 * std::min(1.0, 32.0 / (0.05 * fsHost));
 				if (ex) {
 					envBlock();
@@ -971,10 +1190,23 @@ public:
 				else if (pumpOn) { pumpOn = false; pumpRelease(); }
 			}
 			else if (pumpOn) { pumpOn = false; pumpRelease(); }
+			if (asleep) {
+				if ((e != 0.0 && ctl.excite > 0) || pumpOn) wake();
+				else {
+					// silent and nothing driving it: no work at all
+					statSleep++;
+					out[s] = 0.f;
+					if (ex) {
+						if (ex->R) ex->R[s] = 0.f;
+						if (ex->core) ex->core[s] = 0.f;
+						if (ex->wash) ex->wash[s] = 0.f;
+						if (ex->env) { envV += (envTarget - envV) * (envTarget > envV ? envAtt : envRel); ex->env[s] = (float)envV; }
+					}
+					continue;
+				}
+			}
 			double acc = 0;
 			for (int o = 0; o < OS; o++) {
-				// keep q^{n-1} for the pickup
-				for (int i = 0; i < NA; i++) qpp[i] = qp[i];
 				double v = step(e);
 				if (OS == 1) { acc = v; break; }
 				// FIR decimator
@@ -1049,6 +1281,7 @@ public:
 	double sweepTh = 0;
 	void queueGrain(uint64_t at, double J, double T, double r, double th) {
 		if (grainQ.size() < 512) grainQ.push_back({at, J, T, r, th});
+		wake();
 	}
 	void fireGrains() {
 		for (size_t gi = 0; gi < grainQ.size();) {

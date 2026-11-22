@@ -718,13 +718,14 @@ std::shared_ptr<Model> buildModel(const GeomParams& gp, const SolverOpts& opt) {
 	const Shape& sh = M.sh;
 	const Material& mt = sh.mat;
 
-	static const int CORE_N[3] = {48, 64, 96};
-	static const int STRESS_N[3] = {24, 40, 56};
-	static const int LOW_N[3] = {0, 4, 8};
-	static const int PAIRS_K[3] = {0, 1, 2};
-	static const double PAIR_FMAX[3] = {0, 3.5, 6.0};   // x the core's top frequency
-	static const double FOUT[3] = {16000, 20000, 20000};
-	int q = std::max(0, std::min(2, gp.quality));
+	// quality codes: 0 ECO, 1 HIGH, 2 ULTRA, 3 MID (added later; the codes stay as saved in patches)
+	static const int CORE_N[4] = {48, 64, 96, 56};
+	static const int STRESS_N[4] = {24, 40, 56, 32};
+	static const int LOW_N[4] = {0, 4, 8, 4};
+	static const int PAIRS_K[4] = {0, 1, 2, 1};
+	static const double PAIR_FMAX[4] = {0, 3.5, 6.0, 3.5};   // x the core's top frequency
+	static const double FOUT[4] = {16000, 20000, 20000, 20000};
+	int q = std::max(0, std::min(3, gp.quality));
 	// build up to 1.5x the output band so SIZE can grow the cymbal without a rebuild
 	double fMax = opt.fMax > 0 ? opt.fMax : FOUT[q] * (gp.band > 0 ? gp.band : CY_SIZE_MAX);
 	int nCoreWanted = opt.coreModes >= 0 ? opt.coreModes : CORE_N[q];

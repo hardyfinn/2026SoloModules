@@ -408,7 +408,7 @@ struct CymbolismExtended : Module {
 	void dataFromJson(json_t* root) override {
 		json_t* j;
 		if ((j = json_object_get(root, "seed"))) seed = (uint64_t)json_integer_value(j);
-		if ((j = json_object_get(root, "quality"))) quality = clamp((int)json_integer_value(j), 0, 2);
+		if ((j = json_object_get(root, "quality"))) quality = clamp((int)json_integer_value(j), 0, 3);
 		if ((j = json_object_get(root, "threaded"))) runner.threaded = json_boolean_value(j);
 		if ((j = json_object_get(root, "keepGeometry"))) keepGeometry = json_boolean_value(j);
 		if ((j = json_object_get(root, "rebuildOnCv"))) rebuildOnCv = json_boolean_value(j);
@@ -705,9 +705,10 @@ struct CymbolismExtendedWidget : ModuleWidget {
 		CymbolismExtended* m = getModule<CymbolismExtended>();
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
-		menu->addChild(createIndexSubmenuItem("Quality", {"ECO (lightest)", "HIGH (default)", "ULTRA (bigger nonlinear core, heavy)"},
-			[=]() { return m->quality; },
-			[=](int q) { m->quality = q; m->geomPending = true; m->lastGeom = GeomParams(); }));
+		// menu order ECO, MID, HIGH, ULTRA; the saved codes are 0, 3, 1, 2 (MID came later)
+		menu->addChild(createIndexSubmenuItem("Quality", {"ECO (lightest)", "MID", "HIGH (default)", "ULTRA (bigger nonlinear core, heavy)"},
+			[=]() { static const int pos[4] = {0, 2, 3, 1}; return pos[clamp(m->quality, 0, 3)]; },
+			[=](int i) { static const int code[4] = {0, 3, 1, 2}; m->quality = code[clamp(i, 0, 3)]; m->geomPending = true; m->lastGeom = GeomParams(); }));
 		menu->addChild(createBoolMenuItem("Run on its own thread", "",
 			[=]() { return (bool)m->runner.threaded; },
 			[=](bool b) { m->runner.threaded = b; }));

@@ -172,6 +172,72 @@ int main(int argc, char** argv) {
 		snprintf(msg, sizeof msg, "neutral %.2f s, static UNREAL %.2fx, swept WARP %.2fx (targets 1.25x, 1.6x)", t0, t1 / t0, t2 / t0);
 		check(t1 / t0 <= 1.25 && t2 / t0 <= 1.6, msg);
 	}
+	if (want("x11")) {
+		printf("X11 resting: asleep when silent, awake on the sample of a strike, bloom off in quiet tails\n");
+		char msg[200];
+		{
+			Engine E;
+			E.ctl = defaults(1);
+			E.init(model(1), 48000);
+			std::vector<float> o(96000);
+			for (int s = 0; s < 96000; s += 32) E.process(nullptr, o.data() + s, 32);
+			float pk = 0;
+			for (float v : o) pk = std::max(pk, std::fabs(v));
+			snprintf(msg, sizeof msg, "never struck: asleep for %.0f%% of 2 s, output peak %g V", 100.0 * E.statSleep / 96000, pk);
+			check(E.statSleep > 0.9 * 96000 && pk == 0, msg);
+		}
+		for (double sizzle : {0.0, 1.0}) {
+			Engine E;
+			E.ctl = defaults(1);
+			E.ctl.sizzle = sizzle;
+			E.init(model(1), 48000);
+			int n = 90 * 48000;
+			std::vector<float> o(n);
+			int sleptAt = -1;
+			E.strike(4.0);
+			for (int s = 0; s < n; s += 32) {
+				E.process(nullptr, o.data() + s, 32);
+				if (sleptAt < 0 && E.asleep) { sleptAt = s; break; }
+			}
+			double pk = 0, last = 0;
+			for (int i = 0; i < std::max(0, sleptAt); i++) pk = std::max(pk, (double)std::fabs(o[i]));
+			for (int i = std::max(0, sleptAt - 4800); i < std::max(0, sleptAt); i++) last = std::max(last, (double)std::fabs(o[i]));
+			long nlSteps = E.statNl, steps = E.statSteps;
+			// a second strike wakes it on the same sample and sounds like the first
+			std::vector<float> a(48000), b(48000);
+			E.strike(4.0);
+			bool awake = !E.asleep;
+			for (int s = 0; s < 48000; s += 32) E.process(nullptr, a.data() + s, 32);
+			Engine F;
+			F.ctl = E.ctl;
+			F.init(model(1), 48000);
+			F.strike(4.0);
+			for (int s = 0; s < 48000; s += 32) F.process(nullptr, b.data() + s, 32);
+			double pa = 0, pb = 0;
+			int firstA = -1, firstB = -1;
+			for (int i = 0; i < 48000; i++) {
+				pa = std::max(pa, (double)std::fabs(a[i]));
+				pb = std::max(pb, (double)std::fabs(b[i]));
+				if (firstA < 0 && std::fabs(a[i]) > 1e-3) firstA = i;
+				if (firstB < 0 && std::fabs(b[i]) > 1e-3) firstB = i;
+			}
+			snprintf(msg, sizeof msg, "SIZZLE %2.0f: asleep %.1f s after a hit, tail then %.0f dB under the peak; bloom ran %.0f%% of the time; second hit %.2f V at sample %d (fresh %.2f V at %d)",
+			         sizzle * 12, sleptAt / 48000.0, 20 * std::log10(last / pk + 1e-30), 100.0 * nlSteps / std::max(1L, steps), pa, firstA, pb, firstB);
+			check(sleptAt > 0 && last < 1e-5 * pk && awake && firstA == firstB && std::fabs(pa - pb) < 0.1 * pb && nlSteps < steps && E.guardEvents == 0, msg);
+		}
+		{
+			// held by SUSTAIN it must not sleep
+			Controls c = defaults(1);
+			c.u.sustain = 0.3;
+			Engine E;
+			E.ctl = c;
+			E.init(model(1), 48000);
+			std::vector<float> o(32);
+			for (int s = 0; s < 10 * 48000; s += 32) E.process(nullptr, o.data(), 32);
+			snprintf(msg, sizeof msg, "SUSTAIN on: asleep %ld samples of 10 s", E.statSleep);
+			check(E.statSleep == 0, msg);
+		}
+	}
 	if (want("x2")) {
 		printf("X2 fuzz: random UNREAL settings, a hard hit each\n");
 		CyRng r;
