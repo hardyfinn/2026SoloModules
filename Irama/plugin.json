@@ -1,0 +1,29 @@
+{
+  "slug": "Irama",
+  "name": "Irama",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Irama",
+      "name": "Irama",
+      "description": "Gamelan sequencer (Java and Bali): gong cycles with colotomic triggers, pathet-weighted balungan that mutates per gong, saron/peking/bonang parts at 5 irama levels, kotekan and imbal interlocking pairs, angsel breaks, kebyar bursts, suwuk ending, ombak pairs on every pitch output",
+      "tags": ["Sequencer", "Quantizer", "Polyphonic", "Visual"]
+    },
+    {
+      "slug": "Gatra",
+      "name": "Gatra",
+      "description": "Gamelan structure as a house / techno drum sequencer: straight kick, gong cycle on drum roles, LAND moves the gong from the end of the cycle to the downbeat, kotekan hats in two interlocking parts, polymeter cycles, swing, drop and fill",
+      "tags": ["Sequencer", "Drum", "Clock modulator"]
+    }
+  ]
+}
