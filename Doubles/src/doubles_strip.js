@@ -8,7 +8,7 @@ mgraphics.autofill = 0;
 inlets = 1;
 outlets = 1;
 
-var STAT = jsarguments.length > 1 ? jsarguments[1] : 'dbl_stat';
+var STAT = (typeof jsarguments !== 'undefined' && jsarguments.length > 1) ? jsarguments[1] : 'dbl_stat';
 var bSt = null;
 var wave = [], stk = [], ks = [-1, -1], bars = 0, have = false, lateFlash = 0;
 var pa = 0, pb = 0, ga = 0, gb = 0, live = 0;

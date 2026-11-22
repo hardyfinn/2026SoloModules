@@ -44,6 +44,12 @@ def obj(text, rect, nin, nout, otype=None, **kw):
                otype=otype if otype is not None else [""] * nout, **kw)
 
 
+def embedded(name):
+    """The script is stored inside the device, so Live never has to find a .js file."""
+    code = open(os.path.join(ROOT, 'src', name)).read()
+    return {"text": code, "filename": "none", "flags": 0, "embed": 1, "autowatch": 1}
+
+
 def line(src, so, dst, di):
     lines.append({"patchline": {"source": [src, so], "destination": [dst, di]}})
 
@@ -105,13 +111,13 @@ bind = box("message", [260, 50, 330, 22], text="rec ---dbl_rec, q ---dbl_q, st -
 line(lb, 0, bind, 0); line(bind, 0, gen, 0)
 
 # the logic
-js = obj("js doubles.js " + BUFS, [400, 120, 300, 22], 1, 2, ["", ""],
+js = obj("v8", [400, 120, 300, 22], 1, 2, ["", ""], textfile=embedded("doubles.js"),
          parameter_enable=1,
          saved_attribute_attributes=valueof("Doubles State", "State", 3, parameter_invisible=1))
 param(js, "Doubles State", "State")
 line(js, 0, gen, 0)
 ltd = obj("live.thisdevice", [400, 20, 90, 22], 1, 3, ["bang", "int", "int"])
-initm = box("message", [400, 50, 40, 22], text="init", nin=2, nout=1, otype=[""])
+initm = box("message", [400, 50, 330, 22], text="names " + BUFS + ", init", nin=2, nout=1, otype=[""])
 line(ltd, 0, initm, 0); line(initm, 0, js, 0)
 
 # js outlet 1 -> panel
@@ -213,8 +219,8 @@ drop = box("live.drop", [px[0], 500, 84, 44], nin=1, nout=1, otype=[""], pres=[6
 wire(drop, "drop")
 
 # STRIP
-strip = box("jsui", [px[0], 420, 300, 120], nin=1, nout=1, otype=[""], pres=[100, 6, 294, 126],
-            filename="doubles_strip.js", parameter_enable=0)
+strip = box("v8ui", [px[0], 420, 300, 120], nin=1, nout=1, otype=[""], pres=[100, 6, 294, 126],
+            filename="none", embed=1, textfile=embedded("doubles_strip.js"), parameter_enable=0)
 line(route, ROUTE_OUT["strip"], strip, 0)
 wire(strip, "strip")
 label("FILL KICK", [100, 136, 60, 14])
@@ -366,10 +372,7 @@ patcher = {
     "digest": "", "tags": "", "style": "", "subpatcher_template": "",
     "boxes": boxes, "lines": lines,
     "parameters": dict(params, **{"inherited_shortname": 1}),
-    "dependency_cache": [
-        {"name": "doubles.js", "bootpath": ".", "patcherrelativepath": ".", "type": "TEXT", "implicit": 1},
-        {"name": "doubles_strip.js", "bootpath": ".", "patcherrelativepath": ".", "type": "TEXT", "implicit": 1},
-    ],
+    "dependency_cache": [],
     "latency": 0, "is_mpe": 0, "minimum_live_version": "", "minimum_max_version": "", "platform_compatibility": 0,
     "autosave": 0,
 }

@@ -684,6 +684,10 @@ function showRecord() {
 }
 
 // --- start up
+function names(rec, q, st, save, load) {
+	NAMES.rec = String(rec); NAMES.q = String(q); NAMES.st = String(st);
+	NAMES.save = String(save); NAMES.load = String(load);
+}
 function init() {
 	buffers();
 	S.sr = 44100;

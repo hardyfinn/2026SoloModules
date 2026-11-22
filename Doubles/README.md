@@ -6,7 +6,7 @@ Built for Ableton Live Suite 12.3 (Max 9), Mac.
 
 ## Install
 
-1. Keep these files together in one folder: `Doubles.amxd`, `doubles.js`, `doubles_strip.js`. Put the folder in your User Library, for example `Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/Doubles/`.
+1. `Doubles.amxd` is self-contained: both scripts are stored inside it (Max 9 `v8` and `v8ui`, which come with Live 12.2 and later). Put it in your User Library, for example `Music/Ableton/User Library/Presets/Audio Effects/Max Audio Effect/Doubles/`.
 2. Drag `Doubles.amxd` onto an audio track.
 3. Open the Max Console (right-click the device title bar, then Open in Max, then Window > Max Console). If it shows errors, copy the text and send it back. That is the fastest way to fix anything.
 4. Once it works, you can open it in Max and press Freeze, which makes one self-contained file.
@@ -15,7 +15,7 @@ Recordings are saved as `doubles-YYYYMMDD-HHMMSS.wav` in the same folder as the 
 
 ### If the .amxd will not load
 
-`Doubles.maxpat` is the same patch as plain Max JSON. Drag Live's empty **Max Audio Effect** onto a track and click its Edit button. In Max, select all and delete, then open `Doubles.maxpat` in Max, select all, copy, and paste into the device. Save it as `Doubles.amxd` in the same folder as the two .js files.
+`Doubles.maxpat` is the same patch as plain Max JSON. Drag Live's empty **Max Audio Effect** onto a track and click its Edit button. In Max, select all and delete, then open `Doubles.maxpat` in Max, select all, copy, and paste into the device. Save it as `Doubles.amxd`.
 
 ## Checklist for the first test
 
@@ -35,7 +35,7 @@ Recordings are saved as `doubles-YYYYMMDD-HHMMSS.wav` in the same folder as the 
 | Path | What |
 |---|---|
 | `Doubles.amxd` | The device (generated). |
-| `doubles.js`, `doubles_strip.js` | The logic and the waveform strip (copies of `src/`). |
+| `doubles.js`, `doubles_strip.js` | Copies of the scripts embedded in the device, for reading. |
 | `Doubles.maxpat` | The same patch, for the fallback above. |
 | `src/doubles_core.gen.tmpl` | The audio engine (gen~ code), as a template for the two decks. |
 | `src/doubles.js` | Planner, routine, instinct, sticker finder, record handling. |
