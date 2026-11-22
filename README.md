@@ -7,6 +7,7 @@ without stepping on each other.
 | Folder | Module | What it is |
 |---|---|---|
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
+| [Menagerie](Menagerie/) | Menagerie | Macro oscillator with 16 engines of our own (none from Plaits or Braids) behind SHAPE, TEXTURE and LIFE |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
