@@ -2,6 +2,7 @@
 // The sound engine is in RimbaudEngine.hpp, with notes on how it works.
 #include "plugin.hpp"
 #include "RimbaudEngine.hpp"
+#include "RimbaudPresets.hpp"
 
 // ---- LAYOUT (same numbers in res/make_panel.py) ----
 static const float COL[6] = {16.2f, 40.6f, 65.0f, 89.4f, 113.8f, 138.2f};
@@ -145,9 +146,24 @@ struct Rimbaud : Module {
 		}
 	}
 
-	// right-click starting points
-	void setAll(std::initializer_list<std::pair<int, float>> v) {
-		for (auto& p : v) params[p.first].setValue(p.second);
+	// right-click presets (SYMP and LEVEL are left alone)
+	void loadPreset(const rimbaud::Preset& p) {
+		params[SIZE_PARAM].setValue(p.size);
+		params[DEPTH_PARAM].setValue(p.depth);
+		params[TUNE_PARAM].setValue(std::log2(p.tuneHz));
+		params[RESO_PARAM].setValue(p.reso);
+		params[DAMP_PARAM].setValue(p.damp);
+		params[SHELL_PARAM].setValue(p.shell);
+		params[POSITION_PARAM].setValue(p.position);
+		params[STICK_PARAM].setValue(p.stick);
+		params[BUZZ_PARAM].setValue(p.buzz);
+		params[RIM_PARAM].setValue(p.rim);
+		params[HOOP_PARAM].setValue(p.hoop);
+		params[XSTICK_PARAM].setValue(p.xstick);
+		params[SNARES_PARAM].setValue(p.snares);
+		params[TENSION_PARAM].setValue(p.tension);
+		params[WIRES_PARAM].setValue(p.wires);
+		params[MIC_PARAM].setValue(p.mic);
 	}
 };
 
@@ -189,39 +205,12 @@ struct RimbaudWidget : ModuleWidget {
 		Rimbaud* m = dynamic_cast<Rimbaud*>(this->module);
 		if (!m)
 			return;
-		typedef Rimbaud R;
-		auto hz = [](float f) { return std::log2(f); };
 		menu->addChild(new MenuSeparator);
-		menu->addChild(createMenuLabel("Starting points"));
-		menu->addChild(createMenuItem("Maple 14x6.5, all-round", "", [=]() {
-			m->setAll({{R::SIZE_PARAM, 14.f}, {R::DEPTH_PARAM, 6.5f}, {R::TUNE_PARAM, hz(240.f)}, {R::RESO_PARAM, 1.5f},
-			           {R::DAMP_PARAM, 0.15f}, {R::SHELL_PARAM, 0.2f}, {R::HOOP_PARAM, 0.3f}, {R::SNARES_PARAM, 1.f},
-			           {R::TENSION_PARAM, 0.5f}, {R::WIRES_PARAM, 0.5f}});
-		}));
-		menu->addChild(createMenuItem("Brass 14x5, bright and crisp", "", [=]() {
-			m->setAll({{R::SIZE_PARAM, 14.f}, {R::DEPTH_PARAM, 5.f}, {R::TUNE_PARAM, hz(300.f)}, {R::RESO_PARAM, 1.6f},
-			           {R::DAMP_PARAM, 0.1f}, {R::SHELL_PARAM, 0.85f}, {R::HOOP_PARAM, 0.2f}, {R::SNARES_PARAM, 1.f},
-			           {R::TENSION_PARAM, 0.7f}, {R::WIRES_PARAM, 0.55f}});
-		}));
-		menu->addChild(createMenuItem("Piccolo 13x3.5, high and tight", "", [=]() {
-			m->setAll({{R::SIZE_PARAM, 13.f}, {R::DEPTH_PARAM, 3.5f}, {R::TUNE_PARAM, hz(380.f)}, {R::RESO_PARAM, 1.7f},
-			           {R::DAMP_PARAM, 0.15f}, {R::SHELL_PARAM, 0.6f}, {R::HOOP_PARAM, 0.6f}, {R::SNARES_PARAM, 1.f},
-			           {R::TENSION_PARAM, 0.85f}, {R::WIRES_PARAM, 0.4f}});
-		}));
-		menu->addChild(createMenuItem("Fat 14x8, low and loose", "", [=]() {
-			m->setAll({{R::SIZE_PARAM, 14.f}, {R::DEPTH_PARAM, 8.f}, {R::TUNE_PARAM, hz(150.f)}, {R::RESO_PARAM, 1.3f},
-			           {R::DAMP_PARAM, 0.45f}, {R::SHELL_PARAM, 0.1f}, {R::HOOP_PARAM, 0.8f}, {R::SNARES_PARAM, 1.f},
-			           {R::TENSION_PARAM, 0.2f}, {R::WIRES_PARAM, 0.7f}});
-		}));
-		menu->addChild(createMenuItem("Dry and tight (funk)", "", [=]() {
-			m->setAll({{R::SIZE_PARAM, 14.f}, {R::DEPTH_PARAM, 5.5f}, {R::TUNE_PARAM, hz(330.f)}, {R::RESO_PARAM, 1.5f},
-			           {R::DAMP_PARAM, 0.65f}, {R::SHELL_PARAM, 0.3f}, {R::HOOP_PARAM, 0.9f}, {R::SNARES_PARAM, 1.f},
-			           {R::TENSION_PARAM, 0.8f}, {R::WIRES_PARAM, 0.35f}});
-		}));
-		menu->addChild(createMenuItem("Open and ringy, no muffling", "", [=]() {
-			m->setAll({{R::SIZE_PARAM, 14.f}, {R::DEPTH_PARAM, 6.5f}, {R::TUNE_PARAM, hz(220.f)}, {R::RESO_PARAM, 1.4f},
-			           {R::DAMP_PARAM, 0.f}, {R::SHELL_PARAM, 0.35f}, {R::HOOP_PARAM, 0.1f}, {R::SNARES_PARAM, 1.f},
-			           {R::TENSION_PARAM, 0.35f}, {R::WIRES_PARAM, 0.5f}});
+		menu->addChild(createSubmenuItem("Presets (20)", "", [=](Menu* sub) {
+			for (int i = 0; i < rimbaud::NUM_PRESETS; i++) {
+				const rimbaud::Preset& p = rimbaud::PRESETS[i];
+				sub->addChild(createMenuItem(string::f("%d. %s", i + 1, p.name), "", [=]() { m->loadPreset(p); }));
+			}
 		}));
 	}
 };

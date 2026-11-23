@@ -1,6 +1,7 @@
 // Offline checks for the Rimbaud engine + a demo WAV. No Rack needed.
 //   make test      (prints the checks, writes test/out/rimbaud-demo.wav)
 #include "../src/RimbaudEngine.hpp"
+#include "../src/RimbaudPresets.hpp"
 #include <cstdio>
 #include <vector>
 #include <string>
@@ -330,6 +331,40 @@ int main(int argc, char** argv) {
 		double s = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - t0).count();
 		std::printf("      CPU: %.1f %% of one core at 48 kHz while playing (this machine)\n", 100.0 * s / 4.0);
 		CHECK(s / 4.0 < 0.25, "cheap enough to run (< 25 %% of a core here)");
+	}
+
+	// 14. the 20 presets: every stroke stays finite and sensible, and a tour WAV
+	{
+		std::vector<float> L, R;
+		bool ok = true;
+		float lo = 99.f, hi = 0.f;
+		for (int i = 0; i < NUM_PRESETS; i++) {
+			Controls c; presetToControls(PRESETS[i], c);
+			Engine e; e.setSampleRate(SR);
+			for (int j = 0; j < (int) (0.4f * SR); j++) e.process(c);
+			// hit, ghost, hit, then the preset's signature stroke
+			const int strokes[4] = {HEAD, HEAD, HEAD, i == 15 ? CROSS : RIMSHOT};
+			const float vels[4] = {0.75f, 0.3f, 0.85f, 0.85f};
+			const float gap[4] = {0.45f, 0.25f, 0.45f, 0.9f};
+			float pk = 0.f;
+			for (int h = 0; h < 4; h++) {
+				e.hit(vels[h], strokes[h], c);
+				for (int j = 0; j < (int) (gap[h] * SR); j++) {
+					e.process(c);
+					float v = e.outMix;
+					if (!std::isfinite(v)) ok = false;
+					if (h == 0) pk = std::max(pk, std::fabs(v));
+					L.push_back(v); R.push_back(v);
+				}
+			}
+			std::printf("      %2d. %-38s hit %.2f V\n", i + 1, PRESETS[i].name, pk);
+			lo = std::min(lo, pk); hi = std::max(hi, pk);
+			for (int j = 0; j < (int) (0.25f * SR); j++) { L.push_back(0); R.push_back(0); }
+		}
+		CHECK(ok && lo > 1.f && hi < 9.99f, "all 20 presets: finite, every plain hit between 1 and 9.99 V (%.2f .. %.2f V)", lo, hi);
+		std::string p = dir + "/rimbaud-presets.wav";
+		writeWav(p, L, R);
+		std::printf("wrote %s (%.1f s)\n", p.c_str(), L.size() / SR);
 	}
 
 	// ---- demo: a short groove showing the strokes, the snares and the tuning

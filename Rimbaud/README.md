@@ -1,6 +1,6 @@
 # Rimbaud
 
-A physical model of a snare drum with its rim, for VCV Rack (30 HP, plugin 2.0.0, MIT).
+A physical model of a snare drum with its rim, for VCV Rack (30 HP, plugin 2.1.0, MIT).
 
 ![panel](panel-preview.png)
 
@@ -13,7 +13,8 @@ in sympathy.
 
 - Guide: [docs/Rimbaud-Guide.pdf](docs/Rimbaud-Guide.pdf) (source `docs/guide.html`)
 - Engine (no Rack code): `src/RimbaudEngine.hpp`, with notes on how it works
-- Offline checks and a demo WAV: `make test` (writes `test/out/rimbaud-demo.wav`)
+- 20 presets in the right-click menu (`src/RimbaudPresets.hpp`)
+- Offline checks, a demo WAV and a preset tour: `make test` (writes `test/out/rimbaud-demo.wav`, `test/out/rimbaud-presets.wav`)
 - Panel: `python3 res/make_panel.py` (needs `pip install fonttools`), preview: `tools/preview.py`
 
-Status: builds and passes the offline checks; not yet played in Rack.
+Status: passes the offline checks; Haer has played it in Rack (2026-11-23: "sounds great").
