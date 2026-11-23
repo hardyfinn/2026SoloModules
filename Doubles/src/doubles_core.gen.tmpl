@@ -69,7 +69,7 @@ History h_alive(0);
 History h_pos$(0);
 History h_v$(0);
 History h_vb$(0);
-History h_mode$(0);      // 0 idle, 1 cue pulse, 2 wait for release, 3 run, 4 hold, 5 spin, 6 brake
+History h_mode$(0);      // 0 idle, 1 cue pulse, 2 wait for release, 3 run, 4 hold, 5 spin, 6 brake, 7 baby scratch
 History h_k$(0);
 History h_has$(0);
 History h_bs$(0);
@@ -118,6 +118,15 @@ History h_head$(0);
 History h_brk$(0);
 History h_idl$(0);
 History h_pcs$(0);    // 1 when the pending close ends a slot of the current play
+History h_scn$(0);    // baby scratch: strokes still to do (forward, back, forward, back...)
+History h_scns$(1);   // nominal stroke length, samples
+History h_sctot$(0);  // whole scratch, samples
+History h_sctr$(0);   // forward travel, record samples
+History h_scoff$(0);  // where the record is now, relative to the cue point
+History h_sck$(0);
+History h_sclen$(0);
+History h_sca$(0);
+History h_scj$(0);
 #ENDDECK
 
 
@@ -137,6 +146,8 @@ spm$ = h_spm$; spa$ = h_spa$; spdv$ = h_spdv$; trem$ = h_trem$;
 gt$ = h_gt$; g$ = h_g$; gamp$ = h_gamp$; popen$ = h_popen$; pclose$ = h_pclose$; slot$ = h_slot$;
 drk$ = h_drk$; drlen$ = h_drlen$; drd$ = h_drd$; late$ = h_late$; flub$ = h_flub$; e$ = h_e$;
 wl$ = h_wl$; wr$ = h_wr$; head$ = h_head$; brk$ = h_brk$; idl$ = h_idl$; pcs$ = h_pcs$;
+scn$ = h_scn$; scns$ = h_scns$; sctot$ = h_sctot$; sctr$ = h_sctr$; scoff$ = h_scoff$;
+sck$ = h_sck$; sclen$ = h_sclen$; sca$ = h_sca$; scj$ = h_scj$;
 #ENDDECK
 
 // ---- song position ----
@@ -267,6 +278,7 @@ if (stopped > 0.5 || jumped > 0.5 || active < 0.5) {
 	pclose$ = NONE;
 	culen$ = 0;
 	expok$ = 0;
+	scn$ = 0;
 	if (stopped > 0.5 && brake > 0.5 && gt$ > 0.5) {
 		mode$ = 6;
 		brk$ = floor(0.15 * SR);
@@ -290,8 +302,13 @@ if (flushed > 0.5 && has$ > 0.5 && gen$ >= 0 && gen$ < curgen) {
 	if (bs$ >= flushb) {
 		has$ = 0;
 		popen$ = NONE;
+		scn$ = 0;
 		if (mode$ == 1 || mode$ == 2) {
 			mode$ = 0;
+		}
+		if (mode$ == 7) {
+			mode$ = 0;
+			pclose$ = B;
 		}
 	} else {
 		if (be$ > flushb) {
@@ -349,6 +366,8 @@ if (need_next > 0.5) {
 		e_dist = peek(q, base + 10, 0);
 		e_gen = peek(q, base + 11, 0);
 		e_str = peek(q, base + 12, 0);
+		e_scn = peek(q, base + 13, 0);
+		e_scd = peek(q, base + 14, 0);
 		head$ = head$ + 1;
 		keep = 1;
 		if (e_gen < curgen) {
@@ -415,6 +434,7 @@ if (need_next > 0.5) {
 				culen$ = 0;
 				expok$ = 0;
 				cued$ = 0;
+				scn$ = 0;
 				// the gate: first opening of this play
 				if (gm$ < 0.5) {
 					popen$ = bs$ - earlyj;
@@ -432,10 +452,20 @@ if (need_next > 0.5) {
 					}
 					slot$ = j;
 				}
-				if (kind$ == 0 && e_cm != 1) {
-					// cued play: the hand pulls the record back to its cue and lets go early
-					cued$ = 1;
+				if ((kind$ == 0 && e_cm != 1) || kind$ == 3) {
+					// cued play: the hand pulls the record back to its cue and lets go early.
+					// kind 3 is a baby scratch on its own: the hand goes to the cue, scratches
+					// until the end of the play and holds the record still.
+					if (kind$ == 0) {
+						cued$ = 1;
+					} else {
+						gap = max((be$ - B) * spb, 0);
+						popen$ = NONE;
+					}
 					pre = min(pre0, floor(gap / 2));
+					if (kind$ == 3) {
+						pre = 0;
+					}
 					adv = rate$ * rrate * (pre - tau * (1 - exp(-pre / tau)));
 					d0 = abs(wrap(p0$ - adv - pos$, -L / 2, L / 2));
 					cerr = 0;
@@ -460,11 +490,28 @@ if (need_next > 0.5) {
 					}
 					if (tr < need) {
 						tr = min(need, tlen - 1);
-						late$ = late$ + 1;
+						if (kind$ == 0) {
+							late$ = late$ + 1;
+						}
+					}
+					// a baby scratch just before the release, if the hand has the time
+					if (e_scn > 0.5 && gm$ < 0.5) {
+						ns = max(floor(e_scd * spb), 8);
+						np = min(floor(e_scn + 0.5), floor((tr - need - 0.02 * SR) / (2 * ns)));
+						if (np >= 1) {
+							scn$ = 2 * np;
+							scns$ = ns;
+							sctot$ = 2 * np * ns;
+							sctr$ = e_dist;
+							scoff$ = 0;
+							sck$ = 0;
+							sclen$ = 0;
+							popen$ = NONE;
+						}
 					}
 					dc = 0;
 					if (need > 0) {
-						dc = floor(min(need, tr));
+						dc = floor(min(need, tr - sctot$ * min(scn$, 1)));
 					}
 					if (dc < 4) {
 						pos$ = wrap(pos$ + dist, 0, L);
@@ -482,8 +529,10 @@ if (need_next > 0.5) {
 					}
 					trrem$ = tr;
 					push$ = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
-					exp$ = wrap(p0$ - rate$ * rrate * gap, 0, L);
-					expok$ = 1;
+					if (kind$ == 0) {
+						exp$ = wrap(p0$ - rate$ * rrate * gap, 0, L);
+						expok$ = 1;
+					}
 				} else {
 					if (kind$ == 0) {
 						// let go from wherever it is
@@ -541,10 +590,21 @@ if (mode$ == 1) {
 	if (mode$ == 2) {
 		v$ = v$ * dks;
 		trrem$ = trrem$ - 1;
-		if (trrem$ <= 0) {
+		if (scn$ > 0.5 && trrem$ <= sctot$) {
+			// the fader comes up and the hand starts to scratch
+			mode$ = 7;
+			sck$ = 0;
+			sclen$ = 0;
+			popen$ = B;
+		}
+		if (mode$ == 2 && trrem$ <= 0) {
+			if (kind$ == 3) {
+				mode$ = 0;
+			}
 			if (kind$ == 1) {
 				mode$ = 4;
-			} else {
+			}
+			if (kind$ == 0 || kind$ == 2) {
 				if (kind$ == 2) {
 					spdv$ = v$;
 					k$ = 0;
@@ -557,6 +617,53 @@ if (mode$ == 1) {
 				}
 			}
 		}
+	}
+}
+if (mode$ == 7) {
+	// baby scratch: the hand pushes the record forward through the hit and pulls it
+	// back to the cue, one smooth stroke each way, with the fader open
+	if (sck$ >= sclen$) {
+		if (scn$ < 0.5) {
+			v$ = 0;
+			if (kind$ == 0) {
+				vb$ = 0;
+				rk$ = 0;
+				mode$ = 3;
+				cuchk$ = floor(0.35 * SR);
+			} else {
+				mode$ = 0;
+			}
+		} else {
+			if (wrap(scn$, 0, 2) < 0.5) {
+				// forward: how far depends on the hand; so does the moment it turns
+				scj$ = min(max(((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.5, -0.2 * scns$), 0.2 * scns$);
+				sclen$ = scns$ + floor(scj$);
+				trav = sctr$ * max(1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * 0.25 * slop, 0.4);
+			} else {
+				// back: aim for the cue point again
+				sclen$ = scns$ - floor(scj$);
+				trav = -scoff$ + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * abs(scoff$), 0.03 * SR);
+			}
+			scoff$ = scoff$ + trav;
+			// a push is quickest early in the stroke (the 0.75 power); a pull is even.
+			// 0.6560 and 0.6366 are the mean heights of the two shapes.
+			if (trav > 0) {
+				sca$ = trav / rrate / (0.6560 * sclen$);
+			} else {
+				sca$ = trav / rrate / (0.6366 * sclen$);
+			}
+			sck$ = 0;
+			scn$ = scn$ - 1;
+		}
+	}
+	if (mode$ == 7) {
+		u = (sck$ + 0.5) / sclen$;
+		if (sca$ > 0) {
+			u = pow(u, 0.75);
+		}
+		v$ = sca$ * sin(pi * u);
+		sck$ = sck$ + 1;
+		trrem$ = trrem$ - 1;
 	}
 }
 if (mode$ == 5 && k$ == 0) {
@@ -782,4 +889,6 @@ h_spm$ = spm$; h_spa$ = spa$; h_spdv$ = spdv$; h_trem$ = trem$;
 h_gt$ = gt$; h_g$ = g$; h_gamp$ = gamp$; h_popen$ = popen$; h_pclose$ = pclose$; h_slot$ = slot$;
 h_drk$ = drk$; h_drlen$ = drlen$; h_drd$ = drd$; h_late$ = late$; h_flub$ = flub$; h_e$ = e$;
 h_wl$ = wl$; h_wr$ = wr$; h_head$ = head$; h_brk$ = brk$; h_idl$ = idl$; h_pcs$ = pcs$;
+h_scn$ = scn$; h_scns$ = scns$; h_sctot$ = sctot$; h_sctr$ = sctr$; h_scoff$ = scoff$;
+h_sck$ = sck$; h_sclen$ = sclen$; h_sca$ = sca$; h_scj$ = scj$;
 #ENDDECK

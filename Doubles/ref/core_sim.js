@@ -13,7 +13,7 @@ function makeCore(BUF, SRATE, rnd) {
   var P = {tempo: 120.0, playing: 0.0, songbeat: 0.0, sbseq: 0.0, reccmd: 0.0, recmode: 0.0, reclen: 8.0, recstop: 0.0, haverec: 0.0, L: 1.0, Lb: 8.0, anchor: 0.0, timing: 0.5, weight: 0.5, slop: 0.5, risk: 0.5, wear: 0.5, level: 1.0, strlev: 1.0, brake: 1.0, qt0: 0.0, qt1: 0.0, fgen: 0.0, fbeat: 0.0, bootb: -1000000000.0, dragseq: 0.0, dragdepth: 0.35};
   var H = {h_beatint: 0.0, h_prevph: 0.0, h_sbseq: 0.0, h_wasplay: 0.0, h_curgen: 0.0, h_flushb: 0.0, h_reccmd: 0.0, h_recstate: 0.0, h_wi: 0.0, h_recstart: 0.0, h_recb: 0.0, h_prevb: 0.0, h_statc: 0.0, h_live: 0.0, h_dragseq: 0.0, h_alive: 0.0, h_pos0: 0.0, h_v0: 0.0, h_vb0: 0.0, h_mode0: 0.0, h_k0: 0.0, h_has0: 0.0, h_bs0: 0.0, h_be0: 1000000000.0, h_p00: 0.0, h_rate0: 1.0, h_kind0: 0.0, h_gm0: 0.0, h_gd0: 1.0, h_g00: 0.0, h_amp0: 1.0, h_str0: 0.0, h_gen0: 0.0, h_cued0: 0.0, h_pdc0: 0.0, h_pa0: 0.0, h_pdv0: 0.0, h_trrem0: 0.0, h_push0: 0.0, h_rk0: 0.0, h_exp0: 0.0, h_expok0: 0.0, h_cuchk0: 0.0, h_culen0: 0.0, h_cuk0: 0.0, h_cua0: 0.0, h_spm0: 1.0, h_spa0: 0.0, h_spdv0: 0.0, h_trem0: 0.0, h_gt0: 0.0, h_g0: 0.0, h_gamp0: 1.0, h_popen0: 1000000000.0, h_pclose0: 1000000000.0, h_slot0: 0.0, h_drk0: 0.0, h_drlen0: 0.0, h_drd0: 0.0, h_late0: 0.0, h_flub0: 0.0, h_e0: 0.0, h_wl0: 0.0, h_wr0: 0.0, h_head0: 0.0, h_brk0: 0.0, h_idl0: 0.0, h_pcs0: 0.0, h_scn0: 0.0, h_scns0: 1.0, h_sctot0: 0.0, h_sctr0: 0.0, h_scoff0: 0.0, h_sck0: 0.0, h_sclen0: 0.0, h_sca0: 0.0, h_scj0: 0.0, h_pos1: 0.0, h_v1: 0.0, h_vb1: 0.0, h_mode1: 0.0, h_k1: 0.0, h_has1: 0.0, h_bs1: 0.0, h_be1: 1000000000.0, h_p01: 0.0, h_rate1: 1.0, h_kind1: 0.0, h_gm1: 0.0, h_gd1: 1.0, h_g01: 0.0, h_amp1: 1.0, h_str1: 0.0, h_gen1: 0.0, h_cued1: 0.0, h_pdc1: 0.0, h_pa1: 0.0, h_pdv1: 0.0, h_trrem1: 0.0, h_push1: 0.0, h_rk1: 0.0, h_exp1: 0.0, h_expok1: 0.0, h_cuchk1: 0.0, h_culen1: 0.0, h_cuk1: 0.0, h_cua1: 0.0, h_spm1: 1.0, h_spa1: 0.0, h_spdv1: 0.0, h_trem1: 0.0, h_gt1: 0.0, h_g1: 0.0, h_gamp1: 1.0, h_popen1: 1000000000.0, h_pclose1: 1000000000.0, h_slot1: 0.0, h_drk1: 0.0, h_drlen1: 0.0, h_drd1: 0.0, h_late1: 0.0, h_flub1: 0.0, h_e1: 0.0, h_wl1: 0.0, h_wr1: 0.0, h_head1: 0.0, h_brk1: 0.0, h_idl1: 0.0, h_pcs1: 0.0, h_scn1: 0.0, h_scns1: 1.0, h_sctot1: 0.0, h_sctr1: 0.0, h_scoff1: 0.0, h_sck1: 0.0, h_sclen1: 0.0, h_sca1: 0.0, h_scj1: 0.0};
   function step(in1, in2, in3) {
-    var out1 = 0, out2 = 0, NONE = 0, SR = 0, beatint = 0, prevph = 0, curgen = 0, flushb = 0, recstate = 0, wi = 0, recstart = 0, recb = 0, prevb = 0, live = 0, pos0 = 0, v0 = 0, vb0 = 0, mode0 = 0, k0 = 0, has0 = 0, bs0 = 0, be0 = 0, p00 = 0, rate0 = 0, kind0 = 0, gm0 = 0, gd0 = 0, g00 = 0, amp0 = 0, str0 = 0, gen0 = 0, cued0 = 0, pdc0 = 0, pa0 = 0, pdv0 = 0, trrem0 = 0, push0 = 0, rk0 = 0, exp0 = 0, expok0 = 0, cuchk0 = 0, culen0 = 0, cuk0 = 0, cua0 = 0, spm0 = 0, spa0 = 0, spdv0 = 0, trem0 = 0, gt0 = 0, g0 = 0, gamp0 = 0, popen0 = 0, pclose0 = 0, slot0 = 0, drk0 = 0, drlen0 = 0, drd0 = 0, late0 = 0, flub0 = 0, e0 = 0, wl0 = 0, wr0 = 0, head0 = 0, brk0 = 0, idl0 = 0, pcs0 = 0, scn0 = 0, scns0 = 0, sctot0 = 0, sctr0 = 0, scoff0 = 0, sck0 = 0, sclen0 = 0, sca0 = 0, scj0 = 0, pos1 = 0, v1 = 0, vb1 = 0, mode1 = 0, k1 = 0, has1 = 0, bs1 = 0, be1 = 0, p01 = 0, rate1 = 0, kind1 = 0, gm1 = 0, gd1 = 0, g01 = 0, amp1 = 0, str1 = 0, gen1 = 0, cued1 = 0, pdc1 = 0, pa1 = 0, pdv1 = 0, trrem1 = 0, push1 = 0, rk1 = 0, exp1 = 0, expok1 = 0, cuchk1 = 0, culen1 = 0, cuk1 = 0, cua1 = 0, spm1 = 0, spa1 = 0, spdv1 = 0, trem1 = 0, gt1 = 0, g1 = 0, gamp1 = 0, popen1 = 0, pclose1 = 0, slot1 = 0, drk1 = 0, drlen1 = 0, drd1 = 0, late1 = 0, flub1 = 0, e1 = 0, wl1 = 0, wr1 = 0, head1 = 0, brk1 = 0, idl1 = 0, pcs1 = 0, scn1 = 0, scns1 = 0, sctot1 = 0, sctr1 = 0, scoff1 = 0, sck1 = 0, sclen1 = 0, sca1 = 0, scj1 = 0, ph = 0, jumped = 0, cand = 0, B = 0, spb = 0, started = 0, stopped = 0, tau = 0, taus = 0, dk = 0, dks = 0, pre0 = 0, pushsd = 0, vmax = 0, reach = 0, reljit = 0, rush = 0, fadjit = 0, fadearly = 0, fadlate = 0, cuebase = 0, cueper = 0, tremsd = 0, lvl = 0, fade = 0, flubp = 0, flubsd = 0, recspb = 0, trema = 0, tremb = 0, done = 0, active = 0, flushed = 0, dragnew = 0, rbs = 0, boot = 0, qt = 0, need_next = 0, base = 0, e_bs = 0, e_be = 0, e_p0 = 0, e_kind = 0, e_cm = 0, e_rate = 0, e_gm = 0, e_gd = 0, e_g0 = 0, e_amp = 0, e_dist = 0, e_gen = 0, e_str = 0, e_scn = 0, e_scd = 0, keep = 0, cut = 0, gg = 0, cont = 0, oldbe = 0, latej = 0, earlyj = 0, gap = 0, j = 0, s0 = 0, pre = 0, adv = 0, d0 = 0, cerr = 0, prel = 0, fast = 0, jit = 0, tlen = 0, tr = 0, dist = 0, need = 0, ns = 0, np = 0, dc = 0, sd = 0, nb = 0, w = 0, trav = 0, u = 0, rate_e = 0, vv = 0, err = 0, vplay = 0, waitrel = 0, a = 0, gend = 0, gain0 = 0, yl0 = 0, yr0 = 0, ip = 0, fr = 0, i0 = 0, i1 = 0, i2 = 0, i3 = 0, xm = 0, x0 = 0, x1 = 0, x2 = 0, c1 = 0, c2 = 0, c3 = 0, hw = 0, ja = 0, jb = 0, wa = 0, gain1 = 0, yl1 = 0, yr1 = 0, mixl = 0, mixr = 0, kn = 0, statc = 0;
+    var out1 = 0, out2 = 0, NONE = 0, SR = 0, beatint = 0, prevph = 0, curgen = 0, flushb = 0, recstate = 0, wi = 0, recstart = 0, recb = 0, prevb = 0, live = 0, pos0 = 0, v0 = 0, vb0 = 0, mode0 = 0, k0 = 0, has0 = 0, bs0 = 0, be0 = 0, p00 = 0, rate0 = 0, kind0 = 0, gm0 = 0, gd0 = 0, g00 = 0, amp0 = 0, str0 = 0, gen0 = 0, cued0 = 0, pdc0 = 0, pa0 = 0, pdv0 = 0, trrem0 = 0, push0 = 0, rk0 = 0, exp0 = 0, expok0 = 0, cuchk0 = 0, culen0 = 0, cuk0 = 0, cua0 = 0, spm0 = 0, spa0 = 0, spdv0 = 0, trem0 = 0, gt0 = 0, g0 = 0, gamp0 = 0, popen0 = 0, pclose0 = 0, slot0 = 0, drk0 = 0, drlen0 = 0, drd0 = 0, late0 = 0, flub0 = 0, e0 = 0, wl0 = 0, wr0 = 0, head0 = 0, brk0 = 0, idl0 = 0, pcs0 = 0, scn0 = 0, scns0 = 0, sctot0 = 0, sctr0 = 0, scoff0 = 0, sck0 = 0, sclen0 = 0, sca0 = 0, scj0 = 0, pos1 = 0, v1 = 0, vb1 = 0, mode1 = 0, k1 = 0, has1 = 0, bs1 = 0, be1 = 0, p01 = 0, rate1 = 0, kind1 = 0, gm1 = 0, gd1 = 0, g01 = 0, amp1 = 0, str1 = 0, gen1 = 0, cued1 = 0, pdc1 = 0, pa1 = 0, pdv1 = 0, trrem1 = 0, push1 = 0, rk1 = 0, exp1 = 0, expok1 = 0, cuchk1 = 0, culen1 = 0, cuk1 = 0, cua1 = 0, spm1 = 0, spa1 = 0, spdv1 = 0, trem1 = 0, gt1 = 0, g1 = 0, gamp1 = 0, popen1 = 0, pclose1 = 0, slot1 = 0, drk1 = 0, drlen1 = 0, drd1 = 0, late1 = 0, flub1 = 0, e1 = 0, wl1 = 0, wr1 = 0, head1 = 0, brk1 = 0, idl1 = 0, pcs1 = 0, scn1 = 0, scns1 = 0, sctot1 = 0, sctr1 = 0, scoff1 = 0, sck1 = 0, sclen1 = 0, sca1 = 0, scj1 = 0, ph = 0, jumped = 0, cand = 0, B = 0, spb = 0, started = 0, stopped = 0, tau = 0, taus = 0, dk = 0, dks = 0, pre0 = 0, pushsd = 0, vmax = 0, reach = 0, reljit = 0, rush = 0, fadjit = 0, fadearly = 0, fadlate = 0, cuebase = 0, cueper = 0, tremsd = 0, lvl = 0, fade = 0, flubp = 0, flubsd = 0, rrate = 0, recspb = 0, trema = 0, tremb = 0, done = 0, active = 0, flushed = 0, dragnew = 0, rbs = 0, boot = 0, qt = 0, need_next = 0, base = 0, e_bs = 0, e_be = 0, e_p0 = 0, e_kind = 0, e_cm = 0, e_rate = 0, e_gm = 0, e_gd = 0, e_g0 = 0, e_amp = 0, e_dist = 0, e_gen = 0, e_str = 0, e_scn = 0, e_scd = 0, keep = 0, cut = 0, gg = 0, cont = 0, oldbe = 0, latej = 0, earlyj = 0, gap = 0, j = 0, s0 = 0, pre = 0, adv = 0, d0 = 0, cerr = 0, prel = 0, fast = 0, jit = 0, tlen = 0, tr = 0, dist = 0, need = 0, ns = 0, np = 0, dc = 0, sd = 0, nb = 0, w = 0, trav = 0, u = 0, rate_e = 0, vv = 0, err = 0, vplay = 0, waitrel = 0, a = 0, gend = 0, gain0 = 0, yl0 = 0, yr0 = 0, ip = 0, fr = 0, i0 = 0, i1 = 0, i2 = 0, i3 = 0, xm = 0, x0 = 0, x1 = 0, x2 = 0, c1 = 0, c2 = 0, c3 = 0, hw = 0, ja = 0, jb = 0, wa = 0, gain1 = 0, yl1 = 0, yr1 = 0, mixl = 0, mixr = 0, kn = 0, statc = 0;
 
 
 
@@ -48,18 +48,18 @@ sctr1 = 0; scoff1 = 0; sck1 = 0; sclen1 = 0; sca1 = 0; scj1 = 0; ph = 0; jumped 
 cand = 0; B = 0; spb = 0; started = 0; stopped = 0; tau = 0; taus = 0; dk = 0;
 dks = 0; pre0 = 0; pushsd = 0; vmax = 0; reach = 0; reljit = 0; rush = 0; fadjit = 0;
 fadearly = 0; fadlate = 0; cuebase = 0; cueper = 0; tremsd = 0; lvl = 0; fade = 0; flubp = 0;
-flubsd = 0; recspb = 0; trema = 0; tremb = 0; done = 0; active = 0; flushed = 0; dragnew = 0;
-rbs = 0; boot = 0; qt = 0; need_next = 0; base = 0; e_bs = 0; e_be = 0; e_p0 = 0;
-e_kind = 0; e_cm = 0; e_rate = 0; e_gm = 0; e_gd = 0; e_g0 = 0; e_amp = 0; e_dist = 0;
-e_gen = 0; e_str = 0; e_scn = 0; e_scd = 0; keep = 0; cut = 0; gg = 0; cont = 0;
-oldbe = 0; latej = 0; earlyj = 0; gap = 0; j = 0; s0 = 0; pre = 0; adv = 0;
-d0 = 0; cerr = 0; prel = 0; fast = 0; jit = 0; tlen = 0; tr = 0; dist = 0;
-need = 0; ns = 0; np = 0; dc = 0; sd = 0; nb = 0; w = 0; trav = 0;
-u = 0; rate_e = 0; vv = 0; err = 0; vplay = 0; waitrel = 0; a = 0; gend = 0;
-gain0 = 0; yl0 = 0; yr0 = 0; ip = 0; fr = 0; i0 = 0; i1 = 0; i2 = 0;
-i3 = 0; xm = 0; x0 = 0; x1 = 0; x2 = 0; c1 = 0; c2 = 0; c3 = 0;
-hw = 0; ja = 0; jb = 0; wa = 0; gain1 = 0; yl1 = 0; yr1 = 0; mixl = 0;
-mixr = 0; kn = 0; statc = 0;
+flubsd = 0; rrate = 0; recspb = 0; trema = 0; tremb = 0; done = 0; active = 0; flushed = 0;
+dragnew = 0; rbs = 0; boot = 0; qt = 0; need_next = 0; base = 0; e_bs = 0; e_be = 0;
+e_p0 = 0; e_kind = 0; e_cm = 0; e_rate = 0; e_gm = 0; e_gd = 0; e_g0 = 0; e_amp = 0;
+e_dist = 0; e_gen = 0; e_str = 0; e_scn = 0; e_scd = 0; keep = 0; cut = 0; gg = 0;
+cont = 0; oldbe = 0; latej = 0; earlyj = 0; gap = 0; j = 0; s0 = 0; pre = 0;
+adv = 0; d0 = 0; cerr = 0; prel = 0; fast = 0; jit = 0; tlen = 0; tr = 0;
+dist = 0; need = 0; ns = 0; np = 0; dc = 0; sd = 0; nb = 0; w = 0;
+trav = 0; u = 0; rate_e = 0; vv = 0; err = 0; vplay = 0; waitrel = 0; a = 0;
+gend = 0; gain0 = 0; yl0 = 0; yr0 = 0; ip = 0; fr = 0; i0 = 0; i1 = 0;
+i2 = 0; i3 = 0; xm = 0; x0 = 0; x1 = 0; x2 = 0; c1 = 0; c2 = 0;
+c3 = 0; hw = 0; ja = 0; jb = 0; wa = 0; gain1 = 0; yl1 = 0; yr1 = 0;
+mixl = 0; mixr = 0; kn = 0; statc = 0;
 
 
 
@@ -161,7 +161,7 @@ lvl = 0.07 * P.slop;
 fade = SR * (0.0008 + 0.0012 * P.slop);
 flubp = 0.05 * P.risk;
 flubsd = SR * 0.035;
-rate0 = P.L * P.tempo / (P.Lb * 60 * SR);
+rrate = P.L * P.tempo / (P.Lb * 60 * SR);
 recspb = P.L / P.Lb;
 trema = exp(-twopi * 100 / SR);
 tremb = sqrt(1 - trema * trema);
@@ -426,7 +426,7 @@ if (need_next > 0.5) {
 					if (kind0 == 3) {
 						pre = 0;
 					}
-					adv = rate0 * rate0 * (pre - tau * (1 - exp(-pre / tau)));
+					adv = rate0 * rrate * (pre - tau * (1 - exp(-pre / tau)));
 					d0 = abs(wrap(p00 - adv - pos0, -P.L / 2, P.L / 2));
 					cerr = 0;
 					if (d0 > 8) {
@@ -446,7 +446,7 @@ if (need_next > 0.5) {
 					dist = wrap(prel - pos0, -P.L / 2, P.L / 2);
 					need = 0;
 					if (abs(dist) > 8) {
-						need = reach + abs(dist) / rate0 / vmax;
+						need = reach + abs(dist) / rrate / vmax;
 					}
 					if (tr < need) {
 						tr = min(need, tlen - 1);
@@ -481,7 +481,7 @@ if (need_next > 0.5) {
 						mode0 = 2;
 					} else {
 						sd = v0 * dks * (1 - pow(dks, dc)) / (1 - dks);
-						pa0 = (dist / rate0 - sd) / ((dc + 1) / 2);
+						pa0 = (dist / rrate - sd) / ((dc + 1) / 2);
 						pdv0 = v0;
 						pdc0 = dc;
 						k0 = 0;
@@ -490,7 +490,7 @@ if (need_next > 0.5) {
 					trrem0 = tr;
 					push0 = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
 					if (kind0 == 0) {
-						exp0 = wrap(p00 - rate0 * rate0 * gap, 0, P.L);
+						exp0 = wrap(p00 - rate0 * rrate * gap, 0, P.L);
 						expok0 = 1;
 					}
 				} else {
@@ -605,20 +605,31 @@ if (mode0 == 7) {
 				trav = -scoff0 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * abs(scoff0), 0.03 * SR);
 			}
 			scoff0 = scoff0 + trav;
-			sca0 = trav / rate0 * 1.5707963 / sclen0;
+			
+			
+			if (trav > 0) {
+				sca0 = trav / rrate / (0.6560 * sclen0);
+			} else {
+				sca0 = trav / rrate / (0.6366 * sclen0);
+			}
 			sck0 = 0;
 			scn0 = scn0 - 1;
 		}
 	}
 	if (mode0 == 7) {
-		v0 = sca0 * sin(pi * (sck0 + 0.5) / sclen0);
+		u = (sck0 + 0.5) / sclen0;
+		if (sca0 > 0) {
+			u = pow(u, 0.75);
+		}
+		v0 = sca0 * sin(pi * u);
 		sck0 = sck0 + 1;
+		trrem0 = trrem0 - 1;
 	}
 }
 if (mode0 == 5 && k0 == 0) {
 	
 	sd = spdv0 * dks * (1 - pow(dks, spm0)) / (1 - dks);
-	spa0 = (p00 / rate0 - sd) / (spm0 * 0.2475168);
+	spa0 = (p00 / rrate - sd) / (spm0 * 0.2475168);
 }
 if (mode0 == 5) {
 	u = (k0 + 0.5) / spm0;
@@ -670,10 +681,10 @@ if (mode0 == 3) {
 		cuchk0 = cuchk0 - 1;
 		if (cuchk0 <= 0) {
 			err = wrap(exp0 - pos0, -P.L / 2, P.L / 2);
-			if (abs(err) > 0.0003 * SR * rate0) {
+			if (abs(err) > 0.0003 * SR * rrate) {
 				culen0 = floor(0.6 * SR);
 				cuk0 = 0;
-				cua0 = 0.8 * err / rate0 / ((culen0 + 1) / 2);
+				cua0 = 0.8 * err / rrate / ((culen0 + 1) / 2);
 				cuchk0 = culen0 + floor(0.25 * SR);
 			} else {
 				cuchk0 = floor(2 * SR);
@@ -690,7 +701,7 @@ if (mode0 == 3) {
 	v0 = vv;
 }
 if (expok0 > 0.5) {
-	exp0 = wrap(exp0 + rate0 * rate0, 0, P.L);
+	exp0 = wrap(exp0 + rate0 * rrate, 0, P.L);
 }
 
 
@@ -707,7 +718,7 @@ if (drlen0 > 0) {
 		drlen0 = 0;
 	}
 }
-pos0 = wrap(pos0 + vplay * rate0, 0, P.L);
+pos0 = wrap(pos0 + vplay * rrate, 0, P.L);
 
 
 
@@ -767,9 +778,9 @@ if (g0 > 0 && active > 0.5) {
 	xm = peek(BUF.rec, i0, 1); x0 = peek(BUF.rec, i1, 1); x1 = peek(BUF.rec, i2, 1); x2 = peek(BUF.rec, i3, 1);
 	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
 	yr0 = ((c3 * fr + c2) * fr + c1) * fr + x0;
-	if (abs(vplay * rate0) > 2) {
+	if (abs(vplay * rrate) > 2) {
 		
-		hw = abs(vplay * rate0) * 0.5;
+		hw = abs(vplay * rrate) * 0.5;
 		ja = wrap(floor(pos0 - hw), 0, P.L); jb = wrap(floor(pos0 + hw), 0, P.L);
 		yl0 = 0.5 * yl0 + 0.25 * (peek(BUF.rec, ja, 0) + peek(BUF.rec, jb, 0));
 		yr0 = 0.5 * yr0 + 0.25 * (peek(BUF.rec, ja, 1) + peek(BUF.rec, jb, 1));
@@ -978,7 +989,7 @@ if (need_next > 0.5) {
 					if (kind1 == 3) {
 						pre = 0;
 					}
-					adv = rate1 * rate0 * (pre - tau * (1 - exp(-pre / tau)));
+					adv = rate1 * rrate * (pre - tau * (1 - exp(-pre / tau)));
 					d0 = abs(wrap(p01 - adv - pos1, -P.L / 2, P.L / 2));
 					cerr = 0;
 					if (d0 > 8) {
@@ -998,7 +1009,7 @@ if (need_next > 0.5) {
 					dist = wrap(prel - pos1, -P.L / 2, P.L / 2);
 					need = 0;
 					if (abs(dist) > 8) {
-						need = reach + abs(dist) / rate0 / vmax;
+						need = reach + abs(dist) / rrate / vmax;
 					}
 					if (tr < need) {
 						tr = min(need, tlen - 1);
@@ -1033,7 +1044,7 @@ if (need_next > 0.5) {
 						mode1 = 2;
 					} else {
 						sd = v1 * dks * (1 - pow(dks, dc)) / (1 - dks);
-						pa1 = (dist / rate0 - sd) / ((dc + 1) / 2);
+						pa1 = (dist / rrate - sd) / ((dc + 1) / 2);
 						pdv1 = v1;
 						pdc1 = dc;
 						k1 = 0;
@@ -1042,7 +1053,7 @@ if (need_next > 0.5) {
 					trrem1 = tr;
 					push1 = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
 					if (kind1 == 0) {
-						exp1 = wrap(p01 - rate1 * rate0 * gap, 0, P.L);
+						exp1 = wrap(p01 - rate1 * rrate * gap, 0, P.L);
 						expok1 = 1;
 					}
 				} else {
@@ -1157,20 +1168,31 @@ if (mode1 == 7) {
 				trav = -scoff1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * abs(scoff1), 0.03 * SR);
 			}
 			scoff1 = scoff1 + trav;
-			sca1 = trav / rate0 * 1.5707963 / sclen1;
+			
+			
+			if (trav > 0) {
+				sca1 = trav / rrate / (0.6560 * sclen1);
+			} else {
+				sca1 = trav / rrate / (0.6366 * sclen1);
+			}
 			sck1 = 0;
 			scn1 = scn1 - 1;
 		}
 	}
 	if (mode1 == 7) {
-		v1 = sca1 * sin(pi * (sck1 + 0.5) / sclen1);
+		u = (sck1 + 0.5) / sclen1;
+		if (sca1 > 0) {
+			u = pow(u, 0.75);
+		}
+		v1 = sca1 * sin(pi * u);
 		sck1 = sck1 + 1;
+		trrem1 = trrem1 - 1;
 	}
 }
 if (mode1 == 5 && k1 == 0) {
 	
 	sd = spdv1 * dks * (1 - pow(dks, spm1)) / (1 - dks);
-	spa1 = (p01 / rate0 - sd) / (spm1 * 0.2475168);
+	spa1 = (p01 / rrate - sd) / (spm1 * 0.2475168);
 }
 if (mode1 == 5) {
 	u = (k1 + 0.5) / spm1;
@@ -1222,10 +1244,10 @@ if (mode1 == 3) {
 		cuchk1 = cuchk1 - 1;
 		if (cuchk1 <= 0) {
 			err = wrap(exp1 - pos1, -P.L / 2, P.L / 2);
-			if (abs(err) > 0.0003 * SR * rate0) {
+			if (abs(err) > 0.0003 * SR * rrate) {
 				culen1 = floor(0.6 * SR);
 				cuk1 = 0;
-				cua1 = 0.8 * err / rate0 / ((culen1 + 1) / 2);
+				cua1 = 0.8 * err / rrate / ((culen1 + 1) / 2);
 				cuchk1 = culen1 + floor(0.25 * SR);
 			} else {
 				cuchk1 = floor(2 * SR);
@@ -1242,7 +1264,7 @@ if (mode1 == 3) {
 	v1 = vv;
 }
 if (expok1 > 0.5) {
-	exp1 = wrap(exp1 + rate1 * rate0, 0, P.L);
+	exp1 = wrap(exp1 + rate1 * rrate, 0, P.L);
 }
 
 
@@ -1259,7 +1281,7 @@ if (drlen1 > 0) {
 		drlen1 = 0;
 	}
 }
-pos1 = wrap(pos1 + vplay * rate0, 0, P.L);
+pos1 = wrap(pos1 + vplay * rrate, 0, P.L);
 
 
 
@@ -1319,9 +1341,9 @@ if (g1 > 0 && active > 0.5) {
 	xm = peek(BUF.rec, i0, 1); x0 = peek(BUF.rec, i1, 1); x1 = peek(BUF.rec, i2, 1); x2 = peek(BUF.rec, i3, 1);
 	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
 	yr1 = ((c3 * fr + c2) * fr + c1) * fr + x0;
-	if (abs(vplay * rate0) > 2) {
+	if (abs(vplay * rrate) > 2) {
 		
-		hw = abs(vplay * rate0) * 0.5;
+		hw = abs(vplay * rrate) * 0.5;
 		ja = wrap(floor(pos1 - hw), 0, P.L); jb = wrap(floor(pos1 + hw), 0, P.L);
 		yl1 = 0.5 * yl1 + 0.25 * (peek(BUF.rec, ja, 0) + peek(BUF.rec, jb, 0));
 		yr1 = 0.5 * yr1 + 0.25 * (peek(BUF.rec, ja, 1) + peek(BUF.rec, jb, 1));

@@ -131,7 +131,7 @@ def to_js(gen):
     js = ['// generated from doubles_core.gen.tmpl by tools/genexpr.py: do not edit',
           'function makeCore(BUF, SRATE, rnd) {',
           '  var pi = Math.PI, twopi = 2 * Math.PI;',
-          '  var floor = Math.floor, ceil = Math.ceil, abs = Math.abs, exp = Math.exp, cos = Math.cos,',
+          '  var floor = Math.floor, ceil = Math.ceil, abs = Math.abs, exp = Math.exp, cos = Math.cos, sin = Math.sin,',
           '      tanh = Math.tanh, sqrt = Math.sqrt, pow = Math.pow, sign = Math.sign;',
           '  function min(a, b) { return a < b ? a : b; }',
           '  function max(a, b) { return a > b ? a : b; }',
