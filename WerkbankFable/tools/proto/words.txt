@@ -1,0 +1,396 @@
+# SPRECHER dictionary. Format: language word phonemes...   ' before a vowel marks the stressed (and held) vowel.
+# Written for this module by Fable, 2026-11-23. Numbers 0 to 20 in seven languages, then vocabulary.
+en 0 Z 'IH R OW
+en 1 W 'AH N
+en 2 T 'UW
+en 3 TH R 'IY
+en 4 F 'AO R
+en 5 F 'AY V
+en 6 S 'IH K S
+en 7 S 'EH V AX N
+en 8 'EY T
+en 9 N 'AY N
+en 10 T 'EH N
+en 11 IH L 'EH V AX N
+en 12 T W 'EH L V
+en 13 TH ER T 'IY N
+en 14 F AO R T 'IY N
+en 15 F IH F T 'IY N
+en 16 S IH K S T 'IY N
+en 17 S EH V AX N T 'IY N
+en 18 EY T 'IY N
+en 19 N AY N T 'IY N
+en 20 T W 'EH N T IY
+de 0 N 'UH L
+de 1 'AY N S
+de 2 TS V 'AY
+de 3 D RX 'AY
+de 4 F 'IY AX
+de 5 F 'UY N F
+de 6 Z 'EH K S
+de 7 Z 'IY B AX N
+de 8 'A KX T
+de 9 N 'OY N
+de 10 TS 'EE N
+de 11 'EH L F
+de 12 TS V 'OX L F
+de 13 D RX 'AY TS EE N
+de 14 F 'IH AX TS EE N
+de 15 F 'UY N F TS EE N
+de 16 Z 'EH CX TS EE N
+de 17 Z 'IY P TS EE N
+de 18 'A KX TS EE N
+de 19 N 'OY N TS EE N
+de 20 TS V 'A N TS IH CX
+fr 0 Z EE RX 'OO
+fr 1 'OX N
+fr 2 D 'OE
+fr 3 T RX W 'A
+fr 4 K 'A T RX
+fr 5 S 'AE NG K
+fr 6 S 'IY S
+fr 7 S 'EH T
+fr 8 W 'IY T
+fr 9 N 'OX F
+fr 10 D 'IY S
+fr 11 'AO N Z
+fr 12 D 'UW Z
+fr 13 T RX 'EH Z
+fr 14 K A T 'AO RX Z
+fr 15 K 'AE N Z
+fr 16 S 'EH Z
+fr 17 D IY S 'EH T
+fr 18 D IY Z W 'IY T
+fr 19 D IY Z N 'OX F
+fr 20 V 'AE N
+es 0 S 'EH RR AO
+es 1 'UW N AO
+es 2 D 'AO S
+es 3 T RR 'EH S
+es 4 K W 'A T RR AO
+es 5 S 'IY N K AO
+es 6 S 'EY S
+es 7 S Y 'EH T EH
+es 8 'AO CH AO
+es 9 N W 'EH B EH
+es 10 D Y 'EH S
+es 11 'AO N S EH
+es 12 D 'AO S EH
+es 13 T RR 'EH S EH
+es 14 K A T 'AO RR S EH
+es 15 K 'IY N S EH
+es 16 D Y EH S IY S 'EY S
+es 17 D Y EH S IY S Y 'EH T EH
+es 18 D Y EH S IY 'AO CH AO
+es 19 D Y EH S IY N W 'EH B EH
+es 20 B 'EY N T EH
+it 0 TS 'EH RR AO
+it 1 'UW N AO
+it 2 D 'UW EH
+it 3 T RR 'EH
+it 4 K W 'A T RR AO
+it 5 CH 'IY N K W EH
+it 6 S 'EH IY
+it 7 S 'EH T EH
+it 8 'AO T AO
+it 9 N 'AO V EH
+it 10 D Y 'EH CH IY
+it 11 'UW N D IY CH IY
+it 12 D 'AO D IY CH IY
+it 13 T RR 'EH D IY CH IY
+it 14 K W A T 'AO RR D IY CH IY
+it 15 K W 'IY N D IY CH IY
+it 16 S 'EH D IY CH IY
+it 17 D IY CH A S 'EH T EH
+it 18 D IY CH 'AO T AO
+it 19 D IY CH A N 'AO V EH
+it 20 V 'EH N T IY
+ja 0 Z 'EH RR AO
+ja 1 'IY CH IY
+ja 2 N 'IY
+ja 3 S 'A N
+ja 4 Y 'AO N
+ja 5 G 'AO
+ja 6 RR 'AO K UW
+ja 7 N 'A N A
+ja 8 HH 'A CH IY
+ja 9 K Y 'UW
+ja 10 JH 'UW
+ja 11 JH UW 'IY CH IY
+ja 12 JH UW N 'IY
+ja 13 JH UW S 'A N
+ja 14 JH UW Y 'AO N
+ja 15 JH UW G 'AO
+ja 16 JH UW RR 'AO K UW
+ja 17 JH UW N 'A N A
+ja 18 JH UW HH 'A CH IY
+ja 19 JH UW K Y 'UW
+ja 20 N IY JH 'UW
+ru 0 N 'AO L
+ru 1 A D 'IY N
+ru 2 D V 'A
+ru 3 T RR 'IY
+ru 4 CH IH T 'IH RR EH
+ru 5 P Y 'A T
+ru 6 SH 'EH S T
+ru 7 S Y 'EH M
+ru 8 V 'AO S IH M
+ru 9 D Y 'EH V IH T
+ru 10 D Y 'EH S IH T
+ru 11 A D 'IY N A TS A T
+ru 12 D V IH N 'A TS A T
+ru 13 T RR IH N 'A TS A T
+ru 14 CH IH T 'IH RR N A TS A T
+ru 15 P IH T N 'A TS A T
+ru 16 SH IH S N 'A TS A T
+ru 17 S IH M N 'A TS A T
+ru 18 V A S IH M N 'A TS A T
+ru 19 D IH V IH T N 'A TS A T
+ru 20 D V 'A TS A T
+# English letters
+en a 'EY
+en b B 'IY
+en c S 'IY
+en d D 'IY
+en e 'IY
+en f 'EH F
+en g JH 'IY
+en h 'EY CH
+en i 'AY
+en j JH 'EY
+en k K 'EY
+en l 'EH L
+en m 'EH M
+en n 'EH N
+en o 'OW
+en p P 'IY
+en q K Y 'UW
+en r 'AA R
+en s 'EH S
+en t T 'IY
+en u Y 'UW
+en v V 'IY
+en w D 'AH B AX L Y UW
+en x 'EH K S
+en y W 'AY
+en z Z 'IY
+# English vocabulary
+en computer K AX M P Y 'UW T ER
+en world W 'ER L D
+en machine M AX SH 'IY N
+en man M 'AE N
+en robot R 'OW B AA T
+en robots R 'OW B AA T S
+en music M Y 'UW Z IH K
+en number N 'AH M B ER
+en numbers N 'AH M B ER Z
+en pocket P 'AA K IH T
+en calculator K 'AE L K Y AX L EY T ER
+en home HH 'OW M
+en data D 'EY T AX
+en memory M 'EH M ER IY
+en program P R 'OW G R AE M
+en energy 'EH N ER JH IY
+en radio R 'EY D IY OW
+en activity AE K T 'IH V IH T IY
+en train T R 'EY N
+en express IH K S P R 'EH S
+en europe Y 'UH R AX P
+en endless 'EH N D L AX S
+en motor M 'OW T ER
+en way W 'EY
+en road R 'OW D
+en light L 'AY T
+en neon N 'IY AA N
+en city S 'IH T IY
+en time T 'AY M
+en space S P 'EY S
+en future F Y 'UW CH ER
+en model M 'AA D AX L
+en mirror M 'IH R ER
+en show SH 'OW
+en room R 'UW M
+en power P 'AW ER
+en station S T 'EY SH AX N
+en electric IH L 'EH K T R IH K
+en electronic IH L EH K T R 'AA N IH K
+en voice V 'OY S
+en sound S 'AW N D
+en sounds S 'AW N D Z
+en beat B 'IY T
+en rhythm R 'IH DH AX M
+en techno T 'EH K N OW
+en pop P 'AA P
+en boing B 'OY NG
+en boom B 'UW M
+en dance D 'AE N S
+en body B 'AA D IY
+en we W 'IY
+en are 'AA R
+en the DH AX
+en am 'AE M
+en you Y 'UW
+en is 'IH Z
+en it 'IH T
+en and 'AE N D
+en of 'AH V
+en in 'IH N
+en on 'AA N
+en to T 'UW
+en for F 'AO R
+en yes Y 'EH S
+en no N 'OW
+en hello HH AX L 'OW
+en goodbye G UH D B 'AY
+en please P L 'IY Z
+en thank TH 'AE NG K
+en system S 'IH S T AX M
+en error 'EH R ER
+en ready R 'EH D IY
+en start S T 'AA R T
+en stop S T 'AA P
+en go G 'OW
+en run R 'AH N
+en count K 'AW N T
+en down D 'AW N
+en up 'AH P
+en left L 'EH F T
+en right R 'AY T
+en off 'AO F
+en input 'IH N P UH T
+en output 'AW T P UH T
+en plus P L 'AH S
+en minus M 'AY N AX S
+en equals 'IY K W AX L Z
+en operator 'AA P ER EY T ER
+en digital D 'IH JH IH T AX L
+en analog 'AE N AX L AO G
+en signal S 'IH G N AX L
+en control K AX N T R 'OW L
+en voltage V 'OW L T IH JH
+en clock K L 'AA K
+en reset R IY S 'EH T
+en gate G 'EY T
+en sequence S 'IY K W AX N S
+en step S T 'EH P
+en bass B 'EY S
+en drum D R 'AH M
+en kick K 'IH K
+en snare S N 'EH R
+en hat HH 'AE T
+en clap K L 'AE P
+en house HH 'AW S
+en acid 'AE S IH D
+en funk F 'AH NG K
+en soul S 'OW L
+en love L 'AH V
+en night N 'AY T
+en day D 'EY
+en people P 'IY P AX L
+en party P 'AA R T IY
+en rock R 'AA K
+en planet P L 'AE N IH T
+en automatic AO T AX M 'AE T IH K
+en mechanic M AX K 'AE N IH K
+en speak S P 'IY K
+en spell S P 'EH L
+en with W 'IH DH
+en my M 'AY
+en your Y 'AO R
+en this DH 'IH S
+en jack JH 'AE K
+en work W 'ER K
+en bench B 'EH N CH
+en move M 'UW V
+en feel F 'IY L
+en can K 'AE N
+en pump P 'AH M P
+en volume V 'AA L Y UW M
+en tempo T 'EH M P OW
+# German vocabulary
+de wir V 'IY AX
+de sind Z 'IH N T
+de die D 'IY
+de der D 'EE AX
+de das D 'A S
+de roboter RX 'AO B AO T AX
+de mensch M 'EH N SH
+de maschine M A SH 'IY N AX
+de musik M UW Z 'IY K
+de computer K AO M P Y 'UW T AX
+de welt V 'EH L T
+de zahlen TS 'A L AX N
+de nummer N 'UH M AX
+de taschenrechner T 'A SH AX N RX EH CX N AX
+de heim HH 'AY M
+de daten D 'A T AX N
+de speicher SH P 'AY CX AX
+de programm P RX AO G RX 'A M
+de energie EH N EH RX G 'IY
+de radio RX 'A D IY OO
+de aktivität A K T IY V IY T 'EH T
+de zug TS 'UW K
+de europa OY RX 'OO P A
+de endlos 'EH N T L OO S
+de autobahn 'AW T OO B A N
+de fahren F 'A RX AX N
+de licht L 'IH CX T
+de neon N 'EE AO N
+de stadt SH T 'A T
+de zeit TS 'AY T
+de raum RX 'AW M
+de zukunft TS 'UW K UH N F T
+de modell M AO D 'EH L
+de spiegel SH P 'IY G AX L
+de strom SH T RX 'OO M
+de spannung SH P 'A N UH NG
+de stimme SH T 'IH M AX
+de klang K L 'A NG
+de takt T 'A K T
+de rhythmus RX 'UY T M UH S
+de tanz T 'A N TS
+de ich 'IH CX
+de bin B 'IH N
+de du D 'UW
+de bist B 'IH S T
+de ist 'IH S T
+de es 'EH S
+de ein 'AY N
+de eine 'AY N AX
+de und 'UH N T
+de auf 'AW F
+de mit M 'IH T
+de für F 'UE AX
+de ja Y 'A
+de nein N 'AY N
+de hallo HH 'A L OO
+de bitte B 'IH T AX
+de danke D 'A NG K AX
+de fehler F 'EE L AX
+de bereit B AX RX 'AY T
+de start SH T 'A RX T
+de stopp SH T 'AO P
+de an 'A N
+de aus 'AW S
+de in 'IH N
+de plus P L 'UH S
+de minus M 'IY N UH S
+de gleich G L 'AY CX
+de elektrisch EH L 'EH K T RX IH SH
+de elektronisch EH L EH K T RX 'OO N IH SH
+de automatisch AW T OO M 'A T IH SH
+de mechanisch M EH CX 'A N IH SH
+de nacht N 'A KX T
+de tag T 'A K
+de liebe L 'IY B AX
+de haus HH 'AW S
+de werkbank V 'EH RX K B A NG K
+de sprecher SH P RX 'EH CX AX
+de achtung 'A KX T UH NG
+de los L 'OO S
+de links L 'IH NG K S
+de rechts RX 'EH CX TS
+de laut L 'AW T
+de leise L 'AY Z AX
+de schnell SH N 'EH L
+de langsam L 'A NG Z A M
