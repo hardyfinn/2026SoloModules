@@ -109,6 +109,17 @@ struct Engine {
 	alignas(16) float cp[N] = {}, cpp[N] = {};  // ROAR stretch weights
 	alignas(16) float oL[N] = {}, oR[N] = {};
 	float f[N] = {};                // current frequencies (Hz)
+	alignas(16) float rOwn[N] = {}; // per-mode decay factor without the cascade drain (cached)
+	alignas(16) float hwk[N] = {};  // per-mode cascade noise weight (cached)
+	float cGsum[NBAND] = {};
+	// cache keys: the slow coefficients are recomputed only when one of these moves
+	float cF1 = -1.f, cPitch = -1.f, cBeat = -1.f, cFLast = -1.f, cTlow = -1.f, cFd = -1.f;
+	float cMute = -1.f, cHand = -1.f, cWidth = -1.f;
+	int cType = -1;
+	bool modesDirty = true;
+	bool idle = false;
+	int mLive = N;                  // per-sample loop runs over modes 0 .. mLive-1
+	float stretch = 0.f;            // ROAR: S = sum cpp x^2, kept from the last sample
 	int band[N] = {};
 
 	ModeDef md[N];
@@ -206,6 +217,7 @@ struct Engine {
 
 	void makeModes(int type, int cast) {
 		typeNow = type; castNow = cast;
+		modesDirty = true;
 		Rng g;
 		g.seed(7000u + (uint32_t) cast * 7919u + (uint32_t) type * 104729u);
 		int k = 0;
@@ -292,6 +304,7 @@ struct Engine {
 		pulseLen = std::max(2, (int) (tau * fs));
 		pulsePos = 0;
 		pulseAmp = vel * 2.f / pulseLen;  // raised cosine with area = vel
+		idle = false;
 	}
 
 	void handGrab() { handHold = (int) (0.2f * fs); }
@@ -318,6 +331,7 @@ struct Engine {
 		for (int i = 0; i < NBAND; i++) bandE[i] = 0.f;
 		int cnt[NBAND] = {};
 		float gsum[NBAND] = {};
+		(void) gsum;
 		float Eglide = 0.f;
 		for (int k = 0; k < M; k++) {
 			float E = x[k] * x[k] + v[k] * v[k];
@@ -344,25 +358,32 @@ struct Engine {
 		float gx = std::min(1.25f * gy / (1.f + 0.25f * gy), 2.f);  // ~amplitude^2, rounded off for huge hits
 		pitchMul = std::exp2(c.glide / 12.f * gx);
 
-		// ---- frequencies
-		float fLast = 0.f;
-		for (int k = 0; k < nDense; k++) {
-			const ModeDef& d = md[k];
-			float fk;
-			if (d.twinOf >= 0) {
-				float base = f[d.twinOf];
-				if (d.kind == PARTIAL) fk = base + (0.25f + 6.f * c.beat) * d.hz * d.tw;
-				else fk = base * (1.f + (0.0006f + 0.012f * c.beat * c.beat) * d.tw);
-			} else {
-				fk = f1 * d.ratio * pitchMul;
+		// ---- frequencies (only recomputed when something that moves them changed)
+		const bool fNeed = f1 != cF1 || pitchMul != cPitch || c.beat != cBeat || modesDirty;
+		if (fNeed) {
+			cF1 = f1; cPitch = pitchMul; cBeat = c.beat;
+			float fLast = 0.f;
+			for (int k = 0; k < nDense; k++) {
+				const ModeDef& d = md[k];
+				float fk;
+				if (d.twinOf >= 0) {
+					float base = f[d.twinOf];
+					if (d.kind == PARTIAL) fk = base + (0.25f + 6.f * c.beat) * d.hz * d.tw;
+					else fk = base * (1.f + (0.0006f + 0.012f * c.beat * c.beat) * d.tw);
+				} else {
+					fk = f1 * d.ratio * pitchMul;
+				}
+				f[k] = fk;
+				fLast = std::max(fLast, fk);
 			}
-			f[k] = fk;
-			fLast = std::max(fLast, fk);
-		}
-		float fTop = 16000.f;
-		for (int k = nDense; k < M; k++) {
-			if (fLast < fTop) f[k] = fLast * std::pow(fTop / fLast, md[k].u);
-			else f[k] = 30000.f;
+			float fTop = 16000.f;
+			if (fLast != cFLast || modesDirty) {
+				cFLast = fLast;
+				for (int k = nDense; k < M; k++) {
+					if (fLast < fTop) f[k] = fLast * std::pow(fTop / fLast, md[k].u);
+					else f[k] = 30000.f;
+				}
+			}
 		}
 
 		// ---- decay times
@@ -372,55 +393,78 @@ struct Engine {
 		float lamMute = 14.f * c.mute * c.mute;
 		float handT = (c.hand || handHold > 0) ? 1.f : 0.f;
 		handS += (handT - handS) * std::min(1.f, bdt / 0.03f);
+		if (handS < 1e-6f && handT == 0.f) handS = 0.f;
 		if (handHold > 0) handHold -= BLOCK;
 		float lamHand = 40.f * handS;
 
+		// ---- everything that depends only on the frequencies and the slow knobs:
+		// sin(), exp() and the band of each mode. Cached, because the knobs and the
+		// pitch usually sit still while the gong rings; this was most of the CPU.
+		const bool own = fNeed || Tlow != cTlow || fd != cFd || lamMute != cMute || lamHand != cHand
+		                 || c.width != cWidth || c.type != cType;
+		if (own) {
+			cTlow = Tlow; cFd = fd; cMute = lamMute; cHand = lamHand; cWidth = c.width; cType = c.type;
+			for (int i = 0; i < NBAND; i++) gsum[i] = 0.f;
+			for (int k = 0; k < M; k++) {
+				float fk = f[k];
+				const ModeDef& d = md[k];
+				int bi = fk < 200.f ? 0 : std::min(NBAND - 1, 1 + (int) std::floor(std::log2(fk / 200.f)));
+				band[k] = bi;
+				float hw = d.kind == PARTIAL ? 0.3f : 1.f;
+				hwk[k] = hw;
+				gsum[bi] += hw * hw;  // (modes above Nyquist count here too, as in 2.0.0)
+				float T60 = Tlow / (1.f + fk / fd);
+				if (d.kind == PARTIAL) T60 *= (c.type == BOSSED ? 1.6f : 1.2f);
+				else if (tuned) T60 *= 0.45f;
+				T60 = std::max(T60, 0.03f);
+				float lam = 6.91f / T60 + lamMute * (0.6f + 0.4f * std::min(fk / 2000.f, 1.f)) + lamHand * (1.f + std::min(fk / 3000.f, 1.f));
+				if (fk < 0.45f * fs) {
+					e[k] = 2.f * std::sin(PI * fk * dt);
+					rOwn[k] = std::exp(-lam * dt);
+					float pr = std::min(300.f / fk, 4.f);
+					cp[k] = std::fabs(b[k]) * pr;
+					cpp[k] = cp[k] * pr;
+				} else {
+					e[k] = 0.f; rOwn[k] = 0.f; hwk[k] = 0.f; cp[k] = cpp[k] = 0.f; x[k] = 0.f; v[k] = 0.f;
+				}
+				// radiation: the lowest modes of a big plate radiate weakly
+				float tilt = fk < 160.f ? std::sqrt(fk / 160.f) : 1.f;
+				oL[k] = sgnL[k] * magL[k] * tilt;
+				oR[k] = oL[k] + (sgnR[k] * magR[k] * tilt - oL[k]) * c.width;
+			}
+			for (int i = 0; i < NBAND; i++) cGsum[i] = gsum[i];
+			modesDirty = false;
+			// modes above Nyquist are silent; the per-sample loop stops after the last live one
+			mLive = 0;
+			for (int k = 0; k < M; k++) if (e[k] > 0.f) mLive = k + 1;
+		}
+
 		// ---- noise gains for the cascade: band i+1 receives what band i loses
-		int nb[N];
-		for (int k = 0; k < M; k++) {
-			float fk = f[k];
-			int bi = fk < 200.f ? 0 : std::min(NBAND - 1, 1 + (int) std::floor(std::log2(fk / 200.f)));
-			nb[k] = bi;
-		}
-		for (int k = 0; k < M; k++) {
-			float hw = md[k].kind == PARTIAL ? 0.3f : 1.f;
-			gsum[nb[k]] += hw * hw;
-		}
-		float sig[NBAND];
+		float sig[NBAND], rDrain[NBAND];
 		sig[0] = 0.f;
 		for (int i = 1; i < NBAND; i++) {
 			// unit-variance noise into gain g per mode adds g^2 per sample to x^2+v^2
 			float inflow = flux[i - 1];
-			sig[i] = gsum[i] > 0.f ? std::sqrt(inflow / (fs * gsum[i])) : 0.f;
+			sig[i] = cGsum[i] > 0.f ? std::sqrt(inflow / (fs * cGsum[i])) : 0.f;
 		}
+		for (int i = 0; i < NBAND; i++) rDrain[i] = drain[i] > 0.f ? std::exp(-drain[i] * dt) : 1.f;
 		// whatever leaves the top band (and anything with nowhere to go) becomes air
 		topFlux = flux[NBAND - 1];
-		for (int i = 0; i < NBAND - 1; i++) if (gsum[i + 1] == 0.f) topFlux += flux[i];
+		for (int i = 0; i < NBAND - 1; i++) if (cGsum[i + 1] == 0.f) topFlux += flux[i];
 		airAmp = std::sqrt(topFlux);
 
+		bool noise = false;
+		for (int i = 0; i < NBAND; i++) noise = noise || sig[i] > 0.f;
 		for (int k = 0; k < M; k++) {
-			float fk = f[k];
-			band[k] = nb[k];
-			const ModeDef& d = md[k];
-			float T60 = Tlow / (1.f + fk / fd);
-			if (d.kind == PARTIAL) T60 *= (c.type == BOSSED ? 1.6f : 1.2f);
-			else if (tuned) T60 *= 0.45f;
-			T60 = std::max(T60, 0.03f);
-			float lam = 6.91f / T60 + drain[nb[k]] + lamMute * (0.6f + 0.4f * std::min(fk / 2000.f, 1.f)) + lamHand * (1.f + std::min(fk / 3000.f, 1.f));
-			if (fk < 0.45f * fs) {
-				e[k] = 2.f * std::sin(PI * fk * dt);
-				r[k] = std::exp(-lam * dt);
-				float hw = d.kind == PARTIAL ? 0.3f : 1.f;
-				gn[k] = hw * sig[nb[k]];
-				{ float pr = std::min(300.f / fk, 4.f); cp[k] = std::fabs(b[k]) * pr; cpp[k] = cp[k] * pr; }
-			} else {
-				e[k] = 0.f; r[k] = 0.f; gn[k] = 0.f; cp[k] = cpp[k] = 0.f; x[k] = 0.f; v[k] = 0.f;
-			}
-			// radiation: the lowest modes of a big plate radiate weakly
-			float tilt = fk < 160.f ? std::sqrt(fk / 160.f) : 1.f;
-			oL[k] = sgnL[k] * magL[k] * tilt;
-			oR[k] = oL[k] + (sgnR[k] * magR[k] * tilt - oL[k]) * c.width;
+			int bi = band[k];
+			r[k] = rOwn[k] * rDrain[bi];
+			gn[k] = hwk[k] * sig[bi];
 		}
+
+		// the stretch S for the next sample (the per-sample loop keeps it up to date after this)
+		float S = 0.f;
+		for (int k = 0; k < M; k++) S += cpp[k] * x[k] * x[k];
+		stretch = S;
 
 		// ---- roar: quadratic coupling strength (bounded, see process())
 		roarG = ROAR_G / fs * c.roar * c.roar * (tuned ? 0.5f : 1.f);
@@ -428,6 +472,8 @@ struct Engine {
 		float Etot = 0.f;
 		for (int i = 0; i < NBAND; i++) Etot += bandE[i];
 		meter = std::min(1.f, std::sqrt(Etot) * 0.5f);
+		// nothing rings and nothing is being fed in: the mode loop would only add zeros
+		idle = Etot == 0.f && !noise && pulsePos >= pulseLen && airAmp == 0.f;
 	}
 
 	// ---------------------------------------------------------------- per sample
@@ -450,18 +496,23 @@ struct Engine {
 		// mode a little, which smears and couples the spectrum into a roar and
 		// bends the pitch up while the gong is loud. Potential ~ S^2 >= 0, so it is
 		// energy-conserving and can't run away. (x is velocity-like: displacement = x / omega.)
-		float S = 0.f;
-		for (int k = 0; k < M; k++) S += cpp[k] * x[k] * x[k];
+		float S = stretch;
 		float nl = roarG * S / (1.f + S * (1.f / SMAX));
-		float L = 0.f, R = 0.f;
-		for (int k = 0; k < M; k++) {
-			float vk = r[k] * v[k] - e[k] * x[k] + sA * a[k] + n * gn[k] - nl * cp[k] * x[k];
-			float xk = r[k] * x[k] + e[k] * vk;
-			v[k] = vk;
-			x[k] = xk;
-			L += xk * oL[k];
-			R += xk * oR[k];
+		float L = 0.f, R = 0.f, S2 = 0.f;
+		if (!idle) {
+			// one pass over the modes; it also adds up the stretch for the next sample
+			const int ml = mLive;
+			for (int k = 0; k < ml; k++) {
+				float vk = r[k] * v[k] - e[k] * x[k] + sA * a[k] + n * gn[k] - nl * cp[k] * x[k];
+				float xk = r[k] * x[k] + e[k] * vk;
+				v[k] = vk;
+				x[k] = xk;
+				L += xk * oL[k];
+				R += xk * oR[k];
+				S2 += cpp[k] * xk * xk;
+			}
 		}
+		stretch = S2;
 
 		// air: the hiss above the last modes, fed by what leaves the top band
 		float w1 = n, w2 = rng.bi() * 1.7320508f;

@@ -12,7 +12,7 @@ endif
 
 # Offline engine checks + demo WAV (no Rack needed): make test
 test/render: test/render.cpp src/GongEngine.hpp
-	$(CXX) -O2 -std=c++17 test/render.cpp -o test/render
+	$(CXX) -O3 -funsafe-math-optimizations -std=c++17 test/render.cpp -o test/render
 .PHONY: test
 test: test/render
 	./test/render .
