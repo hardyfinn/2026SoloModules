@@ -210,12 +210,14 @@ def output_stage(mix, amp, age, drive, rng):
     c = np.exp(-2 * np.pi * 8.0 / SR)
     return lfilter([1.0, -1.0], [1.0, -c], y)
 
-def render(pitch, spread, timbre, rich, amp, age=0.6, drive=0.35, voicing=0, seed=1, mono=False, oscs=False):
+def render(pitch, spread, timbre, rich, amp, age=0.6, drive=0.35, voicing=0, seed=1, mono=False, oscs=False, noise=True):
+    """noise=False removes drift and jitter (for the deterministic C++ agreement test)"""
     N = len(pitch); n = N * OS
     up = lambda x: np.full(n, float(x)) if np.ndim(x) == 0 else np.repeat(np.asarray(x, float), OS)[:n]
     ua = unit_arrays(seed, age)
     o = voice(up(pitch), np.clip(up(spread), 0, 1), np.clip(up(timbre), 0, 1), np.clip(up(rich), 0, 1),
-              VOICINGS[voicing], age, drive, seed & 0x7FFFFFFF, *ua, float(SR * OS))
+              VOICINGS[voicing], age, drive, seed & 0x7FFFFFFF, *ua, float(SR * OS),
+              1.0 if noise else 0.0, 1.0 if noise else 0.0)
     if oscs: return o
     rng = np.random.default_rng(seed + 77)
     a = np.clip(up(amp), 0, 1)
