@@ -1,0 +1,29 @@
+{
+  "slug": "Bore",
+  "name": "Bore",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Scanner",
+      "name": "Scanner",
+      "description": "The sound of an MRI scanner from the inside: ten real pulse sequences (localiser, T1, T2, FLAIR, gradient echo, EPI, diffusion, angio, silent, prescan) through three tuned coils, the cold-head pump and the bore, with earplugs and body sound; a whole-exam session mode; gradient waveforms as CV",
+      "tags": ["Drum", "Noise", "Sequencer", "Clock modulator", "Reverb", "Visual"]
+    },
+    {
+      "slug": "BoreRoom",
+      "name": "Bore Room",
+      "description": "Reverb modelled on the inside of an MRI scanner's tube: wall flutter, cross and length modes from the bore size (head coil to 70 cm wide bore), a short dark tail, the room through the open ends, earplugs/headphones and body sound",
+      "tags": ["Reverb", "Effect"]
+    }
+  ]
+}

@@ -15,6 +15,7 @@ without stepping on each other.
 | [Hangover](Hangover/) | Hangover | Handpan (hang drum) by modal synthesis with the real instrument's dirt: tuning drift, beating, rattles, bleed, breath, skin, slop, room |
 | [Panorama](Panorama/) | Panorama | Steel pan (tenor, double second, triple cello) with sympathetic neighbours and imperfect, editable tuning |
 | [Gongoozler](Gongoozler/) | Gongoozler, Gonzo | Gong and tam-tam physical model (tam-tam, wind, opera, bossed; hard hits bloom), plus Gonzo, the same engine pushed past real gongs |
+| [Bore](Bore/) | Scanner, Bore Room | MRI scanner from the inside: real pulse sequences through three coils, pump and bore, plus the bore as a reverb |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
