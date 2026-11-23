@@ -14,6 +14,7 @@ without stepping on each other.
 | [Pond](Pond/) | Pond | Frog and toad chorus: 16 species, call and answer, HUSH (predator) and a tentative return |
 | [Hangover](Hangover/) | Hangover | Handpan (hang drum) by modal synthesis with the real instrument's dirt: tuning drift, beating, rattles, bleed, breath, skin, slop, room |
 | [Panorama](Panorama/) | Panorama | Steel pan (tenor, double second, triple cello) with sympathetic neighbours and imperfect, editable tuning |
+| [Gongoozler](Gongoozler/) | Gongoozler, Gonzo | Gong and tam-tam physical model (tam-tam, wind, opera, bossed; hard hits bloom), plus Gonzo, the same engine pushed past real gongs |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
