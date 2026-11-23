@@ -26,6 +26,7 @@ without stepping on each other.
 | [ClapfallFable](ClapfallFable/) | Clapfall | Multi-particle percussion: modelled claps, snaps, sticks and drum-machine pulses, from an 808 clap to applause |
 | [Menagerie](Menagerie/) | Menagerie | Macro oscillator with 16 engines of our own (none from Plaits or Braids) behind SHAPE, TEXTURE and LIFE |
 | [Rimbaud](Rimbaud/) | Rimbaud | Physical model of a snare drum: coupled heads, colliding snare wires, rimshot, cross-stick, buzz strokes, top/bottom mics |
+| [Lilt](Lilt/) | Lilt | Relabi generator: four summed LFOs crossing four thresholds make triggers that drift around the pulse |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
