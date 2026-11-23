@@ -1,0 +1,23 @@
+{
+  "slug": "ComperFable",
+  "name": "Comper Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Comper",
+      "name": "Comper",
+      "description": "Jazz piano comping player: rootless, shell, quartal and spread voicings with real voice leading, swung two-bar rhythm figures that push into the next chord, a LOOSE knob for human hands, and a LISTEN input that leaves room for a soloist. Notes out; bring your own piano",
+      "tags": ["Sequencer", "Polyphonic", "Random", "Clock modulator"]
+    }
+  ]
+}

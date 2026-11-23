@@ -1,0 +1,9 @@
+build/
+dist/
+plugin.dylib
+plugin.so
+plugin.dll
+test/render
+test/out/
+tools/proto/ref_midi/
+__pycache__/
