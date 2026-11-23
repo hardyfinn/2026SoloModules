@@ -1,0 +1,27 @@
+{
+  "slug": "Riddim",
+  "name": "Riddim",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Riddim",
+      "name": "Riddim",
+      "description": "Dancehall riddim drum machine: 24 classic riddims (Sleng Teng, Rumours/Telephone Love, Dem Bow, Diwali, Dave Kelly and Lenky riddims), each with its machine flavour (Casio, 808, Linn, Simmons, sampler), ten synthesised voices, A/B variations, fills, swing, mutate, crush",
+      "tags": [
+        "Drum",
+        "Sequencer",
+        "Visual"
+      ]
+    }
+  ]
+}
