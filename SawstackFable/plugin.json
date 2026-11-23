@@ -1,0 +1,23 @@
+{
+  "slug": "SawstackFable",
+  "name": "Sawstack Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Sawstack",
+      "name": "Sawstack",
+      "description": "Five-oscillator swarm voice: one SPREAD knob from unison to a stack of octaves, sine-to-saw TIMBRE, saw-multiplying RICHNESS, stereo VCA, two rise/fall envelopes, and an AGE knob for analog looseness",
+      "tags": ["Synth voice", "Oscillator", "Polyphonic", "Envelope generator"]
+    }
+  ]
+}
