@@ -1,0 +1,48 @@
+{
+  "slug": "CymbolismFable",
+  "name": "Cymbolism Fable",
+  "version": "2.4.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Cymbolism",
+      "name": "Cymbolism",
+      "description": "Physical cymbal: real shell modes computed from the geometry, a nonlinear core for the crash bloom, contact beaters (stick, mallet, rods, brush, bow), rivets, choke and a modelled mic. Ten types from splash to china, nothing sampled",
+      "tags": [
+        "Drum",
+        "Physical modeling",
+        "Synth voice"
+      ]
+    },
+    {
+      "slug": "CymbolismExtended",
+      "name": "Cymbolism Extended",
+      "description": "The Cymbolism cymbal with the laws of physics on knobs: morph between two types, warp and tune the mode spectrum to scales or chords, sustain and freeze, load, live tension, pump, bounce, rain, stereo mics and extra outputs",
+      "tags": [
+        "Drum",
+        "Physical modeling",
+        "Synth voice",
+        "Polyphonic"
+      ]
+    },
+    {
+      "slug": "CymbolismLite",
+      "name": "Cymbolism Lite",
+      "description": "Cymbolism on a CPU budget: the same physical cymbal with size, weight, rivets and beaters kept inside a range that stays light however the knobs are set or randomized",
+      "tags": [
+        "Drum",
+        "Physical modeling",
+        "Synth voice"
+      ]
+    }
+  ]
+}
