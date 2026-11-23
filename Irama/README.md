@@ -43,6 +43,18 @@ Weights for the tunings and pathet are designed from the pathet literature, not 
 `make test` runs offline checks of both engines and writes `test/events.csv`; `python3 test/render_demo.py test/events.csv demo.wav` renders it.
 `python3 res/make_panel.py` regenerates the panels; `python3 tools/preview.py outdir` draws previews.
 
+## The instruments: Ageng, Gangsa, Reyong (2.1.0)
+
+Three bronze voices built by modal synthesis (every partial a decaying resonator), designed to be played by Irama. Full design notes: `docs/instruments-design.md`.
+
+**Ageng (18 HP): the gong pair and kempul.** GONG strikes the big gong, GONG 2 the second gong (INTERVAL semitones higher); ALT on makes the GONG input alternate the two. SIZE sets the decay (6 to 30 s), BLOOM the slow swell of the low hum after the strike, OMBAK the gong's own beating. KEMPUL plays a smaller hanging gong at K V/OCT (or two octaves above the gong). SUB outputs only the fundamentals, for a sub-bass channel. DAMP is a hand on the gongs.
+
+**Gangsa (20 HP): the Balinese metallophone pair.** Two players, POLOS and SANGSIH, each with V/OCT and GATE. Every note sounds as an umbang + isep pair tuned apart, so it shimmers at the OMBAK rate (Hz, the same at every pitch, as on a real set). KANTILAN adds the octave-up pair. DAMP is how hard the hand chokes the previous note (on the next note, or on gate fall). SET adds small seeded tuning errors (right-click: New set). Patch Irama's two-channel ombak outputs straight into the V/OCT jacks.
+
+**Reyong (22 HP): kettle gongs, Java bonang or Bali reyong.** STYLE switches padded Java sticks (B plays an octave up if only A's gate is patched) and bright Bali cord sticks. STRIKE moves from the boss (pure) to the rim (clangy). BYOT chokes notes into short muted hits, CEK adds the cymbal clash, SYMPATHY lets ringing kettles ring each other. KENONG and KETHUK inputs play the two time-keeping kettles; COLO outputs them alone.
+
+`make test-instruments` runs the instrument checks and writes `test/instruments-demo-dry.wav` (Bali kebyar and Java ladrang, both driven by the Irama engine). `python3 res/make_instrument_panels.py` regenerates the three panels.
+
 ## Licence
 
 MIT (see `LICENSE.txt`). Fonts on the panel (Inter, Climate Crisis) are under the SIL Open Font Licence.

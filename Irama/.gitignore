@@ -11,3 +11,4 @@ test/render
 *.wav
 test/events.csv
 docs/gamelan-sequencing.html
+test/instruments

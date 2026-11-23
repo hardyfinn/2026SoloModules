@@ -6,7 +6,7 @@ SOURCES += $(wildcard src/*.cpp)
 DISTRIBUTABLES += res
 DISTRIBUTABLES += $(wildcard LICENSE*)
 
-ifneq ($(MAKECMDGOALS),test)
+ifeq ($(filter test test-instruments,$(MAKECMDGOALS)),)
 include $(RACK_DIR)/plugin.mk
 endif
 
@@ -16,3 +16,10 @@ test/render: test/render.cpp src/GamelanCore.hpp
 .PHONY: test
 test: test/render
 	./test/render .
+
+# Instrument engine checks + demo (Ageng, Gangsa, Reyong): make test-instruments
+test/instruments: test/instruments.cpp src/Instruments.hpp src/BronzeDSP.hpp src/GamelanCore.hpp
+	$(CXX) -O2 -std=c++11 test/instruments.cpp -o test/instruments
+.PHONY: test-instruments
+test-instruments: test/instruments
+	./test/instruments .
