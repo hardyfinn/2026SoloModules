@@ -1,0 +1,23 @@
+{
+  "slug": "Menagerie",
+  "name": "Menagerie",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Menagerie",
+      "name": "Menagerie",
+      "description": "Sixteen sound engines behind three macros (SHAPE, TEXTURE, LIFE): Gendy, coupled herd, Duffing chaos, scanned synthesis, Walsh, PLL, bytebeat, cellular automaton, bubbles, spring, bouncing ball, feedback howl, tine piano, tonewheel organ, chorus pad and harmonium",
+      "tags": ["Oscillator", "Polyphonic", "Physical modeling", "Drum", "Noise"]
+    }
+  ]
+}

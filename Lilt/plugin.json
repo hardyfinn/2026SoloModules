@@ -1,0 +1,23 @@
+{
+  "slug": "Lilt",
+  "name": "Lilt",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Lilt",
+      "name": "Lilt",
+      "description": "Relabi generator: four LFOs at ratios of a felt pulse are summed, and four thresholds on the sum make triggers and gates that lean towards the beat and drift away again; drift, mutate and grid steer between loose and locked",
+      "tags": ["Clock generator", "Random", "Sequencer", "LFO", "Visual"]
+    }
+  ]
+}

@@ -1,0 +1,389 @@
+{
+"W": 254.0,
+"H": 128.5,
+"comps": {
+"TRIM": [
+"knob",
+20.5,
+37.0,
+"TRIM"
+],
+"LOW": [
+"knob",
+12.0,
+55.0,
+"LOW"
+],
+"LOW_FREQ": [
+"knob",
+29.0,
+55.0,
+"LO FREQ"
+],
+"HIGH": [
+"knob",
+12.0,
+73.0,
+"HIGH"
+],
+"HIGH_FREQ": [
+"knob",
+29.0,
+73.0,
+"HI FREQ"
+],
+"DESK_ON": [
+"bezel",
+20.5,
+91.0,
+"ON"
+],
+"MULTI_DISP": [
+"display",
+81.0,
+91.0,
+null
+],
+"MULTI_MACHINE": [
+"snap",
+50.0,
+37.0,
+"MACHINE"
+],
+"TAPE": [
+"snap",
+67.0,
+37.0,
+"TAPE"
+],
+"BOUNCE": [
+"snap",
+84.0,
+37.0,
+"BOUNCE"
+],
+"REC": [
+"big",
+50.0,
+55.0,
+"REC"
+],
+"BIAS": [
+"knob",
+67.0,
+55.0,
+"BIAS"
+],
+"CAL": [
+"knob",
+84.0,
+55.0,
+"NR CAL"
+],
+"NR_TYPE": [
+"snap",
+50.0,
+73.0,
+"NR TYPE"
+],
+"NR_ENC": [
+"bezel",
+67.0,
+73.0,
+"NR ENC"
+],
+"NR_DEC": [
+"bezel",
+84.0,
+73.0,
+"NR DEC"
+],
+"MULTI_ON": [
+"bezel",
+50.0,
+91.0,
+"ON"
+],
+"MVU0": [
+"light",
+102.5,
+31.0,
+null
+],
+"MVU1": [
+"light",
+102.5,
+35.6,
+null
+],
+"MVU2": [
+"light",
+102.5,
+40.2,
+null
+],
+"MVU3": [
+"light",
+102.5,
+44.8,
+null
+],
+"MVU4": [
+"light",
+102.5,
+49.4,
+null
+],
+"WOW": [
+"knob",
+122.0,
+37.0,
+"WOW"
+],
+"FLUTTER": [
+"knob",
+138.5,
+37.0,
+"FLUTTER"
+],
+"DROPOUT": [
+"knob",
+122.0,
+55.0,
+"DROPOUT"
+],
+"HISS": [
+"knob",
+138.5,
+55.0,
+"HISS"
+],
+"AZIMUTH": [
+"knob",
+122.0,
+73.0,
+"AZIMUTH"
+],
+"WEAR": [
+"knob",
+138.5,
+73.0,
+"WEAR"
+],
+"THRESH": [
+"knob",
+158.0,
+37.0,
+"THRESH"
+],
+"RATIO": [
+"knob",
+158.0,
+55.0,
+"RATIO"
+],
+"GR": [
+"light",
+158.0,
+72.0,
+null
+],
+"BUS_ON": [
+"bezel",
+158.0,
+91.0,
+"ON"
+],
+"MASTER_DISP": [
+"display",
+190.0,
+73.0,
+null
+],
+"MASTER_MACHINE": [
+"snap",
+179.0,
+37.0,
+"MACHINE"
+],
+"MASTER_TAPE": [
+"snap",
+195.5,
+37.0,
+"TAPE"
+],
+"MASTER_REC": [
+"knob",
+179.0,
+55.0,
+"REC"
+],
+"MASTER_NR": [
+"bezel",
+195.5,
+55.0,
+"NR B"
+],
+"MASTER_ON": [
+"bezel",
+179.0,
+91.0,
+"ON"
+],
+"SVU0": [
+"light",
+206.0,
+31.0,
+null
+],
+"SVU1": [
+"light",
+206.0,
+35.6,
+null
+],
+"SVU2": [
+"light",
+206.0,
+40.2,
+null
+],
+"SVU3": [
+"light",
+206.0,
+44.8,
+null
+],
+"SVU4": [
+"light",
+206.0,
+49.4,
+null
+],
+"STRENGTH": [
+"big",
+233.0,
+37.0,
+"STRENGTH"
+],
+"AGE": [
+"big",
+233.0,
+55.0,
+"AGE"
+],
+"MIX": [
+"knob",
+224.0,
+73.0,
+"MIX"
+],
+"OUTPUT": [
+"knob",
+242.0,
+73.0,
+"OUTPUT"
+],
+"IN_L": [
+"jack",
+10.0,
+105.0,
+"IN L"
+],
+"IN_R": [
+"jack",
+21.0,
+105.0,
+"IN R"
+],
+"TRACKS": [
+"jack",
+32.0,
+105.0,
+"TRACKS"
+],
+"REC_CV": [
+"jack",
+50.0,
+105.0,
+"REC"
+],
+"WOW_CV": [
+"jack",
+122.0,
+105.0,
+"WOW"
+],
+"AZIMUTH_CV": [
+"jack",
+138.5,
+105.0,
+"AZIM"
+],
+"MASTER_IN_L": [
+"jack",
+172.0,
+105.0,
+"MST L"
+],
+"MASTER_IN_R": [
+"jack",
+184.0,
+105.0,
+"MST R"
+],
+"MASTER_REC_CV": [
+"jack",
+196.0,
+105.0,
+"M REC"
+],
+"STRENGTH_CV": [
+"jack",
+224.0,
+105.0,
+"STRENGTH"
+],
+"AGE_CV": [
+"jack",
+242.0,
+105.0,
+"AGE"
+],
+"TRACKS_OUT": [
+"out",
+67.0,
+118.5,
+"TRACKS"
+],
+"MIX_L": [
+"out",
+84.0,
+118.5,
+"MIX L"
+],
+"MIX_R": [
+"out",
+101.0,
+118.5,
+"MIX R"
+],
+"OUT_L": [
+"out",
+224.0,
+118.5,
+"OUT L"
+],
+"OUT_R": [
+"out",
+242.0,
+118.5,
+"OUT R"
+]
+},
+"disp_w": {
+"MULTI_DISP": 38.0,
+"MASTER_DISP": 34.0
+},
+"disp_h": 6.0
+}

@@ -1,0 +1,23 @@
+{
+  "slug": "Krka",
+  "name": "Krka",
+  "version": "2.1.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Krka",
+      "name": "Krka",
+      "description": "Four function generators with 260 drawn shapes in 26 banks: time 0.85 ms to 30 min or clocked note values, response and warp bends, reverse, gate hold, analog retrigger, repeats, 16 chain algorithms with phase hand-over, assignable CV per channel and 18 presets; one knob per parameter, no menus",
+      "tags": ["Envelope generator", "Function generator", "LFO", "Quad", "Visual"]
+    }
+  ]
+}

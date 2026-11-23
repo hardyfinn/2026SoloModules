@@ -1,0 +1,35 @@
+{
+  "slug": "Lindenmayer",
+  "name": "Lindenmayer",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Sprout",
+      "name": "Sprout",
+      "description": "A rhythm that grows by L-system rules (Fibonacci, Thue-Morse, Cantor...): each generation packs more hits into the bar, or read as an endless stream; A/B/C trigger outs",
+      "tags": ["Sequencer", "Drum", "Random"]
+    },
+    {
+      "slug": "Graft",
+      "name": "Graft",
+      "description": "Four-lane drum groove rewritten by chance rules each generation: ratchet, drop, sprout and home, so it mutates but stays related",
+      "tags": ["Sequencer", "Drum", "Random"]
+    },
+    {
+      "slug": "Bloom",
+      "name": "Bloom",
+      "description": "Chord progressions grown by L-system rules on scale degrees, in six modes, voice-led; poly chord, bass, gate and change outs",
+      "tags": ["Sequencer", "Polyphonic", "Quantizer"]
+    }
+  ]
+}

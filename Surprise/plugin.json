@@ -1,0 +1,23 @@
+{
+  "slug": "Surprise",
+  "name": "Surprise",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Surprise",
+      "name": "Surprise",
+      "description": "Novelty follower: a CV that jumps when the audio does something it hasn't heard in the last MEMORY seconds and stays quiet on repeats; trigger on new events, a BORED (loop-fatigue) output and per-band novelty",
+      "tags": ["Envelope follower", "Utility", "Visual"]
+    }
+  ]
+}

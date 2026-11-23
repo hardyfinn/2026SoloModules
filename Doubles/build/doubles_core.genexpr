@@ -1,0 +1,1357 @@
+// Doubles: gen~ core. Two modelled turntables, a crossfader, and the record buffer.
+// GENERATED INTO THE DEVICE by tools/build_device.py. Edit this template, not the device.
+// Lines between #DECK and #ENDDECK are written out twice, with $ replaced by 0 and 1
+// and {D} by the deck number. Every History is copied to a local at the top of the
+// sample and written back at the end, so no History is read after it is written.
+//
+// in1, in2: audio in (L, R). in3: plugphasor~ (0..1 ramp per beat).
+// out1, out2: audio out.
+// Buffers: dbl_rec (the record, stereo), dbl_q (play queue), dbl_stat (status for JS).
+
+Buffer rec("dbl_rec");
+Buffer q("dbl_q");
+Buffer st("dbl_stat");
+Data gcut(256);
+Param tempo(120, min=20, max=999);
+Param playing(0);
+Param songbeat(0);
+Param sbseq(0);
+Param reccmd(0);        // counter: each change arms (recmode 1) or cancels (recmode 0)
+Param recmode(0);
+Param reclen(8, min=0, max=64);  // beats; 0 = free
+Param recstop(0);       // free mode: 1 = stop at next bar line
+Param haverec(0);
+Param L(1, min=1);      // record length, samples
+Param Lb(8, min=1);     // record length, beats
+Param anchor(0);        // song beat where the record starts (mod Lb)
+Param timing(0.5, min=0, max=1);
+Param weight(0.5, min=0, max=1);
+Param slop(0.5, min=0, max=1);
+Param risk(0.5, min=0, max=1);
+Param wear(0.5, min=0, max=1);
+Param level(1, min=0, max=2);
+Param strlev(1, min=0, max=1);
+Param brake(1);
+Param qt0(0);
+Param qt1(0);
+Param fgen(0);
+Param fbeat(0);
+Param bootb(-1000000000);   // play straight until this beat while the plan starts
+Param dragseq(0);
+Param dragdepth(0.35);
+History h_beatint(0);
+History h_prevph(0);
+History h_sbseq(0);
+History h_wasplay(0);
+History h_curgen(0);
+History h_flushb(0);
+History h_reccmd(0);
+History h_recstate(0);   // 0 idle, 1 armed, 2 recording, 3 done
+History h_wi(0);
+History h_recstart(0);
+History h_recb(0);
+History h_prevb(0);
+History h_statc(0);
+History h_live(0);
+History h_dragseq(0);
+History h_alive(0);
+History h_pos0(0);
+History h_v0(0);
+History h_vb0(0);
+History h_mode0(0);      // 0 idle, 1 cue pulse, 2 wait for release, 3 run, 4 hold, 5 spin, 6 brake
+History h_k0(0);
+History h_has0(0);
+History h_bs0(0);
+History h_be0(1000000000);
+History h_p00(0);
+History h_rate0(1);
+History h_kind0(0);
+History h_gm0(0);
+History h_gd0(1);
+History h_g00(0);
+History h_amp0(1);
+History h_str0(0);
+History h_gen0(0);
+History h_cued0(0);
+History h_pdc0(0);
+History h_pa0(0);
+History h_pdv0(0);
+History h_trrem0(0);
+History h_push0(0);
+History h_rk0(0);
+History h_exp0(0);
+History h_expok0(0);
+History h_cuchk0(0);
+History h_culen0(0);
+History h_cuk0(0);
+History h_cua0(0);
+History h_spm0(1);
+History h_spa0(0);
+History h_spdv0(0);
+History h_trem0(0);
+History h_gt0(0);
+History h_g0(0);
+History h_gamp0(1);
+History h_popen0(1000000000);
+History h_pclose0(1000000000);
+History h_slot0(0);
+History h_drk0(0);
+History h_drlen0(0);
+History h_drd0(0);
+History h_late0(0);
+History h_flub0(0);
+History h_e0(0);
+History h_wl0(0);
+History h_wr0(0);
+History h_head0(0);
+History h_brk0(0);
+History h_idl0(0);
+History h_pcs0(0);    // 1 when the pending close ends a slot of the current play
+History h_pos1(0);
+History h_v1(0);
+History h_vb1(0);
+History h_mode1(0);      // 0 idle, 1 cue pulse, 2 wait for release, 3 run, 4 hold, 5 spin, 6 brake
+History h_k1(0);
+History h_has1(0);
+History h_bs1(0);
+History h_be1(1000000000);
+History h_p01(0);
+History h_rate1(1);
+History h_kind1(0);
+History h_gm1(0);
+History h_gd1(1);
+History h_g01(0);
+History h_amp1(1);
+History h_str1(0);
+History h_gen1(0);
+History h_cued1(0);
+History h_pdc1(0);
+History h_pa1(0);
+History h_pdv1(0);
+History h_trrem1(0);
+History h_push1(0);
+History h_rk1(0);
+History h_exp1(0);
+History h_expok1(0);
+History h_cuchk1(0);
+History h_culen1(0);
+History h_cuk1(0);
+History h_cua1(0);
+History h_spm1(1);
+History h_spa1(0);
+History h_spdv1(0);
+History h_trem1(0);
+History h_gt1(0);
+History h_g1(0);
+History h_gamp1(1);
+History h_popen1(1000000000);
+History h_pclose1(1000000000);
+History h_slot1(0);
+History h_drk1(0);
+History h_drlen1(0);
+History h_drd1(0);
+History h_late1(0);
+History h_flub1(0);
+History h_e1(0);
+History h_wl1(0);
+History h_wr1(0);
+History h_head1(0);
+History h_brk1(0);
+History h_idl1(0);
+History h_pcs1(0);    // 1 when the pending close ends a slot of the current play
+
+
+
+// every local starts at zero, so none is read before it is set
+NONE = 0; SR = 0; beatint = 0; prevph = 0; curgen = 0; flushb = 0; recstate = 0; wi = 0;
+recstart = 0; recb = 0; prevb = 0; live = 0; pos0 = 0; v0 = 0; vb0 = 0; mode0 = 0;
+k0 = 0; has0 = 0; bs0 = 0; be0 = 0; p00 = 0; rate0 = 0; kind0 = 0; gm0 = 0;
+gd0 = 0; g00 = 0; amp0 = 0; str0 = 0; gen0 = 0; cued0 = 0; pdc0 = 0; pa0 = 0;
+pdv0 = 0; trrem0 = 0; push0 = 0; rk0 = 0; exp0 = 0; expok0 = 0; cuchk0 = 0; culen0 = 0;
+cuk0 = 0; cua0 = 0; spm0 = 0; spa0 = 0; spdv0 = 0; trem0 = 0; gt0 = 0; g0 = 0;
+gamp0 = 0; popen0 = 0; pclose0 = 0; slot0 = 0; drk0 = 0; drlen0 = 0; drd0 = 0; late0 = 0;
+flub0 = 0; e0 = 0; wl0 = 0; wr0 = 0; head0 = 0; brk0 = 0; idl0 = 0; pcs0 = 0;
+pos1 = 0; v1 = 0; vb1 = 0; mode1 = 0; k1 = 0; has1 = 0; bs1 = 0; be1 = 0;
+p01 = 0; rate1 = 0; kind1 = 0; gm1 = 0; gd1 = 0; g01 = 0; amp1 = 0; str1 = 0;
+gen1 = 0; cued1 = 0; pdc1 = 0; pa1 = 0; pdv1 = 0; trrem1 = 0; push1 = 0; rk1 = 0;
+exp1 = 0; expok1 = 0; cuchk1 = 0; culen1 = 0; cuk1 = 0; cua1 = 0; spm1 = 0; spa1 = 0;
+spdv1 = 0; trem1 = 0; gt1 = 0; g1 = 0; gamp1 = 0; popen1 = 0; pclose1 = 0; slot1 = 0;
+drk1 = 0; drlen1 = 0; drd1 = 0; late1 = 0; flub1 = 0; e1 = 0; wl1 = 0; wr1 = 0;
+head1 = 0; brk1 = 0; idl1 = 0; pcs1 = 0; ph = 0; jumped = 0; cand = 0; B = 0;
+spb = 0; started = 0; stopped = 0; tau = 0; taus = 0; dk = 0; dks = 0; pre0 = 0;
+pushsd = 0; vmax = 0; reach = 0; reljit = 0; rush = 0; fadjit = 0; fadearly = 0; fadlate = 0;
+cuebase = 0; cueper = 0; tremsd = 0; lvl = 0; fade = 0; flubp = 0; flubsd = 0; recspb = 0;
+trema = 0; tremb = 0; done = 0; active = 0; flushed = 0; dragnew = 0; rbs = 0; boot = 0;
+qt = 0; need_next = 0; base = 0; e_bs = 0; e_be = 0; e_p0 = 0; e_kind = 0; e_cm = 0;
+e_rate = 0; e_gm = 0; e_gd = 0; e_g0 = 0; e_amp = 0; e_dist = 0; e_gen = 0; e_str = 0;
+keep = 0; cut = 0; gg = 0; cont = 0; oldbe = 0; latej = 0; earlyj = 0; gap = 0;
+j = 0; s0 = 0; pre = 0; adv = 0; d0 = 0; cerr = 0; prel = 0; fast = 0;
+jit = 0; tlen = 0; tr = 0; dist = 0; need = 0; dc = 0; sd = 0; nb = 0;
+w = 0; u = 0; rate_e = 0; vv = 0; err = 0; vplay = 0; waitrel = 0; a = 0;
+gend = 0; gain0 = 0; yl0 = 0; yr0 = 0; ip = 0; fr = 0; i0 = 0; i1 = 0;
+i2 = 0; i3 = 0; xm = 0; x0 = 0; x1 = 0; x2 = 0; c1 = 0; c2 = 0;
+c3 = 0; hw = 0; ja = 0; jb = 0; wa = 0; gain1 = 0; yl1 = 0; yr1 = 0;
+mixl = 0; mixr = 0; kn = 0; statc = 0;
+// Doubles: gen~ core. Two modelled turntables, a crossfader, and the record buffer.
+// GENERATED INTO THE DEVICE by tools/build_device.py. Edit this template, not the device.
+// Lines between #DECK and #ENDDECK are written out twice, with $ replaced by 0 and 1
+// and {D} by the deck number. Every History is copied to a local at the top of the
+// sample and written back at the end, so no History is read after it is written.
+//
+// in1, in2: audio in (L, R). in3: plugphasor~ (0..1 ramp per beat).
+// out1, out2: audio out.
+// Buffers: dbl_rec (the record, stereo), dbl_q (play queue), dbl_stat (status for JS).
+
+
+// transport, set from JS
+// record
+// hands
+// output
+// queue
+// drag
+
+// global state
+
+
+
+// ---------------- per sample ----------------
+NONE = 1000000000;
+SR = samplerate;
+beatint = h_beatint; prevph = h_prevph; curgen = h_curgen; flushb = h_flushb;
+recstate = h_recstate; wi = h_wi; recstart = h_recstart; recb = h_recb; prevb = h_prevb;
+live = h_live;
+pos0 = h_pos0; v0 = h_v0; vb0 = h_vb0; mode0 = h_mode0; k0 = h_k0; has0 = h_has0;
+bs0 = h_bs0; be0 = h_be0; p00 = h_p00; rate0 = h_rate0; kind0 = h_kind0; gm0 = h_gm0;
+gd0 = h_gd0; g00 = h_g00; amp0 = h_amp0; str0 = h_str0; gen0 = h_gen0; cued0 = h_cued0;
+pdc0 = h_pdc0; pa0 = h_pa0; pdv0 = h_pdv0; trrem0 = h_trrem0; push0 = h_push0; rk0 = h_rk0;
+exp0 = h_exp0; expok0 = h_expok0; cuchk0 = h_cuchk0; culen0 = h_culen0; cuk0 = h_cuk0; cua0 = h_cua0;
+spm0 = h_spm0; spa0 = h_spa0; spdv0 = h_spdv0; trem0 = h_trem0;
+gt0 = h_gt0; g0 = h_g0; gamp0 = h_gamp0; popen0 = h_popen0; pclose0 = h_pclose0; slot0 = h_slot0;
+drk0 = h_drk0; drlen0 = h_drlen0; drd0 = h_drd0; late0 = h_late0; flub0 = h_flub0; e0 = h_e0;
+wl0 = h_wl0; wr0 = h_wr0; head0 = h_head0; brk0 = h_brk0; idl0 = h_idl0; pcs0 = h_pcs0;
+pos1 = h_pos1; v1 = h_v1; vb1 = h_vb1; mode1 = h_mode1; k1 = h_k1; has1 = h_has1;
+bs1 = h_bs1; be1 = h_be1; p01 = h_p01; rate1 = h_rate1; kind1 = h_kind1; gm1 = h_gm1;
+gd1 = h_gd1; g01 = h_g01; amp1 = h_amp1; str1 = h_str1; gen1 = h_gen1; cued1 = h_cued1;
+pdc1 = h_pdc1; pa1 = h_pa1; pdv1 = h_pdv1; trrem1 = h_trrem1; push1 = h_push1; rk1 = h_rk1;
+exp1 = h_exp1; expok1 = h_expok1; cuchk1 = h_cuchk1; culen1 = h_culen1; cuk1 = h_cuk1; cua1 = h_cua1;
+spm1 = h_spm1; spa1 = h_spa1; spdv1 = h_spdv1; trem1 = h_trem1;
+gt1 = h_gt1; g1 = h_g1; gamp1 = h_gamp1; popen1 = h_popen1; pclose1 = h_pclose1; slot1 = h_slot1;
+drk1 = h_drk1; drlen1 = h_drlen1; drd1 = h_drd1; late1 = h_late1; flub1 = h_flub1; e1 = h_e1;
+wl1 = h_wl1; wr1 = h_wr1; head1 = h_head1; brk1 = h_brk1; idl1 = h_idl1; pcs1 = h_pcs1;
+
+// ---- song position ----
+ph = in3;
+if (playing > 0.5) {
+	if (ph < prevph - 0.5) {
+		beatint = beatint + 1;
+	}
+}
+prevph = ph;
+jumped = 0;
+if (sbseq != h_sbseq) {
+	cand = floor(songbeat - ph + 0.5);
+	if (abs(cand - beatint) > 0.5) {
+		if (playing > 0.5) {
+			jumped = 1;
+		}
+		beatint = cand;
+	}
+}
+B = beatint + ph;
+spb = SR * 60 / tempo;
+started = 0;
+stopped = 0;
+if (playing > 0.5 && h_wasplay < 0.5) {
+	started = 1;
+}
+if (playing < 0.5 && h_wasplay > 0.5) {
+	stopped = 1;
+}
+
+// ---- hands ----
+tau = SR * (0.002 + 0.018 * weight);
+taus = SR * (0.003 + 0.012 * weight);
+dk = exp(-1 / tau);
+dks = exp(-1 / taus);
+pre0 = tau * (3.2 - 1.2 * weight);
+pushsd = 0.10 * weight;
+vmax = 6 / max(weight, 0.05);
+reach = SR * 0.045 * weight;
+reljit = SR * 0.007 * timing;
+rush = SR * 0.002 * timing;
+fadjit = SR * 0.003 * timing;
+fadearly = SR * 0.002 * slop;
+fadlate = SR * 0.004 * slop;
+cuebase = SR * 0.002 * slop;
+cueper = 0.012 * slop;
+tremsd = 0.03 * slop;
+lvl = 0.07 * slop;
+fade = SR * (0.0008 + 0.0012 * slop);
+flubp = 0.05 * risk;
+flubsd = SR * 0.035;
+rate0 = L * tempo / (Lb * 60 * SR);
+recspb = L / Lb;
+trema = exp(-twopi * 100 / SR);
+tremb = sqrt(1 - trema * trema);
+
+// ---- recording ----
+if (reccmd != h_reccmd) {
+	if (recmode > 0.5) {
+		recstate = 1;
+	} else {
+		recstate = 0;
+	}
+}
+if (recstate == 1 && playing > 0.5) {
+	if (floor(B / 4) > floor(prevb / 4) && B - prevb < 1) {
+		recstate = 2;
+		wi = 0;
+		recstart = floor(B / 4 + 0.5) * 4;
+	}
+}
+if (recstate == 2) {
+	if (playing < 0.5) {
+		recstate = 0;
+	} else {
+		poke(rec, in1, wi, 0);
+		poke(rec, in2, wi, 1);
+		wi = wi + 1;
+		done = 0;
+		if (reclen > 0 && B - recstart >= reclen) {
+			done = 1;
+			recb = reclen;
+		}
+		if (reclen <= 0 && recstop > 0.5 && floor(B / 4) > floor(prevb / 4) && B - recstart > 3.5) {
+			done = 1;
+			recb = floor((B - recstart) / 4 + 0.5) * 4;
+		}
+		if (wi >= dim(rec) - 1) {
+			done = 1;
+			recb = max(4, floor((B - recstart) / 4) * 4);
+		}
+		if (done > 0.5) {
+			recstate = 3;
+		}
+	}
+}
+prevb = B;
+
+active = 0;
+if (haverec > 0.5 && recstate != 1 && recstate != 2) {
+	active = 1;
+}
+
+// ---- flush ----
+flushed = 0;
+if (fgen != curgen) {
+	curgen = fgen;
+	flushb = fbeat;
+	poke(gcut, fbeat, wrap(curgen, 0, 256), 0);
+	flushed = 1;
+}
+
+// ---- drag ----
+dragnew = 0;
+if (dragseq != h_dragseq) {
+	dragnew = 1;
+}
+
+rbs = wrap(B - anchor, 0, Lb);
+
+// ======== deck 0 ========
+if (stopped > 0.5 || jumped > 0.5 || active < 0.5) {
+	head0 = qt0;
+	has0 = 0;
+	popen0 = NONE;
+	pclose0 = NONE;
+	culen0 = 0;
+	expok0 = 0;
+	if (stopped > 0.5 && brake > 0.5 && gt0 > 0.5) {
+		mode0 = 6;
+		brk0 = floor(0.15 * SR);
+	} else {
+		if (mode0 != 6) {
+			mode0 = 0;
+			gt0 = 0;
+		}
+	}
+}
+if (mode0 == 6) {
+	brk0 = brk0 - 1;
+	if (brk0 <= 0) {
+		gt0 = 0;
+		mode0 = 0;
+	}
+}
+
+// a flush cuts the current play
+if (flushed > 0.5 && has0 > 0.5 && gen0 >= 0 && gen0 < curgen) {
+	if (bs0 >= flushb) {
+		has0 = 0;
+		popen0 = NONE;
+		if (mode0 == 1 || mode0 == 2) {
+			mode0 = 0;
+		}
+	} else {
+		if (be0 > flushb) {
+			be0 = flushb;
+			if (pclose0 > flushb + fadlate / spb) {
+				pclose0 = flushb + fadlate / spb;
+			}
+			if (popen0 > flushb) {
+				popen0 = NONE;
+			}
+		}
+	}
+}
+
+// the safety net: if nothing is planned, play straight
+boot = 0;
+if (B < bootb - 0.02) {
+	boot = 1;
+}
+if (0 == 0 && active > 0.5 && playing > 0.5 && has0 < 0.5 && mode0 != 1 && mode0 != 2 && ((head0 >= qt0 && has1 < 0.5 && head1 >= qt1) || boot > 0.5)) {
+	has0 = 1;
+	bs0 = B; be0 = NONE;
+	if (boot > 0.5) {
+		be0 = bootb;
+		pclose0 = bootb;
+	} p00 = rbs * recspb; rate0 = 1; kind0 = 0; gm0 = 0; amp0 = 1; str0 = 1; gen0 = -1;
+	pos0 = rbs * recspb;
+	v0 = 1; vb0 = 1; mode0 = 3; rk0 = 0; cued0 = 0;
+	exp0 = pos0; expok0 = 1; cuchk0 = floor(0.35 * SR); culen0 = 0;
+	gt0 = 1; popen0 = NONE; pclose0 = NONE;
+	gamp0 = strlev;
+	live = 0;
+}
+// next play
+qt = qt0;
+need_next = 0;
+if (active > 0.5 && playing > 0.5) {
+	if (has0 < 0.5 || B >= be0) {
+		need_next = 1;
+	}
+}
+if (need_next > 0.5) {
+	if (head0 < qt) {
+		base = (0 * 64 + wrap(head0, 0, 64)) * 16;
+		e_bs = peek(q, base, 0);
+		e_be = peek(q, base + 1, 0);
+		e_p0 = peek(q, base + 2, 0);
+		e_kind = peek(q, base + 3, 0);
+		e_cm = peek(q, base + 4, 0);
+		e_rate = peek(q, base + 5, 0);
+		e_gm = peek(q, base + 6, 0);
+		e_gd = peek(q, base + 7, 0);
+		e_g0 = peek(q, base + 8, 0);
+		e_amp = peek(q, base + 9, 0);
+		e_dist = peek(q, base + 10, 0);
+		e_gen = peek(q, base + 11, 0);
+		e_str = peek(q, base + 12, 0);
+		head0 = head0 + 1;
+		keep = 1;
+		if (e_gen < curgen) {
+			cut = NONE;
+			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg = gg + 1) {
+				cut = min(cut, peek(gcut, wrap(gg, 0, 256), 0));
+			}
+			if (e_bs >= cut) {
+				keep = 0;
+			}
+			e_be = min(e_be, cut);
+		}
+		if (keep > 0.5) {
+			cont = 0;
+			if (e_cm == 2 && has0 > 0.5 && mode0 == 3 && abs(be0 - e_bs) < 0.0001) {
+				cont = 1;
+			}
+			oldbe = be0;
+			has0 = 1;
+			bs0 = e_bs; be0 = e_be; p00 = e_p0; rate0 = e_rate; kind0 = e_kind;
+			gm0 = e_gm; gd0 = max(e_gd, 0.001); g00 = e_g0; amp0 = e_amp; str0 = e_str; gen0 = e_gen;
+			if (kind0 == 2) {
+				p00 = e_dist;
+			}
+			latej = (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			earlyj = (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			gap = max((bs0 - B) * spb, 0);
+			if (cont > 0.5) {
+				// carry on: no cue; the fader follows the new play from where it is
+				if (gm0 < 0.5) {
+					if (pclose0 < NONE) {
+						pclose0 = be0 + latej;
+					}
+					if (gt0 < 0.5 && popen0 >= NONE) {
+						popen0 = B;
+						slot0 = 0;
+					}
+				} else {
+					j = floor((B - g00) / gd0 + 0.0001);
+					if (wrap(j, 0, 2) == gm0 - 1) {
+						slot0 = j;
+						if (gt0 > 0.5) {
+							pclose0 = min(be0, g00 + (j + 1) * gd0) + latej;
+							pcs0 = 1;
+						} else {
+							popen0 = B;
+						}
+					} else {
+						slot0 = j - 1;
+						if (gt0 > 0.5) {
+							pclose0 = B + latej;
+							pcs0 = 1;
+						} else {
+							s0 = g00 + (j + 1) * gd0;
+							if (s0 < be0) {
+								popen0 = s0 - earlyj;
+								slot0 = j + 1;
+							}
+						}
+					}
+				}
+			} else {
+				pcs0 = 0;
+				culen0 = 0;
+				expok0 = 0;
+				cued0 = 0;
+				// the gate: first opening of this play
+				if (gm0 < 0.5) {
+					popen0 = bs0 - earlyj;
+					slot0 = 0;
+				} else {
+					j = ceil((bs0 - g00) / gd0 - 0.0001);
+					if (wrap(j, 0, 2) != gm0 - 1) {
+						j = j + 1;
+					}
+					s0 = g00 + j * gd0;
+					if (s0 < be0) {
+						popen0 = s0 - earlyj;
+					} else {
+						popen0 = NONE;
+					}
+					slot0 = j;
+				}
+				if (kind0 == 0 && e_cm != 1) {
+					// cued play: the hand pulls the record back to its cue and lets go early
+					cued0 = 1;
+					pre = min(pre0, floor(gap / 2));
+					adv = rate0 * rate0 * (pre - tau * (1 - exp(-pre / tau)));
+					d0 = abs(wrap(p00 - adv - pos0, -L / 2, L / 2));
+					cerr = 0;
+					if (d0 > 8) {
+						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
+					}
+					prel = p00 - adv + cerr;
+					fast = min(0.25 * SR / max(gap, 1), 2);
+					e0 = 0.6 * e0 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
+					jit = e0 * (1 + 0.5 * fast) - rush * fast;
+					if (noise() * 0.5 + 0.5 < flubp) {
+						jit = jit + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * flubsd;
+						flub0 = flub0 + 1;
+					}
+					tlen = max((be0 - B) * spb, 1);
+					tr = gap - pre + jit;
+					tr = min(max(tr, 0), tlen - 1);
+					dist = wrap(prel - pos0, -L / 2, L / 2);
+					need = 0;
+					if (abs(dist) > 8) {
+						need = reach + abs(dist) / rate0 / vmax;
+					}
+					if (tr < need) {
+						tr = min(need, tlen - 1);
+						late0 = late0 + 1;
+					}
+					dc = 0;
+					if (need > 0) {
+						dc = floor(min(need, tr));
+					}
+					if (dc < 4) {
+						pos0 = wrap(pos0 + dist, 0, L);
+						if (abs(dist) > 8) {
+							v0 = 0;
+						}
+						mode0 = 2;
+					} else {
+						sd = v0 * dks * (1 - pow(dks, dc)) / (1 - dks);
+						pa0 = (dist / rate0 - sd) / ((dc + 1) / 2);
+						pdv0 = v0;
+						pdc0 = dc;
+						k0 = 0;
+						mode0 = 1;
+					}
+					trrem0 = tr;
+					push0 = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
+					exp0 = wrap(p00 - rate0 * rate0 * gap, 0, L);
+					expok0 = 1;
+				} else {
+					if (kind0 == 0) {
+						// let go from wherever it is
+						trrem0 = gap;
+						mode0 = 2;
+					}
+					if (kind0 == 1) {
+						trrem0 = gap;
+						mode0 = 2;
+					}
+					if (kind0 == 2) {
+						trrem0 = gap;
+						mode0 = 2;
+						spm0 = max(floor((be0 - bs0) * spb * 0.85), 16);
+					}
+				}
+			}
+		}
+	} else {
+		if (has0 > 0.5 && B >= be0) {
+			has0 = 0;
+			if (mode0 == 3) {
+				mode0 = 0;
+			}
+		}
+	}
+}
+
+if (0 == 0 && be0 >= NONE && has0 > 0.5) {
+	nb = NONE;
+	if (head0 < qt) {
+		nb = min(nb, peek(q, (0 * 64 + wrap(head0, 0, 64)) * 16, 0));
+	}
+	if (head1 < qt1) {
+		nb = min(nb, peek(q, (64 + wrap(head1, 0, 64)) * 16, 0));
+	}
+	if (nb < NONE) {
+		be0 = max(nb, B);
+		pclose0 = be0 + fadlate / spb;
+	}
+}
+
+// ---- platter ----
+if (mode0 == 1) {
+	w = 0.5 - 0.5 * cos(twopi * (k0 + 1) / (pdc0 + 1));
+	pdv0 = pdv0 * dks;
+	v0 = pdv0 + pa0 * w;
+	k0 = k0 + 1;
+	trrem0 = trrem0 - 1;
+	if (k0 >= pdc0) {
+		v0 = 0;
+		mode0 = 2;
+	}
+} else {
+	if (mode0 == 2) {
+		v0 = v0 * dks;
+		trrem0 = trrem0 - 1;
+		if (trrem0 <= 0) {
+			if (kind0 == 1) {
+				mode0 = 4;
+			} else {
+				if (kind0 == 2) {
+					spdv0 = v0;
+					k0 = 0;
+					mode0 = 5;
+				} else {
+					vb0 = v0;
+					rk0 = 0;
+					mode0 = 3;
+					cuchk0 = floor(0.35 * SR);
+				}
+			}
+		}
+	}
+}
+if (mode0 == 5 && k0 == 0) {
+	// spin distance lives in p0 for a spin entry
+	sd = spdv0 * dks * (1 - pow(dks, spm0)) / (1 - dks);
+	spa0 = (p00 / rate0 - sd) / (spm0 * 0.2475168);
+}
+if (mode0 == 5) {
+	u = (k0 + 0.5) / spm0;
+	spdv0 = spdv0 * dks;
+	v0 = spdv0 + spa0 * exp(-3 * u) * (1 - exp(-60 * u)) * sqrt(max(1 - u, 0));
+	k0 = k0 + 1;
+	if (k0 >= spm0) {
+		v0 = 0;
+		mode0 = 0;
+	}
+}
+if (mode0 == 4) {
+	trem0 = trema * trem0 + tremb * ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678);
+	v0 = v0 * dks + trem0 * tremsd;
+	if (B >= be0) {
+		mode0 = 0;
+	}
+}
+if (mode0 == 0 || mode0 == 6) {
+	if (mode0 == 6) {
+		v0 = v0 * exp(-1 / (0.04 * SR));
+	} else {
+		v0 = v0 * dks;
+	}
+}
+// a deck left alone runs muted in time with the song, ready to be caught
+if (mode0 == 0 && has0 < 0.5 && g0 <= 0 && active > 0.5 && playing > 0.5) {
+	idl0 = idl0 + 1;
+	if (idl0 > 0.25 * SR) {
+		pos0 = rbs * recspb;
+		v0 = 1;
+	}
+} else {
+	idl0 = 0;
+}
+if (mode0 == 3) {
+	rate_e = rate0;
+	if (0 == 1) {
+		rate_e = rate0 * (1 + 0.0012 * wear);
+	}
+	vb0 = vb0 + (rate_e - vb0) * (1 - dk);
+	vv = vb0;
+	if (cued0 > 0.5) {
+		vv = vv + rate_e * push0 * (exp(-rk0 / (2.5 * tau)) - exp(-rk0 / (0.6 * tau)));
+	}
+	rk0 = rk0 + 1;
+	// catching up: the DJ hears the record is off and nudges it back
+	if (expok0 > 0.5) {
+		cuchk0 = cuchk0 - 1;
+		if (cuchk0 <= 0) {
+			err = wrap(exp0 - pos0, -L / 2, L / 2);
+			if (abs(err) > 0.0003 * SR * rate0) {
+				culen0 = floor(0.6 * SR);
+				cuk0 = 0;
+				cua0 = 0.8 * err / rate0 / ((culen0 + 1) / 2);
+				cuchk0 = culen0 + floor(0.25 * SR);
+			} else {
+				cuchk0 = floor(2 * SR);
+			}
+		}
+	}
+	if (culen0 > 0) {
+		vv = vv + cua0 * (0.5 - 0.5 * cos(twopi * (cuk0 + 1) / (culen0 + 1)));
+		cuk0 = cuk0 + 1;
+		if (cuk0 >= culen0) {
+			culen0 = 0;
+		}
+	}
+	v0 = vv;
+}
+if (expok0 > 0.5) {
+	exp0 = wrap(exp0 + rate0 * rate0, 0, L);
+}
+
+// a finger on the platter
+if (dragnew > 0.5 && live == 0) {
+	drlen0 = floor(0.30 * SR);
+	drk0 = 0;
+	drd0 = dragdepth;
+}
+vplay = v0;
+if (drlen0 > 0) {
+	vplay = v0 * (1 - drd0 * (0.5 - 0.5 * cos(twopi * drk0 / drlen0)));
+	drk0 = drk0 + 1;
+	if (drk0 >= drlen0) {
+		drlen0 = 0;
+	}
+}
+pos0 = wrap(pos0 + vplay * rate0, 0, L);
+
+// ---- fader ----
+// a late hand: the fader waits until the record has been let go
+waitrel = 0;
+if (has0 > 0.5 && cued0 > 0.5 && kind0 == 0 && (mode0 == 1 || mode0 == 2)) {
+	waitrel = 1;
+}
+if (B >= popen0 && waitrel < 0.5) {
+	popen0 = NONE;
+	if (has0 > 0.5) {
+		gt0 = 1;
+		live = 0;
+		a = amp0;
+		if (str0 > 0.5) {
+			a = a * strlev;
+		}
+		gamp0 = a * min(1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * lvl, 1.12);
+		gend = be0;
+		if (gm0 > 0.5) {
+			gend = min(be0, g00 + (slot0 + 1) * gd0);
+		}
+		if (kind0 == 2) {
+			gend = min(be0, bs0 + (be0 - bs0) * 0.85);
+		}
+		pclose0 = gend + (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+		pcs0 = 1;
+	}
+}
+if (B >= pclose0) {
+	pclose0 = NONE;
+	gt0 = 0;
+	if (gm0 > 0.5 && has0 > 0.5 && pcs0 > 0.5) {
+		slot0 = slot0 + 2;
+		s0 = g00 + slot0 * gd0;
+		if (s0 < be0) {
+			popen0 = s0 - (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+		}
+	}
+}
+if (gt0 > 0.5) {
+	g0 = min(g0 + 1 / fade, 1);
+} else {
+	g0 = max(g0 - 1 / fade, 0);
+}
+gain0 = gamp0 * (0.5 - 0.5 * cos(pi * g0));
+
+// ---- read the record (4-point Hermite) ----
+yl0 = 0;
+yr0 = 0;
+if (g0 > 0 && active > 0.5) {
+	ip = floor(pos0);
+	fr = pos0 - ip;
+	i0 = wrap(ip - 1, 0, L); i1 = wrap(ip, 0, L); i2 = wrap(ip + 1, 0, L); i3 = wrap(ip + 2, 0, L);
+	xm = peek(rec, i0, 0); x0 = peek(rec, i1, 0); x1 = peek(rec, i2, 0); x2 = peek(rec, i3, 0);
+	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
+	yl0 = ((c3 * fr + c2) * fr + c1) * fr + x0;
+	xm = peek(rec, i0, 1); x0 = peek(rec, i1, 1); x1 = peek(rec, i2, 1); x2 = peek(rec, i3, 1);
+	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
+	yr0 = ((c3 * fr + c2) * fr + c1) * fr + x0;
+	if (abs(vplay * rate0) > 2) {
+		// fast spin: average a little either side to tame aliasing
+		hw = abs(vplay * rate0) * 0.5;
+		ja = wrap(floor(pos0 - hw), 0, L); jb = wrap(floor(pos0 + hw), 0, L);
+		yl0 = 0.5 * yl0 + 0.25 * (peek(rec, ja, 0) + peek(rec, jb, 0));
+		yr0 = 0.5 * yr0 + 0.25 * (peek(rec, ja, 1) + peek(rec, jb, 1));
+	}
+	if (0 == 1) {
+		wa = exp(-twopi * (20000 - 9000 * wear) / SR);
+		wl0 = (1 - wa) * yl0 + wa * wl0;
+		wr0 = (1 - wa) * yr0 + wa * wr0;
+		yl0 = wl0 * (1 - 0.06 * wear);
+		yr0 = wr0 * (1 - 0.06 * wear);
+	}
+}
+// ======== deck 1 ========
+if (stopped > 0.5 || jumped > 0.5 || active < 0.5) {
+	head1 = qt1;
+	has1 = 0;
+	popen1 = NONE;
+	pclose1 = NONE;
+	culen1 = 0;
+	expok1 = 0;
+	if (stopped > 0.5 && brake > 0.5 && gt1 > 0.5) {
+		mode1 = 6;
+		brk1 = floor(0.15 * SR);
+	} else {
+		if (mode1 != 6) {
+			mode1 = 0;
+			gt1 = 0;
+		}
+	}
+}
+if (mode1 == 6) {
+	brk1 = brk1 - 1;
+	if (brk1 <= 0) {
+		gt1 = 0;
+		mode1 = 0;
+	}
+}
+
+// a flush cuts the current play
+if (flushed > 0.5 && has1 > 0.5 && gen1 >= 0 && gen1 < curgen) {
+	if (bs1 >= flushb) {
+		has1 = 0;
+		popen1 = NONE;
+		if (mode1 == 1 || mode1 == 2) {
+			mode1 = 0;
+		}
+	} else {
+		if (be1 > flushb) {
+			be1 = flushb;
+			if (pclose1 > flushb + fadlate / spb) {
+				pclose1 = flushb + fadlate / spb;
+			}
+			if (popen1 > flushb) {
+				popen1 = NONE;
+			}
+		}
+	}
+}
+
+// the safety net: if nothing is planned, play straight
+boot = 0;
+if (B < bootb - 0.02) {
+	boot = 1;
+}
+if (1 == 0 && active > 0.5 && playing > 0.5 && has1 < 0.5 && mode1 != 1 && mode1 != 2 && ((head1 >= qt1 && has1 < 0.5 && head1 >= qt1) || boot > 0.5)) {
+	has1 = 1;
+	bs1 = B; be1 = NONE;
+	if (boot > 0.5) {
+		be1 = bootb;
+		pclose1 = bootb;
+	} p01 = rbs * recspb; rate1 = 1; kind1 = 0; gm1 = 0; amp1 = 1; str1 = 1; gen1 = -1;
+	pos1 = rbs * recspb;
+	v1 = 1; vb1 = 1; mode1 = 3; rk1 = 0; cued1 = 0;
+	exp1 = pos1; expok1 = 1; cuchk1 = floor(0.35 * SR); culen1 = 0;
+	gt1 = 1; popen1 = NONE; pclose1 = NONE;
+	gamp1 = strlev;
+	live = 0;
+}
+// next play
+qt = qt1;
+need_next = 0;
+if (active > 0.5 && playing > 0.5) {
+	if (has1 < 0.5 || B >= be1) {
+		need_next = 1;
+	}
+}
+if (need_next > 0.5) {
+	if (head1 < qt) {
+		base = (1 * 64 + wrap(head1, 0, 64)) * 16;
+		e_bs = peek(q, base, 0);
+		e_be = peek(q, base + 1, 0);
+		e_p0 = peek(q, base + 2, 0);
+		e_kind = peek(q, base + 3, 0);
+		e_cm = peek(q, base + 4, 0);
+		e_rate = peek(q, base + 5, 0);
+		e_gm = peek(q, base + 6, 0);
+		e_gd = peek(q, base + 7, 0);
+		e_g0 = peek(q, base + 8, 0);
+		e_amp = peek(q, base + 9, 0);
+		e_dist = peek(q, base + 10, 0);
+		e_gen = peek(q, base + 11, 0);
+		e_str = peek(q, base + 12, 0);
+		head1 = head1 + 1;
+		keep = 1;
+		if (e_gen < curgen) {
+			cut = NONE;
+			for (gg = max(e_gen + 1, curgen - 255); gg <= curgen; gg = gg + 1) {
+				cut = min(cut, peek(gcut, wrap(gg, 0, 256), 0));
+			}
+			if (e_bs >= cut) {
+				keep = 0;
+			}
+			e_be = min(e_be, cut);
+		}
+		if (keep > 0.5) {
+			cont = 0;
+			if (e_cm == 2 && has1 > 0.5 && mode1 == 3 && abs(be1 - e_bs) < 0.0001) {
+				cont = 1;
+			}
+			oldbe = be1;
+			has1 = 1;
+			bs1 = e_bs; be1 = e_be; p01 = e_p0; rate1 = e_rate; kind1 = e_kind;
+			gm1 = e_gm; gd1 = max(e_gd, 0.001); g01 = e_g0; amp1 = e_amp; str1 = e_str; gen1 = e_gen;
+			if (kind1 == 2) {
+				p01 = e_dist;
+			}
+			latej = (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			earlyj = (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+			gap = max((bs1 - B) * spb, 0);
+			if (cont > 0.5) {
+				// carry on: no cue; the fader follows the new play from where it is
+				if (gm1 < 0.5) {
+					if (pclose1 < NONE) {
+						pclose1 = be1 + latej;
+					}
+					if (gt1 < 0.5 && popen1 >= NONE) {
+						popen1 = B;
+						slot1 = 0;
+					}
+				} else {
+					j = floor((B - g01) / gd1 + 0.0001);
+					if (wrap(j, 0, 2) == gm1 - 1) {
+						slot1 = j;
+						if (gt1 > 0.5) {
+							pclose1 = min(be1, g01 + (j + 1) * gd1) + latej;
+							pcs1 = 1;
+						} else {
+							popen1 = B;
+						}
+					} else {
+						slot1 = j - 1;
+						if (gt1 > 0.5) {
+							pclose1 = B + latej;
+							pcs1 = 1;
+						} else {
+							s0 = g01 + (j + 1) * gd1;
+							if (s0 < be1) {
+								popen1 = s0 - earlyj;
+								slot1 = j + 1;
+							}
+						}
+					}
+				}
+			} else {
+				pcs1 = 0;
+				culen1 = 0;
+				expok1 = 0;
+				cued1 = 0;
+				// the gate: first opening of this play
+				if (gm1 < 0.5) {
+					popen1 = bs1 - earlyj;
+					slot1 = 0;
+				} else {
+					j = ceil((bs1 - g01) / gd1 - 0.0001);
+					if (wrap(j, 0, 2) != gm1 - 1) {
+						j = j + 1;
+					}
+					s0 = g01 + j * gd1;
+					if (s0 < be1) {
+						popen1 = s0 - earlyj;
+					} else {
+						popen1 = NONE;
+					}
+					slot1 = j;
+				}
+				if (kind1 == 0 && e_cm != 1) {
+					// cued play: the hand pulls the record back to its cue and lets go early
+					cued1 = 1;
+					pre = min(pre0, floor(gap / 2));
+					adv = rate1 * rate0 * (pre - tau * (1 - exp(-pre / tau)));
+					d0 = abs(wrap(p01 - adv - pos1, -L / 2, L / 2));
+					cerr = 0;
+					if (d0 > 8) {
+						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
+					}
+					prel = p01 - adv + cerr;
+					fast = min(0.25 * SR / max(gap, 1), 2);
+					e1 = 0.6 * e1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
+					jit = e1 * (1 + 0.5 * fast) - rush * fast;
+					if (noise() * 0.5 + 0.5 < flubp) {
+						jit = jit + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * flubsd;
+						flub1 = flub1 + 1;
+					}
+					tlen = max((be1 - B) * spb, 1);
+					tr = gap - pre + jit;
+					tr = min(max(tr, 0), tlen - 1);
+					dist = wrap(prel - pos1, -L / 2, L / 2);
+					need = 0;
+					if (abs(dist) > 8) {
+						need = reach + abs(dist) / rate0 / vmax;
+					}
+					if (tr < need) {
+						tr = min(need, tlen - 1);
+						late1 = late1 + 1;
+					}
+					dc = 0;
+					if (need > 0) {
+						dc = floor(min(need, tr));
+					}
+					if (dc < 4) {
+						pos1 = wrap(pos1 + dist, 0, L);
+						if (abs(dist) > 8) {
+							v1 = 0;
+						}
+						mode1 = 2;
+					} else {
+						sd = v1 * dks * (1 - pow(dks, dc)) / (1 - dks);
+						pa1 = (dist / rate0 - sd) / ((dc + 1) / 2);
+						pdv1 = v1;
+						pdc1 = dc;
+						k1 = 0;
+						mode1 = 1;
+					}
+					trrem1 = tr;
+					push1 = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
+					exp1 = wrap(p01 - rate1 * rate0 * gap, 0, L);
+					expok1 = 1;
+				} else {
+					if (kind1 == 0) {
+						// let go from wherever it is
+						trrem1 = gap;
+						mode1 = 2;
+					}
+					if (kind1 == 1) {
+						trrem1 = gap;
+						mode1 = 2;
+					}
+					if (kind1 == 2) {
+						trrem1 = gap;
+						mode1 = 2;
+						spm1 = max(floor((be1 - bs1) * spb * 0.85), 16);
+					}
+				}
+			}
+		}
+	} else {
+		if (has1 > 0.5 && B >= be1) {
+			has1 = 0;
+			if (mode1 == 3) {
+				mode1 = 0;
+			}
+		}
+	}
+}
+
+if (1 == 0 && be1 >= NONE && has1 > 0.5) {
+	nb = NONE;
+	if (head1 < qt) {
+		nb = min(nb, peek(q, (1 * 64 + wrap(head1, 0, 64)) * 16, 0));
+	}
+	if (head1 < qt1) {
+		nb = min(nb, peek(q, (64 + wrap(head1, 0, 64)) * 16, 0));
+	}
+	if (nb < NONE) {
+		be1 = max(nb, B);
+		pclose1 = be1 + fadlate / spb;
+	}
+}
+
+// ---- platter ----
+if (mode1 == 1) {
+	w = 0.5 - 0.5 * cos(twopi * (k1 + 1) / (pdc1 + 1));
+	pdv1 = pdv1 * dks;
+	v1 = pdv1 + pa1 * w;
+	k1 = k1 + 1;
+	trrem1 = trrem1 - 1;
+	if (k1 >= pdc1) {
+		v1 = 0;
+		mode1 = 2;
+	}
+} else {
+	if (mode1 == 2) {
+		v1 = v1 * dks;
+		trrem1 = trrem1 - 1;
+		if (trrem1 <= 0) {
+			if (kind1 == 1) {
+				mode1 = 4;
+			} else {
+				if (kind1 == 2) {
+					spdv1 = v1;
+					k1 = 0;
+					mode1 = 5;
+				} else {
+					vb1 = v1;
+					rk1 = 0;
+					mode1 = 3;
+					cuchk1 = floor(0.35 * SR);
+				}
+			}
+		}
+	}
+}
+if (mode1 == 5 && k1 == 0) {
+	// spin distance lives in p0 for a spin entry
+	sd = spdv1 * dks * (1 - pow(dks, spm1)) / (1 - dks);
+	spa1 = (p01 / rate0 - sd) / (spm1 * 0.2475168);
+}
+if (mode1 == 5) {
+	u = (k1 + 0.5) / spm1;
+	spdv1 = spdv1 * dks;
+	v1 = spdv1 + spa1 * exp(-3 * u) * (1 - exp(-60 * u)) * sqrt(max(1 - u, 0));
+	k1 = k1 + 1;
+	if (k1 >= spm1) {
+		v1 = 0;
+		mode1 = 0;
+	}
+}
+if (mode1 == 4) {
+	trem1 = trema * trem1 + tremb * ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678);
+	v1 = v1 * dks + trem1 * tremsd;
+	if (B >= be1) {
+		mode1 = 0;
+	}
+}
+if (mode1 == 0 || mode1 == 6) {
+	if (mode1 == 6) {
+		v1 = v1 * exp(-1 / (0.04 * SR));
+	} else {
+		v1 = v1 * dks;
+	}
+}
+// a deck left alone runs muted in time with the song, ready to be caught
+if (mode1 == 0 && has1 < 0.5 && g1 <= 0 && active > 0.5 && playing > 0.5) {
+	idl1 = idl1 + 1;
+	if (idl1 > 0.25 * SR) {
+		pos1 = rbs * recspb;
+		v1 = 1;
+	}
+} else {
+	idl1 = 0;
+}
+if (mode1 == 3) {
+	rate_e = rate1;
+	if (1 == 1) {
+		rate_e = rate1 * (1 + 0.0012 * wear);
+	}
+	vb1 = vb1 + (rate_e - vb1) * (1 - dk);
+	vv = vb1;
+	if (cued1 > 0.5) {
+		vv = vv + rate_e * push1 * (exp(-rk1 / (2.5 * tau)) - exp(-rk1 / (0.6 * tau)));
+	}
+	rk1 = rk1 + 1;
+	// catching up: the DJ hears the record is off and nudges it back
+	if (expok1 > 0.5) {
+		cuchk1 = cuchk1 - 1;
+		if (cuchk1 <= 0) {
+			err = wrap(exp1 - pos1, -L / 2, L / 2);
+			if (abs(err) > 0.0003 * SR * rate0) {
+				culen1 = floor(0.6 * SR);
+				cuk1 = 0;
+				cua1 = 0.8 * err / rate0 / ((culen1 + 1) / 2);
+				cuchk1 = culen1 + floor(0.25 * SR);
+			} else {
+				cuchk1 = floor(2 * SR);
+			}
+		}
+	}
+	if (culen1 > 0) {
+		vv = vv + cua1 * (0.5 - 0.5 * cos(twopi * (cuk1 + 1) / (culen1 + 1)));
+		cuk1 = cuk1 + 1;
+		if (cuk1 >= culen1) {
+			culen1 = 0;
+		}
+	}
+	v1 = vv;
+}
+if (expok1 > 0.5) {
+	exp1 = wrap(exp1 + rate1 * rate0, 0, L);
+}
+
+// a finger on the platter
+if (dragnew > 0.5 && live == 1) {
+	drlen1 = floor(0.30 * SR);
+	drk1 = 0;
+	drd1 = dragdepth;
+}
+vplay = v1;
+if (drlen1 > 0) {
+	vplay = v1 * (1 - drd1 * (0.5 - 0.5 * cos(twopi * drk1 / drlen1)));
+	drk1 = drk1 + 1;
+	if (drk1 >= drlen1) {
+		drlen1 = 0;
+	}
+}
+pos1 = wrap(pos1 + vplay * rate0, 0, L);
+
+// ---- fader ----
+// a late hand: the fader waits until the record has been let go
+waitrel = 0;
+if (has1 > 0.5 && cued1 > 0.5 && kind1 == 0 && (mode1 == 1 || mode1 == 2)) {
+	waitrel = 1;
+}
+if (B >= popen1 && waitrel < 0.5) {
+	popen1 = NONE;
+	if (has1 > 0.5) {
+		gt1 = 1;
+		live = 1;
+		a = amp1;
+		if (str1 > 0.5) {
+			a = a * strlev;
+		}
+		gamp1 = a * min(1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * lvl, 1.12);
+		gend = be1;
+		if (gm1 > 0.5) {
+			gend = min(be1, g01 + (slot1 + 1) * gd1);
+		}
+		if (kind1 == 2) {
+			gend = min(be1, bs1 + (be1 - bs1) * 0.85);
+		}
+		pclose1 = gend + (fadlate + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+		pcs1 = 1;
+	}
+}
+if (B >= pclose1) {
+	pclose1 = NONE;
+	gt1 = 0;
+	if (gm1 > 0.5 && has1 > 0.5 && pcs1 > 0.5) {
+		slot1 = slot1 + 2;
+		s0 = g01 + slot1 * gd1;
+		if (s0 < be1) {
+			popen1 = s0 - (fadearly + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * fadjit) / spb;
+		}
+	}
+}
+if (gt1 > 0.5) {
+	g1 = min(g1 + 1 / fade, 1);
+} else {
+	g1 = max(g1 - 1 / fade, 0);
+}
+gain1 = gamp1 * (0.5 - 0.5 * cos(pi * g1));
+
+// ---- read the record (4-point Hermite) ----
+yl1 = 0;
+yr1 = 0;
+if (g1 > 0 && active > 0.5) {
+	ip = floor(pos1);
+	fr = pos1 - ip;
+	i0 = wrap(ip - 1, 0, L); i1 = wrap(ip, 0, L); i2 = wrap(ip + 1, 0, L); i3 = wrap(ip + 2, 0, L);
+	xm = peek(rec, i0, 0); x0 = peek(rec, i1, 0); x1 = peek(rec, i2, 0); x2 = peek(rec, i3, 0);
+	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
+	yl1 = ((c3 * fr + c2) * fr + c1) * fr + x0;
+	xm = peek(rec, i0, 1); x0 = peek(rec, i1, 1); x1 = peek(rec, i2, 1); x2 = peek(rec, i3, 1);
+	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
+	yr1 = ((c3 * fr + c2) * fr + c1) * fr + x0;
+	if (abs(vplay * rate0) > 2) {
+		// fast spin: average a little either side to tame aliasing
+		hw = abs(vplay * rate0) * 0.5;
+		ja = wrap(floor(pos1 - hw), 0, L); jb = wrap(floor(pos1 + hw), 0, L);
+		yl1 = 0.5 * yl1 + 0.25 * (peek(rec, ja, 0) + peek(rec, jb, 0));
+		yr1 = 0.5 * yr1 + 0.25 * (peek(rec, ja, 1) + peek(rec, jb, 1));
+	}
+	if (1 == 1) {
+		wa = exp(-twopi * (20000 - 9000 * wear) / SR);
+		wl1 = (1 - wa) * yl1 + wa * wl1;
+		wr1 = (1 - wa) * yr1 + wa * wr1;
+		yl1 = wl1 * (1 - 0.06 * wear);
+		yr1 = wr1 * (1 - 0.06 * wear);
+	}
+}
+
+// ---- mix ----
+mixl = yl0 * gain0 + yl1 * gain1;
+mixr = yr0 * gain0 + yr1 * gain1;
+kn = 0.85;
+if (abs(mixl) > kn) {
+	mixl = sign(mixl) * (kn + (1 - kn) * tanh((abs(mixl) - kn) / (1 - kn)));
+}
+if (abs(mixr) > kn) {
+	mixr = sign(mixr) * (kn + (1 - kn) * tanh((abs(mixr) - kn) / (1 - kn)));
+}
+if (active > 0.5) {
+	out1 = mixl * level;
+	out2 = mixr * level;
+} else {
+	out1 = in1;
+	out2 = in2;
+}
+
+// ---- status for JS, every 32 samples ----
+statc = h_statc + 1;
+if (statc >= 32) {
+	statc = 0;
+	poke(st, B, 0, 0);
+	poke(st, playing, 1, 0);
+	poke(st, recstate, 2, 0);
+	poke(st, wi, 3, 0);
+	poke(st, recstart, 4, 0);
+	poke(st, head0, 5, 0);
+	poke(st, head1, 6, 0);
+	poke(st, pos0 / L, 7, 0);
+	poke(st, pos1 / L, 8, 0);
+	poke(st, gain0, 9, 0);
+	poke(st, gain1, 10, 0);
+	poke(st, late0 + late1, 11, 0);
+	poke(st, flub0 + flub1, 12, 0);
+	poke(st, h_alive + 1, 13, 0);
+	poke(st, recb, 14, 0);
+	poke(st, live, 15, 0);
+}
+
+// ---- write back ----
+h_beatint = beatint; h_prevph = prevph; h_sbseq = sbseq; h_wasplay = playing; h_curgen = curgen;
+h_flushb = flushb; h_reccmd = reccmd; h_recstate = recstate; h_wi = wi; h_recstart = recstart;
+h_recb = recb; h_prevb = prevb; h_statc = statc; h_live = live; h_dragseq = dragseq; h_alive = h_alive + 1;
+h_pos0 = pos0; h_v0 = v0; h_vb0 = vb0; h_mode0 = mode0; h_k0 = k0; h_has0 = has0;
+h_bs0 = bs0; h_be0 = be0; h_p00 = p00; h_rate0 = rate0; h_kind0 = kind0; h_gm0 = gm0;
+h_gd0 = gd0; h_g00 = g00; h_amp0 = amp0; h_str0 = str0; h_gen0 = gen0; h_cued0 = cued0;
+h_pdc0 = pdc0; h_pa0 = pa0; h_pdv0 = pdv0; h_trrem0 = trrem0; h_push0 = push0; h_rk0 = rk0;
+h_exp0 = exp0; h_expok0 = expok0; h_cuchk0 = cuchk0; h_culen0 = culen0; h_cuk0 = cuk0; h_cua0 = cua0;
+h_spm0 = spm0; h_spa0 = spa0; h_spdv0 = spdv0; h_trem0 = trem0;
+h_gt0 = gt0; h_g0 = g0; h_gamp0 = gamp0; h_popen0 = popen0; h_pclose0 = pclose0; h_slot0 = slot0;
+h_drk0 = drk0; h_drlen0 = drlen0; h_drd0 = drd0; h_late0 = late0; h_flub0 = flub0; h_e0 = e0;
+h_wl0 = wl0; h_wr0 = wr0; h_head0 = head0; h_brk0 = brk0; h_idl0 = idl0; h_pcs0 = pcs0;
+h_pos1 = pos1; h_v1 = v1; h_vb1 = vb1; h_mode1 = mode1; h_k1 = k1; h_has1 = has1;
+h_bs1 = bs1; h_be1 = be1; h_p01 = p01; h_rate1 = rate1; h_kind1 = kind1; h_gm1 = gm1;
+h_gd1 = gd1; h_g01 = g01; h_amp1 = amp1; h_str1 = str1; h_gen1 = gen1; h_cued1 = cued1;
+h_pdc1 = pdc1; h_pa1 = pa1; h_pdv1 = pdv1; h_trrem1 = trrem1; h_push1 = push1; h_rk1 = rk1;
+h_exp1 = exp1; h_expok1 = expok1; h_cuchk1 = cuchk1; h_culen1 = culen1; h_cuk1 = cuk1; h_cua1 = cua1;
+h_spm1 = spm1; h_spa1 = spa1; h_spdv1 = spdv1; h_trem1 = trem1;
+h_gt1 = gt1; h_g1 = g1; h_gamp1 = gamp1; h_popen1 = popen1; h_pclose1 = pclose1; h_slot1 = slot1;
+h_drk1 = drk1; h_drlen1 = drlen1; h_drd1 = drd1; h_late1 = late1; h_flub1 = flub1; h_e1 = e1;
+h_wl1 = wl1; h_wr1 = wr1; h_head1 = head1; h_brk1 = brk1; h_idl1 = idl1; h_pcs1 = pcs1;

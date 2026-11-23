@@ -1,0 +1,35 @@
+{
+  "slug": "Paddock",
+  "name": "Paddock",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Swerve",
+      "name": "Swerve",
+      "description": "Bounce generator: a triangle that rises and falls between two CV bounds at separate up and down slopes; narrow the bounds and it speeds up, cross them and it goes into paradox. LFO to audio, one-shot mode, top/bottom pulses",
+      "tags": ["Oscillator", "LFO", "Function Generator", "Envelope Generator"]
+    },
+    {
+      "slug": "Gallop",
+      "name": "Gallop",
+      "description": "Four bounce oscillators stacked so each is bounded by its neighbours: they push each other into shifting, chaotic shapes. Tilt, CV, bound inserts, paradox, mix and poly outs, scope",
+      "tags": ["Oscillator", "LFO", "Random", "Quad", "Visual"]
+    },
+    {
+      "slug": "Tumble",
+      "name": "Tumble",
+      "description": "Five coupled rhythm cores with touch knobs between neighbours that pull them together or push them apart; each strikes its own gong. Gates out, stereo gongs, sync",
+      "tags": ["Clock Generator", "Drum", "Random", "Physical Modeling"]
+    }
+  ]
+}

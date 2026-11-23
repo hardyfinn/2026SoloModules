@@ -1,0 +1,23 @@
+{
+  "slug": "Pond",
+  "name": "Pond",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Pond",
+      "name": "Pond",
+      "description": "A frog and toad chorus: 16 species, up to 16 frogs that call and answer, a HUSH input that silences them like a predator, then a tentative return",
+      "tags": ["Synth voice", "Physical modeling", "Random", "Polyphonic", "Sequencer"]
+    }
+  ]
+}

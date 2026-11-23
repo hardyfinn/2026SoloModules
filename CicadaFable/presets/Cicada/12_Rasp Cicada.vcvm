@@ -1,0 +1,70 @@
+{
+ "plugin": "CicadaFable",
+ "model": "Cicada",
+ "version": "2.0.0",
+ "params": [
+  {
+   "value": 2.0,
+   "id": 0
+  },
+  {
+   "value": 0.7668,
+   "id": 1
+  },
+  {
+   "value": 0.2995,
+   "id": 2
+  },
+  {
+   "value": 0.0909,
+   "id": 3
+  },
+  {
+   "value": 0.0,
+   "id": 4
+  },
+  {
+   "value": 0.5,
+   "id": 5
+  },
+  {
+   "value": 0.5,
+   "id": 6
+  },
+  {
+   "value": 0.9,
+   "id": 7
+  },
+  {
+   "value": 0.15,
+   "id": 8
+  },
+  {
+   "value": 0.7741,
+   "id": 9
+  },
+  {
+   "value": 0.76,
+   "id": 10
+  },
+  {
+   "value": 0.3673,
+   "id": 11
+  },
+  {
+   "value": 0.0,
+   "id": 12
+  },
+  {
+   "value": 1.0,
+   "id": 13
+  },
+  {
+   "value": 1.0,
+   "id": 14
+  }
+ ],
+ "data": {
+  "individuals": 1
+ }
+}
