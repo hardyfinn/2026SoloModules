@@ -127,6 +127,9 @@ History h_sck$(0);
 History h_sclen$(0);
 History h_sca$(0);
 History h_scj$(0);
+History h_scsolo$(0); // this scratch is played alone: the other record is faded out for it
+History h_dk$(0);     // asked by the other deck: close the fader now...
+History h_dkr$(0);    // ...and open it again at this beat if the play is still going
 #ENDDECK
 
 
@@ -148,6 +151,7 @@ drk$ = h_drk$; drlen$ = h_drlen$; drd$ = h_drd$; late$ = h_late$; flub$ = h_flub
 wl$ = h_wl$; wr$ = h_wr$; head$ = h_head$; brk$ = h_brk$; idl$ = h_idl$; pcs$ = h_pcs$;
 scn$ = h_scn$; scns$ = h_scns$; sctot$ = h_sctot$; sctr$ = h_sctr$; scoff$ = h_scoff$;
 sck$ = h_sck$; sclen$ = h_sclen$; sca$ = h_sca$; scj$ = h_scj$;
+scsolo$ = h_scsolo$; dk$ = h_dk$; dkr$ = h_dkr$;
 #ENDDECK
 
 // ---- song position ----
@@ -200,6 +204,7 @@ lvl = 0.07 * slop;
 fade = SR * (0.0008 + 0.0012 * slop);
 flubp = 0.05 * risk;
 flubsd = SR * 0.035;
+needle = SR * (0.14 + 0.28 * weight);
 rrate = L * tempo / (Lb * 60 * SR);
 recspb = L / Lb;
 trema = exp(-twopi * 100 / SR);
@@ -472,6 +477,11 @@ if (need_next > 0.5) {
 					if (d0 > 8) {
 						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
 					}
+					if (str$ > 0.5) {
+						// straight play is the record that has been running in time all along:
+						// coming back to it is not a blind needle drop
+						cerr = cerr * 0.15;
+					}
 					prel = p0$ - adv + cerr;
 					fast = min(0.25 * SR / max(gap, 1), 2);
 					e$ = 0.6 * e$ + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
@@ -486,17 +496,29 @@ if (need_next > 0.5) {
 					dist = wrap(prel - pos$, -L / 2, L / 2);
 					need = 0;
 					if (abs(dist) > 8) {
-						need = reach + abs(dist) / rrate / vmax;
+						// a long way off, the needle is lifted and dropped: that takes a fixed time
+						need = reach + min(abs(dist) / rrate / vmax, needle);
 					}
 					if (tr < need) {
+						lateby = min(need, tlen - 1) - tr;
 						tr = min(need, tlen - 1);
 						if (kind$ == 0) {
 							late$ = late$ + 1;
+							// a late hand does not play the record late and then chase it: it drops
+							// in where the music has got to. A few ms late is played as it falls.
+							if (str$ > 0.5 || lateby > 0.04 * SR) {
+								prel = prel + rate$ * rrate * lateby;
+								dist = wrap(prel - pos$, -L / 2, L / 2);
+							}
 						}
 					}
 					// a baby scratch just before the release, if the hand has the time
 					if (e_scn > 0.5 && gm$ < 0.5) {
-						ns = max(floor(e_scd * spb), 8);
+						ns = max(floor(abs(e_scd) * spb), 8);
+						scsolo$ = 0;
+						if (e_scd < 0) {
+							scsolo$ = 1;
+						}
 						np = min(floor(e_scn + 0.5), floor((tr - need - 0.02 * SR) / (2 * ns)));
 						if (np >= 1) {
 							scn$ = 2 * np;
@@ -596,6 +618,16 @@ if (mode$ == 1) {
 			sck$ = 0;
 			sclen$ = 0;
 			popen$ = B;
+			if (scsolo$ > 0.5) {
+				// played alone: the other record is faded out until the scratch is over
+				if ({D} == 0) {
+					dk1 = 1;
+					dkr1 = B + sctot$ / spb;
+				} else {
+					dk0 = 1;
+					dkr0 = B + sctot$ / spb;
+				}
+			}
 		}
 		if (mode$ == 2 && trrem$ <= 0) {
 			if (kind$ == 3) {
@@ -721,10 +753,16 @@ if (mode$ == 3) {
 		cuchk$ = cuchk$ - 1;
 		if (cuchk$ <= 0) {
 			err = wrap(exp$ - pos$, -L / 2, L / 2);
+			if (abs(err) > 0.08 * SR * rrate) {
+				// too far out to ride back: that hit was simply early or late
+				expok$ = 0;
+				err = 0;
+			}
 			if (abs(err) > 0.0003 * SR * rrate) {
 				culen$ = floor(0.6 * SR);
 				cuk$ = 0;
-				cua$ = 0.8 * err / rrate / ((culen$ + 1) / 2);
+				// never more than a 3% ride of the pitch: no racing to catch up
+				cua$ = min(max(0.8 * err / rrate / ((culen$ + 1) / 2), -0.03), 0.03);
 				cuchk$ = culen$ + floor(0.25 * SR);
 			} else {
 				cuchk$ = floor(2 * SR);
@@ -765,6 +803,15 @@ pos$ = wrap(pos$ + vplay * rrate, 0, L);
 waitrel = 0;
 if (has$ > 0.5 && cued$ > 0.5 && kind$ == 0 && (mode$ == 1 || mode$ == 2)) {
 	waitrel = 1;
+}
+if (dk$ > 0.5) {
+	dk$ = 0;
+	if (gt$ > 0.5 && has$ > 0.5 && gm$ < 0.5 && mode$ != 7) {
+		gt$ = 0;
+		if (be$ > dkr$ + 0.1) {
+			popen$ = dkr$ - (fade + fadearly) / spb;
+		}
+	}
 }
 if (B >= popen$ && waitrel < 0.5) {
 	popen$ = NONE;
@@ -891,4 +938,5 @@ h_drk$ = drk$; h_drlen$ = drlen$; h_drd$ = drd$; h_late$ = late$; h_flub$ = flub
 h_wl$ = wl$; h_wr$ = wr$; h_head$ = head$; h_brk$ = brk$; h_idl$ = idl$; h_pcs$ = pcs$;
 h_scn$ = scn$; h_scns$ = scns$; h_sctot$ = sctot$; h_sctr$ = sctr$; h_scoff$ = scoff$;
 h_sck$ = sck$; h_sclen$ = sclen$; h_sca$ = sca$; h_scj$ = scj$;
+h_scsolo$ = scsolo$; h_dk$ = dk$; h_dkr$ = dkr$;
 #ENDDECK

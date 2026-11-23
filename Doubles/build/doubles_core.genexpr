@@ -116,6 +116,9 @@ History h_sck0(0);
 History h_sclen0(0);
 History h_sca0(0);
 History h_scj0(0);
+History h_scsolo0(0); // this scratch is played alone: the other record is faded out for it
+History h_dk0(0);     // asked by the other deck: close the fader now...
+History h_dkr0(0);    // ...and open it again at this beat if the play is still going
 History h_pos1(0);
 History h_v1(0);
 History h_vb1(0);
@@ -177,6 +180,9 @@ History h_sck1(0);
 History h_sclen1(0);
 History h_sca1(0);
 History h_scj1(0);
+History h_scsolo1(0); // this scratch is played alone: the other record is faded out for it
+History h_dk1(0);     // asked by the other deck: close the fader now...
+History h_dkr1(0);    // ...and open it again at this beat if the play is still going
 
 
 
@@ -190,24 +196,25 @@ cuk0 = 0; cua0 = 0; spm0 = 0; spa0 = 0; spdv0 = 0; trem0 = 0; gt0 = 0; g0 = 0;
 gamp0 = 0; popen0 = 0; pclose0 = 0; slot0 = 0; drk0 = 0; drlen0 = 0; drd0 = 0; late0 = 0;
 flub0 = 0; e0 = 0; wl0 = 0; wr0 = 0; head0 = 0; brk0 = 0; idl0 = 0; pcs0 = 0;
 scn0 = 0; scns0 = 0; sctot0 = 0; sctr0 = 0; scoff0 = 0; sck0 = 0; sclen0 = 0; sca0 = 0;
-scj0 = 0; pos1 = 0; v1 = 0; vb1 = 0; mode1 = 0; k1 = 0; has1 = 0; bs1 = 0;
-be1 = 0; p01 = 0; rate1 = 0; kind1 = 0; gm1 = 0; gd1 = 0; g01 = 0; amp1 = 0;
-str1 = 0; gen1 = 0; cued1 = 0; pdc1 = 0; pa1 = 0; pdv1 = 0; trrem1 = 0; push1 = 0;
-rk1 = 0; exp1 = 0; expok1 = 0; cuchk1 = 0; culen1 = 0; cuk1 = 0; cua1 = 0; spm1 = 0;
-spa1 = 0; spdv1 = 0; trem1 = 0; gt1 = 0; g1 = 0; gamp1 = 0; popen1 = 0; pclose1 = 0;
-slot1 = 0; drk1 = 0; drlen1 = 0; drd1 = 0; late1 = 0; flub1 = 0; e1 = 0; wl1 = 0;
-wr1 = 0; head1 = 0; brk1 = 0; idl1 = 0; pcs1 = 0; scn1 = 0; scns1 = 0; sctot1 = 0;
-sctr1 = 0; scoff1 = 0; sck1 = 0; sclen1 = 0; sca1 = 0; scj1 = 0; ph = 0; jumped = 0;
-cand = 0; B = 0; spb = 0; started = 0; stopped = 0; tau = 0; taus = 0; dk = 0;
-dks = 0; pre0 = 0; pushsd = 0; vmax = 0; reach = 0; reljit = 0; rush = 0; fadjit = 0;
-fadearly = 0; fadlate = 0; cuebase = 0; cueper = 0; tremsd = 0; lvl = 0; fade = 0; flubp = 0;
-flubsd = 0; rrate = 0; recspb = 0; trema = 0; tremb = 0; done = 0; active = 0; flushed = 0;
-dragnew = 0; rbs = 0; boot = 0; qt = 0; need_next = 0; base = 0; e_bs = 0; e_be = 0;
-e_p0 = 0; e_kind = 0; e_cm = 0; e_rate = 0; e_gm = 0; e_gd = 0; e_g0 = 0; e_amp = 0;
-e_dist = 0; e_gen = 0; e_str = 0; e_scn = 0; e_scd = 0; keep = 0; cut = 0; gg = 0;
-cont = 0; oldbe = 0; latej = 0; earlyj = 0; gap = 0; j = 0; s0 = 0; pre = 0;
-adv = 0; d0 = 0; cerr = 0; prel = 0; fast = 0; jit = 0; tlen = 0; tr = 0;
-dist = 0; need = 0; ns = 0; np = 0; dc = 0; sd = 0; nb = 0; w = 0;
+scj0 = 0; scsolo0 = 0; dk0 = 0; dkr0 = 0; pos1 = 0; v1 = 0; vb1 = 0; mode1 = 0;
+k1 = 0; has1 = 0; bs1 = 0; be1 = 0; p01 = 0; rate1 = 0; kind1 = 0; gm1 = 0;
+gd1 = 0; g01 = 0; amp1 = 0; str1 = 0; gen1 = 0; cued1 = 0; pdc1 = 0; pa1 = 0;
+pdv1 = 0; trrem1 = 0; push1 = 0; rk1 = 0; exp1 = 0; expok1 = 0; cuchk1 = 0; culen1 = 0;
+cuk1 = 0; cua1 = 0; spm1 = 0; spa1 = 0; spdv1 = 0; trem1 = 0; gt1 = 0; g1 = 0;
+gamp1 = 0; popen1 = 0; pclose1 = 0; slot1 = 0; drk1 = 0; drlen1 = 0; drd1 = 0; late1 = 0;
+flub1 = 0; e1 = 0; wl1 = 0; wr1 = 0; head1 = 0; brk1 = 0; idl1 = 0; pcs1 = 0;
+scn1 = 0; scns1 = 0; sctot1 = 0; sctr1 = 0; scoff1 = 0; sck1 = 0; sclen1 = 0; sca1 = 0;
+scj1 = 0; scsolo1 = 0; dk1 = 0; dkr1 = 0; ph = 0; jumped = 0; cand = 0; B = 0;
+spb = 0; started = 0; stopped = 0; tau = 0; taus = 0; dk = 0; dks = 0; pre0 = 0;
+pushsd = 0; vmax = 0; reach = 0; reljit = 0; rush = 0; fadjit = 0; fadearly = 0; fadlate = 0;
+cuebase = 0; cueper = 0; tremsd = 0; lvl = 0; fade = 0; flubp = 0; flubsd = 0; needle = 0;
+rrate = 0; recspb = 0; trema = 0; tremb = 0; done = 0; active = 0; flushed = 0; dragnew = 0;
+rbs = 0; boot = 0; qt = 0; need_next = 0; base = 0; e_bs = 0; e_be = 0; e_p0 = 0;
+e_kind = 0; e_cm = 0; e_rate = 0; e_gm = 0; e_gd = 0; e_g0 = 0; e_amp = 0; e_dist = 0;
+e_gen = 0; e_str = 0; e_scn = 0; e_scd = 0; keep = 0; cut = 0; gg = 0; cont = 0;
+oldbe = 0; latej = 0; earlyj = 0; gap = 0; j = 0; s0 = 0; pre = 0; adv = 0;
+d0 = 0; cerr = 0; prel = 0; fast = 0; jit = 0; tlen = 0; tr = 0; dist = 0;
+need = 0; lateby = 0; ns = 0; np = 0; dc = 0; sd = 0; nb = 0; w = 0;
 trav = 0; u = 0; rate_e = 0; vv = 0; err = 0; vplay = 0; waitrel = 0; a = 0;
 gend = 0; gain0 = 0; yl0 = 0; yr0 = 0; ip = 0; fr = 0; i0 = 0; i1 = 0;
 i2 = 0; i3 = 0; xm = 0; x0 = 0; x1 = 0; x2 = 0; c1 = 0; c2 = 0;
@@ -252,6 +259,7 @@ drk0 = h_drk0; drlen0 = h_drlen0; drd0 = h_drd0; late0 = h_late0; flub0 = h_flub
 wl0 = h_wl0; wr0 = h_wr0; head0 = h_head0; brk0 = h_brk0; idl0 = h_idl0; pcs0 = h_pcs0;
 scn0 = h_scn0; scns0 = h_scns0; sctot0 = h_sctot0; sctr0 = h_sctr0; scoff0 = h_scoff0;
 sck0 = h_sck0; sclen0 = h_sclen0; sca0 = h_sca0; scj0 = h_scj0;
+scsolo0 = h_scsolo0; dk0 = h_dk0; dkr0 = h_dkr0;
 pos1 = h_pos1; v1 = h_v1; vb1 = h_vb1; mode1 = h_mode1; k1 = h_k1; has1 = h_has1;
 bs1 = h_bs1; be1 = h_be1; p01 = h_p01; rate1 = h_rate1; kind1 = h_kind1; gm1 = h_gm1;
 gd1 = h_gd1; g01 = h_g01; amp1 = h_amp1; str1 = h_str1; gen1 = h_gen1; cued1 = h_cued1;
@@ -263,6 +271,7 @@ drk1 = h_drk1; drlen1 = h_drlen1; drd1 = h_drd1; late1 = h_late1; flub1 = h_flub
 wl1 = h_wl1; wr1 = h_wr1; head1 = h_head1; brk1 = h_brk1; idl1 = h_idl1; pcs1 = h_pcs1;
 scn1 = h_scn1; scns1 = h_scns1; sctot1 = h_sctot1; sctr1 = h_sctr1; scoff1 = h_scoff1;
 sck1 = h_sck1; sclen1 = h_sclen1; sca1 = h_sca1; scj1 = h_scj1;
+scsolo1 = h_scsolo1; dk1 = h_dk1; dkr1 = h_dkr1;
 
 // ---- song position ----
 ph = in3;
@@ -314,6 +323,7 @@ lvl = 0.07 * slop;
 fade = SR * (0.0008 + 0.0012 * slop);
 flubp = 0.05 * risk;
 flubsd = SR * 0.035;
+needle = SR * (0.14 + 0.28 * weight);
 rrate = L * tempo / (Lb * 60 * SR);
 recspb = L / Lb;
 trema = exp(-twopi * 100 / SR);
@@ -585,6 +595,11 @@ if (need_next > 0.5) {
 					if (d0 > 8) {
 						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
 					}
+					if (str0 > 0.5) {
+						// straight play is the record that has been running in time all along:
+						// coming back to it is not a blind needle drop
+						cerr = cerr * 0.15;
+					}
 					prel = p00 - adv + cerr;
 					fast = min(0.25 * SR / max(gap, 1), 2);
 					e0 = 0.6 * e0 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
@@ -599,17 +614,29 @@ if (need_next > 0.5) {
 					dist = wrap(prel - pos0, -L / 2, L / 2);
 					need = 0;
 					if (abs(dist) > 8) {
-						need = reach + abs(dist) / rrate / vmax;
+						// a long way off, the needle is lifted and dropped: that takes a fixed time
+						need = reach + min(abs(dist) / rrate / vmax, needle);
 					}
 					if (tr < need) {
+						lateby = min(need, tlen - 1) - tr;
 						tr = min(need, tlen - 1);
 						if (kind0 == 0) {
 							late0 = late0 + 1;
+							// a late hand does not play the record late and then chase it: it drops
+							// in where the music has got to. A few ms late is played as it falls.
+							if (str0 > 0.5 || lateby > 0.04 * SR) {
+								prel = prel + rate0 * rrate * lateby;
+								dist = wrap(prel - pos0, -L / 2, L / 2);
+							}
 						}
 					}
 					// a baby scratch just before the release, if the hand has the time
 					if (e_scn > 0.5 && gm0 < 0.5) {
-						ns = max(floor(e_scd * spb), 8);
+						ns = max(floor(abs(e_scd) * spb), 8);
+						scsolo0 = 0;
+						if (e_scd < 0) {
+							scsolo0 = 1;
+						}
 						np = min(floor(e_scn + 0.5), floor((tr - need - 0.02 * SR) / (2 * ns)));
 						if (np >= 1) {
 							scn0 = 2 * np;
@@ -709,6 +736,16 @@ if (mode0 == 1) {
 			sck0 = 0;
 			sclen0 = 0;
 			popen0 = B;
+			if (scsolo0 > 0.5) {
+				// played alone: the other record is faded out until the scratch is over
+				if (0 == 0) {
+					dk1 = 1;
+					dkr1 = B + sctot0 / spb;
+				} else {
+					dk0 = 1;
+					dkr0 = B + sctot0 / spb;
+				}
+			}
 		}
 		if (mode0 == 2 && trrem0 <= 0) {
 			if (kind0 == 3) {
@@ -834,10 +871,16 @@ if (mode0 == 3) {
 		cuchk0 = cuchk0 - 1;
 		if (cuchk0 <= 0) {
 			err = wrap(exp0 - pos0, -L / 2, L / 2);
+			if (abs(err) > 0.08 * SR * rrate) {
+				// too far out to ride back: that hit was simply early or late
+				expok0 = 0;
+				err = 0;
+			}
 			if (abs(err) > 0.0003 * SR * rrate) {
 				culen0 = floor(0.6 * SR);
 				cuk0 = 0;
-				cua0 = 0.8 * err / rrate / ((culen0 + 1) / 2);
+				// never more than a 3% ride of the pitch: no racing to catch up
+				cua0 = min(max(0.8 * err / rrate / ((culen0 + 1) / 2), -0.03), 0.03);
 				cuchk0 = culen0 + floor(0.25 * SR);
 			} else {
 				cuchk0 = floor(2 * SR);
@@ -878,6 +921,15 @@ pos0 = wrap(pos0 + vplay * rrate, 0, L);
 waitrel = 0;
 if (has0 > 0.5 && cued0 > 0.5 && kind0 == 0 && (mode0 == 1 || mode0 == 2)) {
 	waitrel = 1;
+}
+if (dk0 > 0.5) {
+	dk0 = 0;
+	if (gt0 > 0.5 && has0 > 0.5 && gm0 < 0.5 && mode0 != 7) {
+		gt0 = 0;
+		if (be0 > dkr0 + 0.1) {
+			popen0 = dkr0 - (fade + fadearly) / spb;
+		}
+	}
 }
 if (B >= popen0 && waitrel < 0.5) {
 	popen0 = NONE;
@@ -1148,6 +1200,11 @@ if (need_next > 0.5) {
 					if (d0 > 8) {
 						cerr = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * min(cuebase + cueper * d0, 0.03 * SR);
 					}
+					if (str1 > 0.5) {
+						// straight play is the record that has been running in time all along:
+						// coming back to it is not a blind needle drop
+						cerr = cerr * 0.15;
+					}
 					prel = p01 - adv + cerr;
 					fast = min(0.25 * SR / max(gap, 1), 2);
 					e1 = 0.6 * e1 + ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * reljit * 0.8;
@@ -1162,17 +1219,29 @@ if (need_next > 0.5) {
 					dist = wrap(prel - pos1, -L / 2, L / 2);
 					need = 0;
 					if (abs(dist) > 8) {
-						need = reach + abs(dist) / rrate / vmax;
+						// a long way off, the needle is lifted and dropped: that takes a fixed time
+						need = reach + min(abs(dist) / rrate / vmax, needle);
 					}
 					if (tr < need) {
+						lateby = min(need, tlen - 1) - tr;
 						tr = min(need, tlen - 1);
 						if (kind1 == 0) {
 							late1 = late1 + 1;
+							// a late hand does not play the record late and then chase it: it drops
+							// in where the music has got to. A few ms late is played as it falls.
+							if (str1 > 0.5 || lateby > 0.04 * SR) {
+								prel = prel + rate1 * rrate * lateby;
+								dist = wrap(prel - pos1, -L / 2, L / 2);
+							}
 						}
 					}
 					// a baby scratch just before the release, if the hand has the time
 					if (e_scn > 0.5 && gm1 < 0.5) {
-						ns = max(floor(e_scd * spb), 8);
+						ns = max(floor(abs(e_scd) * spb), 8);
+						scsolo1 = 0;
+						if (e_scd < 0) {
+							scsolo1 = 1;
+						}
 						np = min(floor(e_scn + 0.5), floor((tr - need - 0.02 * SR) / (2 * ns)));
 						if (np >= 1) {
 							scn1 = 2 * np;
@@ -1272,6 +1341,16 @@ if (mode1 == 1) {
 			sck1 = 0;
 			sclen1 = 0;
 			popen1 = B;
+			if (scsolo1 > 0.5) {
+				// played alone: the other record is faded out until the scratch is over
+				if (1 == 0) {
+					dk1 = 1;
+					dkr1 = B + sctot1 / spb;
+				} else {
+					dk0 = 1;
+					dkr0 = B + sctot1 / spb;
+				}
+			}
 		}
 		if (mode1 == 2 && trrem1 <= 0) {
 			if (kind1 == 3) {
@@ -1397,10 +1476,16 @@ if (mode1 == 3) {
 		cuchk1 = cuchk1 - 1;
 		if (cuchk1 <= 0) {
 			err = wrap(exp1 - pos1, -L / 2, L / 2);
+			if (abs(err) > 0.08 * SR * rrate) {
+				// too far out to ride back: that hit was simply early or late
+				expok1 = 0;
+				err = 0;
+			}
 			if (abs(err) > 0.0003 * SR * rrate) {
 				culen1 = floor(0.6 * SR);
 				cuk1 = 0;
-				cua1 = 0.8 * err / rrate / ((culen1 + 1) / 2);
+				// never more than a 3% ride of the pitch: no racing to catch up
+				cua1 = min(max(0.8 * err / rrate / ((culen1 + 1) / 2), -0.03), 0.03);
 				cuchk1 = culen1 + floor(0.25 * SR);
 			} else {
 				cuchk1 = floor(2 * SR);
@@ -1441,6 +1526,15 @@ pos1 = wrap(pos1 + vplay * rrate, 0, L);
 waitrel = 0;
 if (has1 > 0.5 && cued1 > 0.5 && kind1 == 0 && (mode1 == 1 || mode1 == 2)) {
 	waitrel = 1;
+}
+if (dk1 > 0.5) {
+	dk1 = 0;
+	if (gt1 > 0.5 && has1 > 0.5 && gm1 < 0.5 && mode1 != 7) {
+		gt1 = 0;
+		if (be1 > dkr1 + 0.1) {
+			popen1 = dkr1 - (fade + fadearly) / spb;
+		}
+	}
 }
 if (B >= popen1 && waitrel < 0.5) {
 	popen1 = NONE;
@@ -1565,6 +1659,7 @@ h_drk0 = drk0; h_drlen0 = drlen0; h_drd0 = drd0; h_late0 = late0; h_flub0 = flub
 h_wl0 = wl0; h_wr0 = wr0; h_head0 = head0; h_brk0 = brk0; h_idl0 = idl0; h_pcs0 = pcs0;
 h_scn0 = scn0; h_scns0 = scns0; h_sctot0 = sctot0; h_sctr0 = sctr0; h_scoff0 = scoff0;
 h_sck0 = sck0; h_sclen0 = sclen0; h_sca0 = sca0; h_scj0 = scj0;
+h_scsolo0 = scsolo0; h_dk0 = dk0; h_dkr0 = dkr0;
 h_pos1 = pos1; h_v1 = v1; h_vb1 = vb1; h_mode1 = mode1; h_k1 = k1; h_has1 = has1;
 h_bs1 = bs1; h_be1 = be1; h_p01 = p01; h_rate1 = rate1; h_kind1 = kind1; h_gm1 = gm1;
 h_gd1 = gd1; h_g01 = g01; h_amp1 = amp1; h_str1 = str1; h_gen1 = gen1; h_cued1 = cued1;
@@ -1576,3 +1671,4 @@ h_drk1 = drk1; h_drlen1 = drlen1; h_drd1 = drd1; h_late1 = late1; h_flub1 = flub
 h_wl1 = wl1; h_wr1 = wr1; h_head1 = head1; h_brk1 = brk1; h_idl1 = idl1; h_pcs1 = pcs1;
 h_scn1 = scn1; h_scns1 = scns1; h_sctot1 = sctot1; h_sctr1 = sctr1; h_scoff1 = scoff1;
 h_sck1 = sck1; h_sclen1 = sclen1; h_sca1 = sca1; h_scj1 = scj1;
+h_scsolo1 = scsolo1; h_dk1 = dk1; h_dkr1 = dkr1;

@@ -36,7 +36,7 @@ var S = {
 		looplen: 1, doubledist: 0.5, chaseunit: 1, shuffle: 0.5, pauselen: 0.5, fillpat: 1, spinback: 4,
 		quant: 1, latch: 0, mode: 0, fillk: 0, fills: 0, density: 0.6, funk: 0.5, arc: 16, slotlen: 4,
 		timing: 0.5, weight: 0.5, slop: 0.5, risk: 0.5, copy: 0.5, length: 8,
-		scratch: 0.3
+		scratch: 0.3, scrover: 1       // scrover: 0 over the groove, 1 a mix, 2 over silence
 	},
 	forceScratch: false, // BABY pressed while both decks are busy: scratch into the next cue
 	held: null,          // {move, b} the move button in force
@@ -129,7 +129,7 @@ function readyDeck(b, rb) {
 		if (b - e > 0.5) return d;                          // idle a while: running in time, muted
 		at = lp.rb === null ? rbS(e) : mod(lp.rb + (Math.min(lp.be, b) - lp.bs) * lp.rate, S.Lb);
 		var dist = Math.abs(wrapc(rb - at, S.Lb)) * 60 / S.tempo;     // seconds of record
-		var need = 0.045 * w + dist / vmax;
+		var need = 0.045 * w + Math.min(dist / vmax, 0.14 + 0.28 * w);   // far off: a needle drop
 		var slack = (b - e) * 60 / S.tempo - need;
 		if (slack > bslack) { bslack = slack; best = d; }
 	}
@@ -191,6 +191,12 @@ function scratchTravel(strokeBeats) {
 	var st = strokeBeats * 60 / S.tempo;
 	return Math.min(st * (0.75 + 0.3 * rng()), 0.095) * S.recSR;
 }
+// Alone or over the groove? Alone, the other record is faded out while the scratch plays.
+// gen~ reads a negative stroke length as "alone".
+function scratchAlone() {
+	var o = S.ctl.scrover;
+	return o === 2 || (o === 1 && rng() < 0.35);
+}
 function ornament(d, p, prev) {
 	var amt = S.ctl.scratch, force = S.forceScratch;
 	if (amt <= 0 && !force) return;
@@ -200,7 +206,7 @@ function ornament(d, p, prev) {
 	if (!force && rng() >= amt * pos) return;
 	var sc = scratchPattern(gap);
 	if (!sc) return;
-	p.scn = sc[0]; p.scd = sc[1]; p.dist = scratchTravel(sc[1]);
+	p.scn = sc[0]; p.scd = scratchAlone() ? -sc[1] : sc[1]; p.dist = scratchTravel(sc[1]);
 	S.forceScratch = false;
 }
 // BABY: a scratch on its own, on the record that is not playing, into the next beat.
@@ -219,7 +225,7 @@ function babyPress() {
 		}
 		if (free >= 0) {
 			addPlay(free, {bs: bs, be: be, rb: null, kind: 3, cm: 1, p0: snapSamples(rbS(be)),
-				scn: sc[0], scd: sc[1], dist: scratchTravel(sc[1])});
+				scn: sc[0], scd: scratchAlone() ? -sc[1] : sc[1], dist: scratchTravel(sc[1])});
 			send(now);
 			return;
 		}
@@ -1019,6 +1025,7 @@ function anything() {
 		if (S.playing && S.have) cutAt(Math.ceil((S.B + 0.25) / 4) * 4);
 		return;
 	case 'scratch': c.scratch = v / 100; return;
+	case 'scrover': c.scrover = v; return;
 	case 'density': c.density = v / 100; return;
 	case 'funk': c.funk = v / 100; return;
 	case 'arc': c.arc = ARCS[v] || 16; return;

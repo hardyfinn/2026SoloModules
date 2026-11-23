@@ -9,7 +9,7 @@ reality, where a quick baby scratch ahead of the beat is common."
 
 The engine and the planner are **already written and tested offline** as part of the design.
 They are in `src/doubles_core.gen.tmpl`, `src/doubles.js` and `tools/genexpr.py`, and they are
-the source of the demos Hardy heard (`/mnt/project-files/beat-juggling/demos-scratch/`).
+the source of the demos Hardy heard (`/mnt/project-files/beat-juggling/demos-scratch-2/`).
 Do not redesign them. What is left is the panel, the wiring, the manual and the device build:
 
 1. Add the two controls to the panel (section 4).
@@ -43,7 +43,7 @@ Two of the three spare queue fields are now used. An entry is
 | Field | Meaning |
 |---|---|
 | `scn` (13) | Pairs of strokes asked for. 0 means no scratch. |
-| `scd` (14) | Length of one stroke, in beats. |
+| `scd` (14) | Length of one stroke, in beats. **Negative means the scratch is played alone** (section 2.5); the length is the absolute value. |
 | `dist` (10) | For a scratched entry: how much record one forward stroke covers, in record samples. (Still the spin distance for kind 2.) |
 | `kind` 3 | New: a scratch on its own. `[bs, be)` is the scratch; `p0` is the cue point. |
 
@@ -86,6 +86,35 @@ up (`popen = B`) and mode 7 starts. Strokes alternate forward, back.
 
 A flush that removes the play also stops the scratch and closes the fader. A stop or a jump
 clears it.
+
+### 2.5 Alone or over the groove
+
+Hardy: "Sometimes it can be played without the other deck playing, so it's just over silence
+rather than over a groove."
+
+When a scratch marked alone starts, the scratching deck asks the other deck to close its
+fader (`dk`, with `dkr` = the beat the scratch ends). The other deck closes at once if it is
+open on a plain play (no gate pattern), and opens again just before `dkr` if its play is
+still going by then. So a BABY over straight play punches a hole in the groove exactly the
+length of the scratch, and an ornament cuts the outgoing record a 16th or an 8th early.
+
+### 2.6 No racing to catch up
+
+Hardy, on the first demos: "remove this strange long pitch up action that makes the record
+race faster. It's not really used in the scratch vernacular." That was the catch-up nudge
+after a late return, which could push the pitch up by 16% to 83% for 0.6 s. Four changes:
+
+- **A nudge never exceeds 3%.** `cua` is clamped to +-0.03.
+- **A late hand drops in where the music has got to.** If the release is late because the hand
+  could not get there, the cue target is moved on by the lateness, so the record comes in late
+  but in the right place and there is nothing to chase. Always for straight play; for other
+  plays only when more than 40 ms late (less than that is played as it falls).
+- **Far moves are needle drops.** The time to reach a cue is capped at `needle = 0.14 + 0.28 *
+  WEIGHT` seconds however far it is. `readyDeck()` in the planner uses the same cap.
+- **Errors over 80 ms are not chased at all**, and the cue error for straight play is 15% of
+  that for a cued hit (straight play is the record that was running in time all along).
+
+Result in the design runs: 14 to 38 nudges per run, biggest 3.0%, where 1.0 had up to 83%.
 
 ### 2.4 Two engine bugs fixed on the way (already in the 1.0 device on the branch)
 
@@ -141,12 +170,18 @@ Routine and Instinct all make cued plays, so all of them get scratches.
 
 `liveDeck` is not changed by a kind 3 play.
 
+### 3.4 Alone or over the groove
+
+`S.ctl.scrover`: 0 always over the groove, 1 a mix (35% of scratches alone), 2 always alone.
+Applies to ornaments and to BABY. The planner sends `scd` negative for a scratch alone.
+
 ## 4. Panel (to build)
 
 | Control | Type | Range, default | Message | Where |
 |---|---|---|---|---|
 | **SCRATCH** | `live.dial`, percent | 0 to 100, default 30 | `scratch` | HANDS section, as a seventh dial |
 | **BABY** | `live.text`, momentary | | `baby` | MOVES, in the one-shot row after DRAG |
+| **OVER** | `live.menu`: GROOVE, MIX, SILENCE | default MIX | `scrover` (0, 1, 2) | HANDS, under SCRATCH |
 
 - HANDS has two rows of three dials. Make the second row four (SLOP, RISK, COPY, SCRATCH) and
   widen the section and the device by one dial (44 px). Move PLAY and OUT right to match.
@@ -170,7 +205,11 @@ Offline, with `ref/sim.js` (scripts are plain JSON, see `ref/out/*.json`; `ctl` 
 5. Peak hand speed stays under 2.0 (it was 1.5 to 1.9 in the design runs).
 
 In the device: the lint in `build_device.py` passes, the codebox has no function definitions,
-and the parameter count is 65.
+and the parameter count is 66.
+
+6. `scrover: 2` with BABY over straight play: the live deck's fader is closed for the length of
+   each scratch and fully open again by the beat (18 of 18 in the design run).
+7. No catch-up nudge above 3% in any run.
 
 ## 6. Manual
 
@@ -178,5 +217,7 @@ and the parameter count is 65.
 - HANDS: add SCRATCH. "How often a baby scratch is flicked in just before a record comes back.
   0 is never. 30 is an occasional habit. 100 is every time there is room. A hand that is late
   never scratches, so loose hands scratch less than the dial says."
+- HANDS: add OVER. "GROOVE: scratches are heard over the other record. SILENCE: the other
+  record is cut while the scratch plays. MIX: about one in three is over silence."
 - One new recipe: "Loop with pick-ups: LOOP at 1 beat, SCRATCH at 100."
-- Version history: 1.1.0, baby scratches; the two fixes in section 2.4.
+- Version history: 1.1.0, baby scratches; no more racing to catch up (2.6); the two fixes in 2.4.
