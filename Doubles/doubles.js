@@ -35,8 +35,10 @@ var S = {
 	ctl: {
 		looplen: 1, doubledist: 0.5, chaseunit: 1, shuffle: 0.5, pauselen: 0.5, fillpat: 1, spinback: 4,
 		quant: 1, latch: 0, mode: 0, fillk: 0, fills: 0, density: 0.6, funk: 0.5, arc: 16, slotlen: 4,
-		timing: 0.5, weight: 0.5, slop: 0.5, risk: 0.5, copy: 0.5, length: 8
+		timing: 0.5, weight: 0.5, slop: 0.5, risk: 0.5, copy: 0.5, length: 8,
+		scratch: 0.3, scrover: 1       // scrover: 0 over the groove, 1 a mix, 2 over silence
 	},
+	forceScratch: false, // BABY pressed while both decks are busy: scratch into the next cue
 	held: null,          // {move, b} the move button in force
 	pad: null,
 	routine: [],
@@ -127,7 +129,7 @@ function readyDeck(b, rb) {
 		if (b - e > 0.5) return d;                          // idle a while: running in time, muted
 		at = lp.rb === null ? rbS(e) : mod(lp.rb + (Math.min(lp.be, b) - lp.bs) * lp.rate, S.Lb);
 		var dist = Math.abs(wrapc(rb - at, S.Lb)) * 60 / S.tempo;     // seconds of record
-		var need = 0.045 * w + dist / vmax;
+		var need = 0.045 * w + Math.min(dist / vmax, 0.14 + 0.28 * w);   // far off: a needle drop
 		var slack = (b - e) * 60 / S.tempo - need;
 		if (slack > bslack) { bslack = slack; best = d; }
 	}
@@ -156,8 +158,79 @@ function addPlay(d, p) {
 		else if (p.cm === 2 || p.nosnap) p.p0 = mod(p.rb, S.Lb) * spbRec();
 		else p.p0 = snapSamples(p.rb);
 	}
+	if (p.kind === 0 && p.cm === 0 && p.gm === 0 && !p.scn) ornament(d, p, prev);
 	TL[d].push(p);
 	return p;
+}
+
+// ------------------------------------------------------------------ baby scratches
+// A baby scratch is one push forward through a hit and one pull back to its cue, fader
+// open. DJs flick one in just ahead of the beat as they bring a record back. The planner
+// only asks for one; gen~ plays it if the hand turns out to have the time.
+//   pattern: [pairs of strokes, stroke length in beats, weight]
+var SCRATCHES = [[1, 0.125, 5], [1, 0.25, 3], [2, 0.125, 2], [1, 1 / 6, 1]];
+function scratchPattern(gapBeats) {
+	var bs = 60 / S.tempo, w = S.ctl.weight, ok = [], tot = 0, i, r;
+	var room = gapBeats - (0.045 * w + 0.05) / bs;        // the hand has to get to the cue first
+	for (i = 0; i < SCRATCHES.length; i++) {
+		var sc = SCRATCHES[i], st = sc[1] * bs;
+		if (st < 0.05 || st > 0.19) continue;               // too fast for a hand, or a drag not a scratch
+		if (2 * sc[0] * sc[1] > room) continue;
+		var wt = sc[2] * (i === 3 ? 2 * S.ctl.funk : 1);
+		if (wt <= 0) continue;
+		ok.push([sc, wt]); tot += wt;
+	}
+	if (!ok.length) return null;
+	r = rng() * tot;
+	for (i = 0; i < ok.length; i++) { r -= ok[i][1]; if (r <= 0) return ok[i][0]; }
+	return ok[ok.length - 1][0];
+}
+function scratchTravel(strokeBeats) {
+	// how much record one forward stroke covers: the hand moves at about playing speed,
+	// and never goes further than one drum hit
+	var st = strokeBeats * 60 / S.tempo;
+	return Math.min(st * (0.75 + 0.3 * rng()), 0.095) * S.recSR;
+}
+// Alone or over the groove? Alone, the other record is faded out while the scratch plays.
+// gen~ reads a negative stroke length as "alone".
+function scratchAlone() {
+	var o = S.ctl.scrover;
+	return o === 2 || (o === 1 && rng() < 0.35);
+}
+function ornament(d, p, prev) {
+	var amt = S.ctl.scratch, force = S.forceScratch;
+	if (amt <= 0 && !force) return;
+	var gap = prev ? p.bs - Math.min(prev.be, p.bs) : 4;
+	if (gap < 0.25) return;
+	var f = mod(p.bs, 1), pos = (f < 1e-6 || f > 1 - 1e-6) ? 1 : (Math.abs(f - 0.5) < 1e-6 ? 0.7 : 0.35);
+	if (!force && rng() >= amt * pos) return;
+	var sc = scratchPattern(gap);
+	if (!sc) return;
+	p.scn = sc[0]; p.scd = scratchAlone() ? -sc[1] : sc[1]; p.dist = scratchTravel(sc[1]);
+	S.forceScratch = false;
+}
+// BABY: a scratch on its own, on the record that is not playing, into the next beat.
+function babyPress() {
+	if (!S.have || !S.playing) return;
+	var now = S.B, q = Math.max(S.ctl.quant, 0.5), d, i, free = -1;
+	for (var tries = 0; tries < 2 && free < 0; tries++) {
+		var be = quantNext(now + 0.3 + tries * q, q);
+		var sc = scratchPattern(be - now);
+		if (!sc) continue;
+		var bs = be - 2 * sc[0] * sc[1];
+		for (d = 1; d >= 0 && free < 0; d--) {
+			var dd = (liveDeck + d) % 2, busy = false;
+			for (i = 0; i < TL[dd].length; i++) if (TL[dd][i].be > now - 1e-9) busy = true;
+			if (!busy) free = dd;
+		}
+		if (free >= 0) {
+			addPlay(free, {bs: bs, be: be, rb: null, kind: 3, cm: 1, p0: snapSamples(rbS(be)),
+				scn: sc[0], scd: scratchAlone() ? -sc[1] : sc[1], dist: scratchTravel(sc[1])});
+			send(now);
+			return;
+		}
+	}
+	S.forceScratch = true;
 }
 
 // ------------------------------------------------------------------ moves
@@ -424,7 +497,7 @@ function send(now) {
 			if (tail[d] - heads[d] >= QN - 1) break;
 			var p = t[sentIdx[d]];
 			HOST.queueWrite(d, mod(tail[d], QN), [p.bs, p.be, p.p0, p.kind, p.cm, p.rate, p.gm, p.gd, p.g0,
-				p.amp, p.dist, gen, p.str, 0, 0, tail[d]]);
+				p.amp, p.dist, gen, p.str, p.scn || 0, p.scd || 0, tail[d]]);
 			tail[d]++;
 			sentIdx[d]++;
 		}
@@ -474,6 +547,7 @@ function movePress(m, on) {
 	var now = S.B, c = S.ctl;
 	if (!S.have) return;
 	if (m === 'drag') { if (on) dragPulse(); return; }
+	if (m === 'baby') { if (on) babyPress(); return; }
 	var b = S.playing ? quantNext(now, c.quant) : now;
 	if (on) {
 		S.held = {move: m, b: b};
@@ -950,6 +1024,8 @@ function anything() {
 		if (v === 2) S.instinctBar0 = Math.ceil((S.B + 0.25) / 4);
 		if (S.playing && S.have) cutAt(Math.ceil((S.B + 0.25) / 4) * 4);
 		return;
+	case 'scratch': c.scratch = v / 100; return;
+	case 'scrover': c.scrover = v; return;
 	case 'density': c.density = v / 100; return;
 	case 'funk': c.funk = v / 100; return;
 	case 'arc': c.arc = ARCS[v] || 16; return;
@@ -965,7 +1041,7 @@ function anything() {
 		return;
 	}
 	if (m.indexOf('pad') === 0) { padPress(parseInt(m.substr(3), 10) - 1, v ? 1 : 0); return; }
-	if (MOVES.indexOf(m) >= 0 || m === 'drag') { movePress(m, v ? 1 : 0); return; }
+	if (MOVES.indexOf(m) >= 0 || m === 'drag' || m === 'baby') { movePress(m, v ? 1 : 0); return; }
 	HOST.log('unknown message ' + m);
 }
 function bang() {}

@@ -11,7 +11,7 @@ ROOT = os.path.join(HERE, '..')
 sys.path.insert(0, HERE)
 import genexpr
 
-DEVICE_W = 1068
+DEVICE_W = 1112
 APP = {"major": 9, "minor": 0, "revision": 5, "architecture": "x64", "modernui": 1}
 BUFS = '---dbl_rec ---dbl_q ---dbl_stat ---dbl_save ---dbl_load'
 
@@ -208,7 +208,7 @@ def panel_bg(pres, color):
 
 SEC = [0.17, 0.17, 0.18, 1.0]
 # section backgrounds
-for x, w in ((2, 92), (96, 302), (400, 254), (656, 102), (760, 136), (898, 114), (1014, 52)):
+for x, w in ((2, 92), (96, 302), (400, 254), (656, 102), (760, 180), (942, 114), (1058, 52)):
     panel_bg([x, 2, w, 165], SEC)
 
 # RECORD
@@ -241,10 +241,11 @@ for i, (nm, lab) in enumerate((("loop", "LOOP"), ("double", "DOUBLE"), ("chase",
                                 ("shuffle", "SHUFFLE"), ("fill", "FILL"), ("phase", "PHASE"))):
     held[nm] = toggle(nm, lab.title(), lab, lab, [404 + i * 41, 20, 39, 20])
     line(btnroute, i, held[nm], 0)
-for i, (nm, lab) in enumerate((("triple", "TRIPLE"), ("pause", "PAUSE"), ("spin", "SPIN"), ("drag", "DRAG"))):
+for i, (nm, lab) in enumerate((("triple", "TRIPLE"), ("pause", "PAUSE"), ("spin", "SPIN"), ("drag", "DRAG"),
+                                ("baby", "BABY"))):
     toggle(nm, lab.title(), lab, lab, [404 + i * 41, 44, 39, 20], momentary=True)
-label("QUANT", [570, 44, 40, 14])
-menu("quant", "Quantise", "Quant", [608, 46, 42, 15], ["1/16", "1/8", "1/4", "BAR"], 2)
+label("QUANT", [540, 106, 46, 14])
+menu("quant", "Quantise", "Quant", [540, 120, 46, 15], ["1/16", "1/8", "1/4", "BAR"], 2)
 for i, (nm, long, items, init) in enumerate((
         ("looplen", "Loop Length", ["1/16", "1/8", "1/4", "1/2", "BAR"], 2),
         ("doubledist", "Double Distance", ["1/16", "1/8", "1/4"], 1),
@@ -258,7 +259,7 @@ label("SHUFFLE", [404, 106, 48, 14])
 numbox("shuffle_amt", "Shuffle Amount", "Shuffle", [404, 120, 46, 15], 0, 60, 50, unit=5)
 label("FILL PATTERN", [458, 106, 70, 14])
 numbox("fillpat", "Fill Pattern", "Fill Pat", [458, 120, 46, 15], 1, 8, 1)
-label("ON/OFF: LOOP TO PHASE.  ONE-SHOT: TRIPLE TO DRAG.", [404, 140, 246, 24])
+label("ON/OFF: LOOP TO PHASE.  ONE-SHOT: TRIPLE TO BABY.", [404, 140, 246, 24])
 
 # PADS
 label("PADS  A / B", [660, 4, 90, 14])
@@ -278,22 +279,26 @@ for i, (nm, long) in enumerate((("slop", "Slop"), ("risk", "Risk"), ("copy", "Co
     dials[nm] = dial(nm, long, long.upper(), [764 + i * 44, 92, 41, 48], 0, 100, 50, unit=5)
 for nm in ("timing", "weight", "slop", "risk"):
     line(route, ROUTE_OUT[nm], dials[nm], 0)
-label("HANDS MOVES ALL FOUR.  COPY: WEAR ON DECK B.", [764, 142, 130, 24])
+# baby scratches (1.1): not moved by the HANDS macro
+dial("scratch", "Scratch", "SCRATCH", [894, 18, 41, 48], 0, 100, 30, unit=5)
+label("OVER", [894, 92, 44, 14])
+menu("scrover", "Scratch Over", "Over", [894, 106, 44, 15], ["GROOVE", "MIX", "SILENCE"], 1)
+label("HANDS MOVES ALL FOUR.  COPY: WEAR ON DECK B.  SCRATCH: BABY SCRATCHES.", [764, 142, 174, 24])
 
 # PLAY
-label("PLAY", [902, 4, 60, 14])
+label("PLAY", [946, 4, 60, 14])
 v = valueof("Mode", "Mode", 2, parameter_enum=["HANDS-ON", "ROUTINE", "INSTINCT"], parameter_initial=[0],
             parameter_initial_enable=1, parameter_mmax=2)
-mode = box("live.tab", [px[0], 500, 70, 48], nin=1, nout=3, otype=["", "", "float"], pres=[902, 18, 64, 48],
+mode = box("live.tab", [px[0], 500, 70, 48], nin=1, nout=3, otype=["", "", "float"], pres=[946, 18, 64, 48],
            parameter_enable=1, saved_attribute_attributes=v, varname="Mode", num_lines_patching=3,
            num_lines_presentation=3, **FONT)
 param(mode, "Mode", "Mode")
 wire(mode, "mode")
-dial("density", "Density", "DENSITY", [968, 18, 41, 48], 0, 100, 60, unit=5)
-dial("funk", "Funk", "FUNK", [902, 72, 41, 48], 0, 100, 50, unit=5)
-label("ARC", [948, 76, 40, 14])
-menu("arc", "Arc", "Arc", [948, 90, 58, 15], ["8 BARS", "16 BARS", "32 BARS"], 1)
-openr = box("live.text", [px[0], 500, 60, 20], nin=1, nout=2, otype=["", ""], pres=[902, 126, 106, 18],
+dial("density", "Density", "DENSITY", [1012, 18, 41, 48], 0, 100, 60, unit=5)
+dial("funk", "Funk", "FUNK", [946, 72, 41, 48], 0, 100, 50, unit=5)
+label("ARC", [992, 76, 40, 14])
+menu("arc", "Arc", "Arc", [992, 90, 58, 15], ["8 BARS", "16 BARS", "32 BARS"], 1)
+openr = box("live.text", [px[0], 500, 60, 20], nin=1, nout=2, otype=["", ""], pres=[946, 126, 106, 18],
             text="ROUTINE...", texton="ROUTINE...", mode=0, parameter_enable=0, **FONT)
 px[0] += 80
 pc = obj("pcontrol", [px[0], 540, 60, 22], 1, 1)
@@ -301,10 +306,10 @@ openmsg = box("message", [px[0], 510, 40, 22], text="open", nin=2, nout=1, otype
 line(openr, 0, openmsg, 0); line(openmsg, 0, pc, 0)
 
 # OUT
-label("OUT", [1018, 4, 40, 14])
-dial("straight", "Straight Level", "STRAIGHT", [1018, 18, 41, 48], 0, 100, 100, unit=5)
-dial("level", "Level", "LEVEL", [1018, 72, 41, 48], -70, 6, 0, unit=4)
-toggle("brake", "Brake", "BRAKE", "BRAKE", [1018, 126, 44, 18], init=1)
+label("OUT", [1062, 4, 40, 14])
+dial("straight", "Straight Level", "STRAIGHT", [1062, 18, 41, 48], 0, 100, 100, unit=5)
+dial("level", "Level", "LEVEL", [1062, 72, 41, 48], -70, 6, 0, unit=4)
+toggle("brake", "Brake", "BRAKE", "BRAKE", [1062, 126, 44, 18], init=1)
 
 TEXTCOL[0] = GREY
 

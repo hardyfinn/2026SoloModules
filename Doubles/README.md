@@ -57,9 +57,13 @@ Tested offline by running the gen~ code (translated to JavaScript) together with
 
 Not tested, because Live cannot run here: the device loading in Live, the panel, the Live API transport hookup, `plugphasor~`, saving and reloading the record with the set, and file drop. Expect a round of fixes from the Max Console output.
 
+## 1.1.0: baby scratches
+
+Built from `docs/03-baby-scratch-build-instructions.md` (design by Fable). New controls: SCRATCH and OVER in HANDS, BABY in MOVES; QUANT moved under the move menus. No more racing to catch up after a late return (corrections are capped at 3 %). Offline checks: SCRATCH 0 gives no scratches; LOOP at one beat with SCRATCH 100 scratched 12 of 12 returns; BABY with OVER on SILENCE scratched 18 of 18 presses, each ending within 5 ms of the grid with the other record fully cut; biggest drift correction 3.0 %.
+
 ## Differences from the build spec
 
 - Held moves (LOOP, DOUBLE, CHASE, SHUFFLE, FILL, PHASE) are on/off buttons, not hold-to-play. Turning one on switches the others off. That replaces LATCH and works the same from a MIDI controller.
-- TRIPLE, PAUSE, SPIN and DRAG are one-shots. Each pad plays its sticker until the next hit, or for one beat.
+- TRIPLE, PAUSE, SPIN, DRAG and BABY are one-shots. Each pad plays its sticker until the next hit, or for one beat.
 - The other deck, when unused, runs muted in time with the song, so it is ready to catch. A real DJ does this, and it keeps pull-backs short.
 - When the hand is late, the fader waits for the release instead of opening onto a record that hasn't moved yet.

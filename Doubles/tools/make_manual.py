@@ -18,7 +18,7 @@ def tbl(rows, w):
     return t
 s = []
 s += [Paragraph('Doubles', H1), Paragraph('Beat juggling for Ableton Live (Max for Live audio effect)', P), Spacer(1, 6)]
-s += [Image(os.path.join(ROOT, 'docs', 'panel-preview.png'), width=180 * mm, height=180 * mm * 338 / 2136), Spacer(1, 6)]
+s += [Image(os.path.join(ROOT, 'docs', 'panel-preview.png'), width=180 * mm, height=180 * mm * 338 / 2224), Spacer(1, 6)]
 s += [Paragraph('What it is', H2), Paragraph(
     'Beat juggling is the hip-hop DJ craft of playing two copies of the same record on two decks and using the crossfader '
     'and both hands to loop, double, chase and rebuild a break. Doubles does this to a short piece you record into it. '
@@ -37,9 +37,9 @@ s += [Paragraph('Controls', H2), tbl([
     ['STRIP', 'waveform', 'Ticks are stickers (the hits). Yellow and red flags are the kick and snare a fill will use. Orange and blue lines are the needles of decks A and B. The bar under it shows which fader is open. LATE flashes when a hand misses.'],
     ['', 'FILL KICK / SNARE', '0 = AUTO: each fill uses the kick and snare of the bar it starts in. Otherwise the sticker number.'],
     ['MOVES', 'LOOP ... PHASE', 'On/off. The move starts at the next QUANT step and stops at the next step after you switch it off. The newest one wins.'],
-    ['', 'TRIPLE, PAUSE, SPIN, DRAG', 'One-shots. TRIPLE: the next beat three times. PAUSE: hold the record, let go late, rejoin at the bar. SPIN: backspin through the last beat of the bar. DRAG: a finger on the platter, which slows the record and then catches up.'],
+    ['', 'TRIPLE, PAUSE, SPIN, DRAG, BABY', 'One-shots. TRIPLE: the next beat three times. PAUSE: hold the record, let go late, rejoin at the bar. SPIN: backspin through the last beat of the bar. DRAG: a finger on the platter, which slows the record and then catches up. BABY: the record that is not playing scratches the next hit, ending on the beat.'],
     ['', 'LOOP, DOUBLE, CHASE, PAUSE, SPIN menus', 'Loop length; how far behind the double runs; chase step; pause length; how far the spin goes back.'],
-    ['', 'SHUFFLE, FILL PATTERN', 'Swing of the shuffle strobe (0 to 60 %); which of 8 fill patterns.'],
+    ['', 'SHUFFLE, FILL PATTERN, QUANT', 'Swing of the shuffle strobe (0 to 60 %); which of 8 fill patterns; where a move button starts.'],
     ['PADS', '1 to 4 / 5 to 8', 'Play a sticker now: kick, snare, kick 2, snare 2. Pads 1 to 4 on deck A, 5 to 8 on deck B. A hit lasts until the next hit or one beat.'],
     ['HANDS', 'HANDS', 'Sets the four below to the same value. 0 is a machine, 50 a tight DJ (default), 100 a loose one.'],
     ['', 'TIMING', 'How far releases and cuts stray. A late hand stays late for a few moves. Fast passages get looser.'],
@@ -47,6 +47,8 @@ s += [Paragraph('Controls', H2), tbl([
     ['', 'SLOP', 'Missed cue points (worse the further the pull), a sliver of pull-back through the fader, uneven levels, a trembling held record.'],
     ['', 'RISK', 'How often a hit is fluffed outright.'],
     ['', 'COPY', 'How worn the second copy is: a touch slower, duller and quieter. The decks drift apart and get nudged back.'],
+    ['', 'SCRATCH', 'How often a baby scratch (one push through the hit, one pull back, fader open) is flicked in just before a record comes back. 0 is never, 30 an occasional habit (default), 100 every time there is room. A late hand never scratches, so loose hands scratch less than the dial says. Not moved by HANDS.'],
+    ['', 'OVER', 'GROOVE: scratches are heard over the other record. SILENCE: the other record is cut while the scratch plays. MIX: about one in three is over silence (default).'],
     ['PLAY', 'MODE', 'HANDS-ON: you play the buttons. ROUTINE: the 16 slots play in turn. INSTINCT: the device chooses.'],
     ['', 'DENSITY, FUNK, ARC', 'Instinct: how busy, how syncopated, and over how many bars it builds up.'],
     ['', 'ROUTINE...', 'Opens the 16 slots, SLOT LENGTH (bar or half bar) and RESET.'],
@@ -77,6 +79,8 @@ for t, b in [
     ('7. Juggle something else', 'Record a bass line, a vocal phrase or a horn stab instead of drums. Doubles and chases work on anything rhythmic. Turn FILL KICK and SNARE to fixed stickers.'),
     ('8. Clean slicer', 'HANDS to 0 and COPY to 0: every cut is sample-exact and nothing drifts. Good for edits you then resample.'),
     ('9. Practice-room sound', 'HANDS to 100 with RISK at 30: late releases, slips and the odd fluffed hit.'),
+    ('10. Loop with pick-ups', 'LOOP at 1/4 (one beat), SCRATCH at 100: every return gets a baby scratch. Set OVER to SILENCE for bare scratches between the beats.'),
+    ('11. Scratch over the groove', 'Leave the record playing straight and tap BABY just before beats 2 and 4. OVER on GROOVE keeps the beat under it; SILENCE punches a hole for each scratch.'),
 ]:
     s += [Paragraph('<b>%s.</b> %s' % (t, b), P), Spacer(1, 3)]
 s += [Paragraph('Playing it from a controller', H2), Paragraph(
@@ -87,6 +91,11 @@ s += [Paragraph('Good to know', H2), Paragraph(
     'Doubles assumes 4/4. Changing the tempo after recording repitches the record, like a turntable. The record is saved as a '
     'WAV next to the device, and the Live set remembers which one. If that file is moved, the strip shows RECORD MISSING. '
     'Several Doubles in one set each keep their own record.', P)]
+s += [Paragraph('Version history', H2), Paragraph(
+    '1.1.0: baby scratches (SCRATCH, OVER, BABY). A late record is now dropped in where the music has got to instead of '
+    'being sped up to catch up; drift corrections are at most 3 %. Fixed: the hands dials always played fully loose; deck A '
+    'ran at the wrong speed when Live\'s tempo differed from the recording tempo. Scripts are stored inside the device.<br/>'
+    '1.0.0: first release.', P)]
 SimpleDocTemplate(os.path.join(ROOT, 'docs', 'Doubles-Manual.pdf'), pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm,
                   topMargin=14 * mm, bottomMargin=14 * mm, title='Doubles Manual').build(s)
 print('docs/Doubles-Manual.pdf')
