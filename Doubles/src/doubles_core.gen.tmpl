@@ -189,7 +189,7 @@ lvl = 0.07 * slop;
 fade = SR * (0.0008 + 0.0012 * slop);
 flubp = 0.05 * risk;
 flubsd = SR * 0.035;
-rate0 = L * tempo / (Lb * 60 * SR);
+rrate = L * tempo / (Lb * 60 * SR);
 recspb = L / Lb;
 trema = exp(-twopi * 100 / SR);
 tremb = sqrt(1 - trema * trema);
@@ -436,7 +436,7 @@ if (need_next > 0.5) {
 					// cued play: the hand pulls the record back to its cue and lets go early
 					cued$ = 1;
 					pre = min(pre0, floor(gap / 2));
-					adv = rate$ * rate0 * (pre - tau * (1 - exp(-pre / tau)));
+					adv = rate$ * rrate * (pre - tau * (1 - exp(-pre / tau)));
 					d0 = abs(wrap(p0$ - adv - pos$, -L / 2, L / 2));
 					cerr = 0;
 					if (d0 > 8) {
@@ -456,7 +456,7 @@ if (need_next > 0.5) {
 					dist = wrap(prel - pos$, -L / 2, L / 2);
 					need = 0;
 					if (abs(dist) > 8) {
-						need = reach + abs(dist) / rate0 / vmax;
+						need = reach + abs(dist) / rrate / vmax;
 					}
 					if (tr < need) {
 						tr = min(need, tlen - 1);
@@ -474,7 +474,7 @@ if (need_next > 0.5) {
 						mode$ = 2;
 					} else {
 						sd = v$ * dks * (1 - pow(dks, dc)) / (1 - dks);
-						pa$ = (dist / rate0 - sd) / ((dc + 1) / 2);
+						pa$ = (dist / rrate - sd) / ((dc + 1) / 2);
 						pdv$ = v$;
 						pdc$ = dc;
 						k$ = 0;
@@ -482,7 +482,7 @@ if (need_next > 0.5) {
 					}
 					trrem$ = tr;
 					push$ = ((noise() + noise() + noise() + noise() + noise() + noise()) * 0.70710678) * pushsd;
-					exp$ = wrap(p0$ - rate$ * rate0 * gap, 0, L);
+					exp$ = wrap(p0$ - rate$ * rrate * gap, 0, L);
 					expok$ = 1;
 				} else {
 					if (kind$ == 0) {
@@ -562,7 +562,7 @@ if (mode$ == 1) {
 if (mode$ == 5 && k$ == 0) {
 	// spin distance lives in p0 for a spin entry
 	sd = spdv$ * dks * (1 - pow(dks, spm$)) / (1 - dks);
-	spa$ = (p0$ / rate0 - sd) / (spm$ * 0.2475168);
+	spa$ = (p0$ / rrate - sd) / (spm$ * 0.2475168);
 }
 if (mode$ == 5) {
 	u = (k$ + 0.5) / spm$;
@@ -614,10 +614,10 @@ if (mode$ == 3) {
 		cuchk$ = cuchk$ - 1;
 		if (cuchk$ <= 0) {
 			err = wrap(exp$ - pos$, -L / 2, L / 2);
-			if (abs(err) > 0.0003 * SR * rate0) {
+			if (abs(err) > 0.0003 * SR * rrate) {
 				culen$ = floor(0.6 * SR);
 				cuk$ = 0;
-				cua$ = 0.8 * err / rate0 / ((culen$ + 1) / 2);
+				cua$ = 0.8 * err / rrate / ((culen$ + 1) / 2);
 				cuchk$ = culen$ + floor(0.25 * SR);
 			} else {
 				cuchk$ = floor(2 * SR);
@@ -634,7 +634,7 @@ if (mode$ == 3) {
 	v$ = vv;
 }
 if (expok$ > 0.5) {
-	exp$ = wrap(exp$ + rate$ * rate0, 0, L);
+	exp$ = wrap(exp$ + rate$ * rrate, 0, L);
 }
 
 // a finger on the platter
@@ -651,7 +651,7 @@ if (drlen$ > 0) {
 		drlen$ = 0;
 	}
 }
-pos$ = wrap(pos$ + vplay * rate0, 0, L);
+pos$ = wrap(pos$ + vplay * rrate, 0, L);
 
 // ---- fader ----
 // a late hand: the fader waits until the record has been let go
@@ -711,9 +711,9 @@ if (g$ > 0 && active > 0.5) {
 	xm = peek(rec, i0, 1); x0 = peek(rec, i1, 1); x1 = peek(rec, i2, 1); x2 = peek(rec, i3, 1);
 	c1 = 0.5 * (x1 - xm); c2 = xm - 2.5 * x0 + 2 * x1 - 0.5 * x2; c3 = 0.5 * (x2 - xm) + 1.5 * (x0 - x1);
 	yr$ = ((c3 * fr + c2) * fr + c1) * fr + x0;
-	if (abs(vplay * rate0) > 2) {
+	if (abs(vplay * rrate) > 2) {
 		// fast spin: average a little either side to tame aliasing
-		hw = abs(vplay * rate0) * 0.5;
+		hw = abs(vplay * rrate) * 0.5;
 		ja = wrap(floor(pos$ - hw), 0, L); jb = wrap(floor(pos$ + hw), 0, L);
 		yl$ = 0.5 * yl$ + 0.25 * (peek(rec, ja, 0) + peek(rec, jb, 0));
 		yr$ = 0.5 * yr$ + 0.25 * (peek(rec, ja, 1) + peek(rec, jb, 1));
