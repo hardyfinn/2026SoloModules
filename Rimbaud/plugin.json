@@ -1,0 +1,23 @@
+{
+  "slug": "Rimbaud",
+  "name": "Rimbaud",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Rimbaud",
+      "name": "Rimbaud",
+      "description": "Physical model of a snare drum: two coupled heads with pitch drop, stick contact with buzz strokes, colliding snare wires, rimshot, cross-stick, hoop and shell; top, bottom and mix mics; EXT for sympathetic buzz",
+      "tags": ["Drum", "Physical Modeling", "Synth Voice"]
+    }
+  ]
+}
