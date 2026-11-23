@@ -1,0 +1,322 @@
+// DJ Claude Skratch: gen~ core. One modelled record, a cartridge and a fader.
+// GENERATED INTO THE DEVICE by tools/build_device.py. Edit this template, not the device.
+// #FOR blocks are written out once per value with {name} replaced (tools/genexpr.py).
+// Every History is copied to a local at the top of the sample and written back at the end.
+//
+// The planner (skratch.js) decides everything. This core only plays what it is given:
+//   skr_q  hand segments, 12 fields: tb kind dur p1 a k e x1 x2 x3 gen spare
+//          kind 1 stroke  v = a * sin(pi * u^k)^e, u = (i + 0.5) / m
+//          kind 2 play    v = a + (v0 - a) * exp(-(i + 1) / (k * SR))
+//          kind 3 wiggle  a amp, k cycles, e wobble depth, x1 wobble rate, x2 mean, x3 phase
+//          kind 4 stop    v = v0 * exp(-(i + 1) / (k * SR))
+//          At the end of a segment the record position is set to p1.
+//          With no segment the hand holds the record: v decays, plus a little tremor.
+//   skr_f  fader events, 4 fields: tb gain gen spare. The fader moves in a straight line
+//          to each new gain over FADE seconds.
+//   skr_cut  the record, upsampled 4 times and pre-emphasised (inverse phono curve).
+// Output: speed times the cut record, read 4 times per sample, through the phono curve
+// and a low-pass at 4 x SR, every 4th result kept. Then the fader.
+//
+// in1: plugphasor~ (0..1 ramp per beat).   out1, out2: audio.
+
+Buffer cut("skr_cut");
+Buffer q("skr_q");
+Buffer fq("skr_f");
+Buffer st("skr_stat");
+
+// transport, set from JS
+Param tempo(120, min=20, max=999);
+Param playing(0);
+Param songbeat(0);
+Param sbseq(0);
+// queues
+Param qtail(0);
+Param ftail(0);
+Param fgen(0);
+// hands
+Param taustop(0.009, min=0.0005);
+Param tremor(0.01);
+Param fadet(0.0014, min=0.0002);
+// record
+Param haverec(0);
+Param recsr4(176400, min=1);
+Param rlen(0);
+Param level(1, min=0, max=4);
+Param posset(0);
+Param poscmd(0);
+// phono playback curve at 4 x SR (two first-order sections) and its 1 kHz gain
+Param pb0a(0.10079887);
+Param pb1a(-0.09901778);
+Param pa1a(-0.9982189);
+Param pb0b(0.13435687);
+Param pb1b(-0.06149022);
+Param pa1b(-0.92713336);
+Param g1k(9.886505);
+// low-pass at 4 x SR, three biquads
+Param lb0a(0.00223697);
+Param lb1a(0.00300486);
+Param lb2a(0.00223697);
+Param la1a(-1.40456695);
+Param la2a(0.52091626);
+Param lb0b(1);
+Param lb1b(-0.30111365);
+Param lb2b(1);
+Param la1b(-1.39470843);
+Param la2b(0.68395549);
+Param lb0c(1);
+Param lb1c(-0.8032222);
+Param lb2c(1);
+Param la1c(-1.43507501);
+Param la2c(0.8921389);
+
+History h_beatint(0);
+History h_prevph(0);
+History h_sbseq(0);
+History h_B(0);
+History h_wasplay(0);
+History h_jumps(0);
+History h_curgen(0);
+History h_poscmd(0);
+History h_qh(0);
+History h_fh(0);
+History h_alive(0);
+// the hand
+History h_act(0);
+History h_kind(0);
+History h_m(1);
+History h_i(0);
+History h_p1(0);
+History h_a(0);
+History h_k(1);
+History h_e(1);
+History h_x1(0);
+History h_x2(0);
+History h_x3(0);
+History h_v0(0);
+History h_pos(0);
+History h_v(0);
+History h_vb(0);
+History h_trph(0);
+// the fader
+History h_g(0);
+History h_gt(0);
+// filters, per channel
+#FOR c 0 1
+History h_sa{c}(0);
+History h_sb{c}(0);
+History h_z1a{c}(0);
+History h_z2a{c}(0);
+History h_z1b{c}(0);
+History h_z2b{c}(0);
+History h_z1c{c}(0);
+History h_z2c{c}(0);
+#ENDFOR
+
+// ---------------- per sample ----------------
+QN = 256;
+QF = 12;
+FN = 512;
+FF = 4;
+SR = samplerate;
+beatint = h_beatint; prevph = h_prevph; B = h_B; jumps = h_jumps; curgen = h_curgen;
+qh = h_qh; fh = h_fh;
+act = h_act; kind = h_kind; m = h_m; i = h_i; p1 = h_p1; a = h_a; sk = h_k; se = h_e;
+x1 = h_x1; x2 = h_x2; x3 = h_x3; v0 = h_v0; pos = h_pos; vprev = h_v; vb = h_vb; trph = h_trph;
+g = h_g; gt = h_gt;
+#FOR c 0 1
+sa{c} = h_sa{c}; sb{c} = h_sb{c};
+z1a{c} = h_z1a{c}; z2a{c} = h_z2a{c}; z1b{c} = h_z1b{c}; z2b{c} = h_z2b{c}; z1c{c} = h_z1c{c}; z2c{c} = h_z2c{c};
+#ENDFOR
+
+// ---- clock: the song position while Live plays, free running at the tempo when it stops ----
+ph = in1;
+if (playing > 0.5) {
+	if (ph < prevph - 0.5) {
+		beatint = beatint + 1;
+	}
+	if (sbseq != h_sbseq) {
+		cand = floor(songbeat - ph + 0.5);
+		if (abs(cand - beatint) > 0.5) {
+			beatint = cand;
+		}
+	}
+	Bn = beatint + ph;
+	if (h_wasplay < 0.5 || abs(Bn - B) > 0.05) {
+		jumps = jumps + 1;
+	}
+	B = Bn;
+} else {
+	B = B + tempo / (60 * SR);
+}
+prevph = ph;
+
+// ---- flush: a new generation drops the segment in hand and closes the fader ----
+if (fgen != curgen) {
+	curgen = fgen;
+	act = 0;
+	vb = vprev;
+	gt = 0;
+}
+
+// ---- a new record: put the needle on its cue ----
+if (poscmd != h_poscmd) {
+	pos = posset;
+	act = 0;
+	vb = 0;
+	vprev = 0;
+}
+
+// ---- next hand segment ----
+if (qh < qtail) {
+	base = (qh - floor(qh / QN) * QN) * QF;
+	if (peek(q, base + 10, 0) != curgen) {
+		qh = qh + 1;
+	} else {
+		if (peek(q, base, 0) <= B) {
+			kind = peek(q, base + 1, 0);
+			m = max(1, floor(peek(q, base + 2, 0) * SR + 0.5));
+			p1 = peek(q, base + 3, 0);
+			a = peek(q, base + 4, 0);
+			sk = peek(q, base + 5, 0);
+			se = peek(q, base + 6, 0);
+			x1 = peek(q, base + 7, 0);
+			x2 = peek(q, base + 8, 0);
+			x3 = peek(q, base + 9, 0);
+			v0 = vprev;
+			i = 0;
+			act = 1;
+			qh = qh + 1;
+		}
+	}
+}
+
+// ---- next fader event ----
+if (fh < ftail) {
+	fbase = (fh - floor(fh / FN) * FN) * FF;
+	if (peek(fq, fbase + 2, 0) != curgen) {
+		fh = fh + 1;
+	} else {
+		if (peek(fq, fbase, 0) <= B) {
+			gt = peek(fq, fbase + 1, 0);
+			fh = fh + 1;
+		}
+	}
+}
+
+// ---- the hand: speed for this sample ----
+ended = 0;
+if (act > 0.5) {
+	u = (i + 0.5) / m;
+	if (kind == 1) {
+		sh = sin(pi * pow(u, sk));
+		if (se != 1) {
+			sh = pow(max(sh, 0), se);
+		}
+		v = a * sh;
+	} else {
+		if (kind == 2) {
+			v = a + (v0 - a) * exp(-(i + 1) / (sk * SR));
+		} else {
+			if (kind == 3) {
+				kk = i / m;
+				kn = (i + 1) / m;
+				tw = twopi * x1;
+				wn = (kn + se * (1 - cos(tw * kn)) / tw) / (1 + se * (1 - cos(tw)) / tw);
+				env = min(1, min(kk, 1 - kk) * 12);
+				v = a * sin(twopi * sk * wn) * env - x2;
+			} else {
+				v = v0 * exp(-(i + 1) / (sk * SR));
+			}
+		}
+	}
+	vb = v;
+	i = i + 1;
+	if (i >= m) {
+		act = 0;
+		ended = 1;
+	}
+} else {
+	if (abs(vb) > 0.001) {
+		vb = vb * exp(-1 / (taustop * SR));
+	} else {
+		vb = 0;
+	}
+	v = vb + tremor * 0.2 * sin(trph);
+	trph = trph + twopi * 8.5 / SR;
+	if (trph > twopi) {
+		trph = trph - twopi;
+	}
+}
+
+// ---- the cartridge: four sub-steps from the last sample to this one ----
+dp = vprev / SR;
+#FOR c 0 1
+y{c} = 0;
+#ENDFOR
+#FOR j 1 2 3 4
+fr{j} = {j} * 0.25;
+pj = pos + fr{j} * dp;
+vj = vprev + fr{j} * (v - vprev);
+ix = min(max(pj * recsr4, 0), max(rlen - 2, 0));
+i0 = floor(ix);
+fx = ix - i0;
+#FOR c 0 1
+x = (peek(cut, i0, {c}) * (1 - fx) + peek(cut, i0 + 1, {c}) * fx) * vj + 0.000000000000000001;
+t1 = pb0a * x + sa{c};
+sa{c} = pb1a * x - pa1a * t1;
+t2 = pb0b * t1 + sb{c};
+sb{c} = pb1b * t1 - pa1b * t2;
+l1 = lb0a * t2 + z1a{c};
+z1a{c} = lb1a * t2 - la1a * l1 + z2a{c};
+z2a{c} = lb2a * t2 - la2a * l1;
+l2 = lb0b * l1 + z1b{c};
+z1b{c} = lb1b * l1 - la1b * l2 + z2b{c};
+z2b{c} = lb2b * l1 - la2b * l2;
+l3 = lb0c * l2 + z1c{c};
+z1c{c} = lb1c * l2 - la1c * l3 + z2c{c};
+z2c{c} = lb2c * l2 - la2c * l3;
+y{c} = l3;
+#ENDFOR
+#ENDFOR
+pos = pos + dp;
+if (ended > 0.5) {
+	pos = p1 - v / SR;
+}
+
+// ---- the fader ----
+frate = 1 / (fadet * SR);
+if (g < gt) {
+	g = min(gt, g + frate);
+} else {
+	g = max(gt, g - frate);
+}
+
+outg = g * g1k * level * haverec;
+out1 = y0 * outg;
+out2 = y1 * outg;
+
+// ---- status for the planner ----
+alive = h_alive + 1;
+poke(st, B, 0, 0);
+poke(st, playing, 1, 0);
+poke(st, qh, 2, 0);
+poke(st, fh, 3, 0);
+poke(st, pos, 4, 0);
+poke(st, v, 5, 0);
+poke(st, g, 6, 0);
+poke(st, alive, 7, 0);
+poke(st, SR, 8, 0);
+poke(st, jumps, 9, 0);
+poke(st, act, 10, 0);
+poke(st, curgen, 11, 0);
+
+// ---- write back ----
+h_beatint = beatint; h_prevph = prevph; h_sbseq = sbseq; h_B = B; h_wasplay = playing; h_jumps = jumps;
+h_curgen = curgen; h_poscmd = poscmd; h_qh = qh; h_fh = fh; h_alive = alive;
+h_act = act; h_kind = kind; h_m = m; h_i = i; h_p1 = p1; h_a = a; h_k = sk; h_e = se;
+h_x1 = x1; h_x2 = x2; h_x3 = x3; h_v0 = v0; h_pos = pos; h_v = v; h_vb = vb; h_trph = trph;
+h_g = g; h_gt = gt;
+#FOR c 0 1
+h_sa{c} = sa{c}; h_sb{c} = sb{c};
+h_z1a{c} = z1a{c}; h_z2a{c} = z2a{c}; h_z1b{c} = z1b{c}; h_z2b{c} = z2b{c}; h_z1c{c} = z1c{c}; h_z2c{c} = z2c{c};
+#ENDFOR

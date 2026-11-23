@@ -29,6 +29,7 @@ without stepping on each other.
 | [Rimbaud](Rimbaud/) | Rimbaud | Physical model of a snare drum: coupled heads, colliding snare wires, rimshot, cross-stick, buzz strokes, top/bottom mics |
 | [Lilt](Lilt/) | Lilt | Relabi generator: four summed LFOs crossing four thresholds make triggers that drift around the pulse |
 | [Peal](Peal/) | Peal, Bell Foundry | Change ringing sequencer (methods, calls, open handstroke) and a 12-bell modal voice to ring it |
+| [DJClaudeSkratch](DJClaudeSkratch/) | DJ Claude Skratch | Max for Live scratching instrument: a modelled record hand and fader hand play sixteen scratches (baby to flares, crabs, transforms) on one sound, from keys, a Routine or Instinct |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
