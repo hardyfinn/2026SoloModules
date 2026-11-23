@@ -33,6 +33,7 @@ def dynamo_voice(pitch, gate, accent, cutcv, P, U, seed32, fs):
     cg = 0.0 if P[17] <= 1e-4 else np.exp(-1.0 / (P[17] * fs))
     dg = 0.5 + 2.5 * P[18]
     r = 4.3 * P[8]
+    ns = np.sqrt(f2 / 96000.0)
     for n in range(N):
         rs, rn = xs32(rs)
         dr = drift_tick(d, rn, fs)
@@ -95,18 +96,31 @@ def dynamo_voice(pitch, gate, accent, cutcv, P, U, seed32, fs):
             if p2 < 0.0: p2 += 1.0
             sq = (2.0 * phs - 1.0 - blep(phs, dsub)) - (2.0 * p2 - 1.0 - blep(p2, dsub))
             rs, rn2 = xs32(rs)
-            x = (1.0 - P[4]) * x1 + P[4] * x2 + P[5] * sq + 1.2 * P[6] * rn2
+            x = (1.0 - P[4]) * x1 + P[4] * x2 + P[5] * sq + 1.2 * P[6] * rn2 * ns
             # ladder: four one-pole sections, feedback through tanh, one sample of delay in the loop
             u = np.tanh(dg * (0.6 * x) - r * y4)
             for j in range(4):
                 v = (u - s[j]) * G; u = v + s[j]; s[j] = u + v
             y4 = u
-            o[2 * n + k] = y4 * (1.0 + 0.6 * r) * amp / (0.35 + 0.65 * np.tanh(dg * 0.6)) * 1.0 + hiss * rn2
+            o[2 * n + k] = y4 * (1.0 + 0.6 * r) * amp / (0.35 + 0.65 * np.tanh(dg * 0.6)) * 1.0 + hiss * rn2 * ns
     return o
+
+def halfband():
+    """Sawstack's 2:1 decimator: 47-tap Blackman-windowed half-band FIR with exact zeros."""
+    N = 47; M = N - 1; n = np.arange(N); t = n - M / 2.0
+    s = np.where(t == 0, 0.5, np.sin(np.pi * 0.5 * t) / (np.pi * np.where(t == 0, 1, t)))
+    w = 0.42 - 0.5 * np.cos(2 * np.pi * n / M) + 0.08 * np.cos(4 * np.pi * n / M)
+    h = s * w; h /= h.sum(); h[((n - M // 2) % 2 == 0) & (n != M // 2)] = 0.0
+    return h
+
+def decimate2(o):
+    """Output sample k is the filter over input samples up to and including 2k+1 (as Decimator2.process(a, b))."""
+    y = np.convolve(o, halfband())[:len(o)]
+    return y[1::2]
 
 def dynamo_render(pitch, gate, accent, cutcv, P, seed=1, fs=SR):
     o = dynamo_voice(pitch, gate, accent, cutcv, np.asarray(P, float), unit(seed, 8), seed & 0x7FFFFFFF | 1, float(fs))
-    return resample_poly(o, 1, 2)       # the C++ uses the same half-band decimator as Sawstack
+    return decimate2(o)
 
 # ------------------------------------------------------------------ ORCHESTER
 REV = 1.8      # seconds per disc revolution (an assumption: no published figure)
@@ -177,6 +191,8 @@ def orch_voice(pitch, gate, D, F, A, NP, wobble, tone, attack, release, age, the
         if F[j, 2] > 0.0:
             g = np.tan(np.pi * min(F[j, 0], 0.45 * fs) / fs); k = 1.0 / F[j, 1]
             fa[j, 0] = 1.0 / (1.0 + g * (g + k)); fa[j, 1] = g * fa[j, 0]; fa[j, 2] = g * fa[j, 1]
+    nsc = np.sqrt(fs / 48000.0)
+    cb1 = 1.0 - np.exp(-2.0 * np.pi * 2724.6 / fs); cb2 = 1.0 - np.exp(-2.0 * np.pi * 391.8 / fs)   # 0.30 and 0.05 at 48 kHz
     for n in range(N):
         th_prev = th
         th += 1.0 / (REV * fs)
@@ -213,7 +229,7 @@ def orch_voice(pitch, gate, D, F, A, NP, wobble, tone, attack, release, age, the
                 fb1[j] = 2.0 * v1 - fb1[j]; fb2[j] = 2.0 * v2 - fb2[j]
                 y += F[j, 2] * v1 / F[j, 1] * 3.0
         # breath / bow noise recorded with the note: band-passed around 2.5 kHz by a one-pole pair
-        b1 += 0.30 * (rn - b1); b2 += 0.05 * (b1 - b2)
+        b1 += cb1 * (rn * nsc - b1); b2 += cb2 * (b1 - b2)
         y += D[14] * 4.0 * (b1 - b2)
         # optical playback
         y *= (1.0 + fdepth * np.sin(2.0 * np.pi * th + np.pi * NP[7]))

@@ -33,6 +33,7 @@ def zap_render(trig, pitch, start_hz, end_hz, sweep, res, decay, noise, click, d
     lr = np.log(start_hz / end_hz)
     dg = 1.0 + 3.0 * drive; dn = np.tanh(dg)
     hiss = 0.0 if age <= 0.6 else (age - 0.6) / 0.4 * 2.0e-4
+    ns = np.sqrt(fs / 48000.0)                           # white noise keeps the same level per Hz at any rate
     for n in range(N):
         s, r = xs32(s)
         dr = drift_tick(d, r, fs)
@@ -48,13 +49,13 @@ def zap_render(trig, pitch, start_hz, end_hz, sweep, res, decay, noise, click, d
         g = np.tan(np.pi * f / fs)
         k = k0 + 0.05 * v1 * v1
         a1 = 1.0 / (1.0 + g * (g + k)); a2 = g * a1; a3 = g * a2
-        x = 1.5 * noise * ne * r
+        x = 1.5 * noise * ne * r * ns
         v3 = x - ic2; v1 = a1 * ic1 + a2 * v3; v2 = ic2 + a2 * ic1 + a3 * v3
         ic1 = 2.0 * v1 - ic1; ic2 = 2.0 * v2 - ic2
         y = v1 * ae
         ae *= ca; ne *= cn
         s, r3 = xs32(s)
-        out[n] = np.tanh(dg * y) / dn + hiss * r3
+        out[n] = np.tanh(dg * y) / dn + hiss * r3 * ns
     return out
 
 # ------------------------------------------------------------------ BLECH
@@ -106,9 +107,11 @@ def blech_render(trig, box, tune, decay, dyn, ped_pitch, tone, age, U, seed32, f
     hiss = 0.0 if age <= 0.6 else (age - 0.6) / 0.4 * 1.5e-4
     hum = 0.0 if age <= 0.6 else (age - 0.6) / 0.4 * 3.0e-4
     leak_all = 0.0
+    ns = np.sqrt(fs / 48000.0)
     for n in range(N):
         s, r = xs32(s)                                   # one noise source shared by SNARE, HAT, CYMBAL
         dr = drift_tick(d, r, fs)
+        rn = r * ns
         leak = 0.0
         for v in range(6):
             p = box[v]
@@ -147,10 +150,10 @@ def blech_render(trig, box, tune, decay, dyn, ped_pitch, tone, age, U, seed32, f
                 f = min(p[5] * 2.0 ** (0.5 * (tune[v] + ped_pitch)) * (1.0 + age * 0.08 * U[4 * v + 3]), 0.45 * fs)
                 g = np.tan(np.pi * f / fs); k = p[6]
                 a1 = 1.0 / (1.0 + g * (g + k)); a2 = g * a1; a3 = g * a2
-                v3 = r - n2[v]; v1 = a1 * n1[v] + a2 * v3; v2 = n2[v] + a2 * n1[v] + a3 * v3
+                v3 = rn - n2[v]; v1 = a1 * n1[v] + a2 * v3; v2 = n2[v] + a2 * n1[v] + a3 * v3
                 n1[v] = 2.0 * v1 - n1[v]; n2[v] = 2.0 * v2 - n2[v]
                 if v == 2:
-                    z = r - k * v1 - v2                   # HAT: high-pass
+                    z = rn - k * v1 - v2                  # HAT: high-pass
                 else:
                     z = v1                                # SNARE, CYMBAL: band-pass
                     fh = 900.0 if v == 1 else 3000.0
@@ -160,7 +163,7 @@ def blech_render(trig, box, tune, decay, dyn, ped_pitch, tone, age, U, seed32, f
             lp[v] += ctone * (y - lp[v])
             out[v, n] = lp[v]
         s, r4 = xs32(s)
-        common = age * 0.02 * leak_all + hiss * r4 + hum * np.sin(2.0 * np.pi * 50.0 * n / fs)
+        common = age * 0.02 * leak_all + hiss * r4 * ns + hum * np.sin(2.0 * np.pi * 50.0 * n / fs)
         leak_all = leak
         for v in range(6):
             out[v, n] += common / 6.0

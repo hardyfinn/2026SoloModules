@@ -47,6 +47,7 @@ def vok_render(mod, car, centres, sliders, attack, release, shift, sib, thresh, 
     nh1 = 0.0; nh2 = 0.0; gn = np.tan(np.pi * 2500.0 / fs)        # sibilance noise is high-passed at 2.5 kHz before the bank
     bleed = 0.0 if age <= 0.6 else (age - 0.6) / 0.4 * 0.003
     hiss = 0.0 if age <= 0.6 else (age - 0.6) / 0.4 * 1.5e-4
+    ns = np.sqrt(fs / 48000.0)
     for n in range(N):
         m = mod[n]
         pz += kpe * (m - pz); mp = m + 1.0 * (m - pz)
@@ -65,6 +66,7 @@ def vok_render(mod, car, centres, sliders, attack, release, shift, sib, thresh, 
         vflag[n] = 1.0 - uv; senv[n] = min(1.0, 4.0 * (eh + el))
         # carrier with noise substitution
         rs, r = xs32(rs)
+        r *= ns
         a1 = 1.0 / (1.0 + gn * (gn + k)); a2 = gn * a1; a3 = gn * a2
         v3 = r - nh2; v1 = a1 * nh1 + a2 * v3; v2 = nh2 + a2 * nh1 + a3 * v3; nh1 = 2 * v1 - nh1; nh2 = 2 * v2 - nh2
         nz = r - k * v1 - v2
@@ -84,11 +86,12 @@ def vok_render(mod, car, centres, sliders, attack, release, shift, sib, thresh, 
                 e2[i] += ksm * (e1[i] - e2[i])
         for i in range(NB):
             # FORMANT shift: synthesis band i takes the envelope of analysis band i - shift (linear interpolation)
+            # bands shifted in from outside the bank are silent
             p = i - shift
-            if p <= 0.0: e = e2[0]
-            elif p >= NB - 1: e = e2[NB - 1]
-            else:
-                j = int(p); fr = p - j; e = e2[j] * (1.0 - fr) + e2[j + 1] * fr
+            j = int(np.floor(p)); fr = p - j
+            ea = e2[j] if 0 <= j < NB else 0.0
+            eb = e2[j + 1] if 0 <= j + 1 < NB else 0.0
+            e = ea * (1.0 - fr) + eb * fr
             x = c
             for sgi in range(2):
                 o4 = 4 * sgi
@@ -97,7 +100,7 @@ def vok_render(mod, car, centres, sliders, attack, release, shift, sib, thresh, 
             y += gb[i] * x * e
             es[i] = e
         rs, r2 = xs32(rs)
-        out[n] = np.tanh(0.5 * (5.0 * y * sp + bleed * car[n])) * 2.0 + hiss * r2
+        out[n] = np.tanh(0.5 * (5.0 * y * sp + bleed * car[n])) * 2.0 + hiss * r2 * ns
     return out, vflag, senv
 
 @njit(cache=True)

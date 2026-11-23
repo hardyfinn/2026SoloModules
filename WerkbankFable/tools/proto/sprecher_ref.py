@@ -210,12 +210,13 @@ def formant_engine(T, f0, size, whisper, age, U, seed32, fs):
     fy1 = 0.0; fy2 = 0.0; fA = 0.0; fB = 0.0; fC = 0.0
     ph = 0.0; rs = np.int64(seed32); d = np.zeros(2); lp = 0.0; hpz = 0.0; nlp = 0.0; sh = 0.0
     BW = np.array([70.0, 100.0, 160.0, 250.0, 300.0])
+    ns = np.sqrt(fs / 48000.0); cn = 1.0 - np.exp(-2.0 * np.pi * 5295.0 / fs)   # 0.5 at 48 kHz
     clk = 1.0 + age * 0.02 * U[0]                       # the one clock sets pitch AND formants, as on the phoneme boxes
     hiss = 0.0 if age <= 0.6 else (age - 0.6) / 0.4 * 1.5e-4
     for n in range(N):
         fi = min(n // hop, T.shape[0] - 1); t = T[fi]
         rs, r = xs32(rs)
-        dr = drift_tick(d, r, fs); ck = clk * (1.0 + age * 0.006 * dr)
+        dr = drift_tick(d, r, fs); r *= ns; ck = clk * (1.0 + age * 0.006 * dr)
         for j in range(3): cur[j] += kf * (t[j] - cur[j])
         kk = kq if t[9] > 0.5 else ka
         for j in range(3, 6): cur[j] += kk * (t[j] - cur[j])
@@ -237,7 +238,7 @@ def formant_engine(T, f0, size, whisper, age, U, seed32, fs):
         saw = 2.0 * ph - 1.0 - blep(ph, dt)
         lp += (1.0 - np.exp(-2.0 * np.pi * 4000.0 / fs)) * (saw - lp)
         av = cur[3] * (1.0 - whisper); ah = cur[4] + cur[3] * whisper * 1.5
-        nlp += 0.5 * (r - nlp)
+        nlp += cn * (r - nlp)
         x = 0.5 * av * lp + 0.25 * ah * nlp
         y = x
         for j in range(5):
@@ -250,7 +251,7 @@ def formant_engine(T, f0, size, whisper, age, U, seed32, fs):
         hpz += (1.0 - np.exp(-2.0 * np.pi * 60.0 / fs)) * (y - hpz); y -= hpz
         sh += (1.0 - np.exp(-2.0 * np.pi * 1500.0 / fs)) * (y - sh); y += 1.0 * (y - sh)     # +6 dB shelf above 1.5 kHz
         rs, r2 = xs32(rs)
-        out[n] = np.tanh(1.1 * y) + hiss * r2
+        out[n] = np.tanh(1.1 * y) + hiss * r2 * ns
         f1o[n] = cur[0] / size
     return out, f1o
 
@@ -282,14 +283,14 @@ def chip_engine(T, f0, size, whisper, age, U, seed32, fs):
     g = np.tan(np.pi * min(4500.0, 0.45 * fs) / fs); k = 1.2
     l1 = 0.0; l2 = 0.0; tchip = 0.0; d = np.zeros(2)
     fric = False
+    hop = int(round(CTRL * fs))
     for n in range(N):
         rs, r = xs32(rs); dr = drift_tick(d, r, fs)
         acc += clk * (1.0 + age * 0.01 * dr) / fs
         while acc >= 1.0:                             # one chip sample
             acc -= 1.0
             if fcount == 0:                           # new frame: read and quantise the targets
-                tt = tchip
-                fi = min(int(tt / CTRL), T.shape[0] - 1); t = T[fi]
+                fi = min(n // hop, T.shape[0] - 1); t = T[fi]   # the frame the live scheduler is showing now
                 for j in range(6): a[j] = b[j]
                 av = t[3] * (1.0 - whisper); nz = max(t[4], t[5]) + t[3] * whisper * 0.6
                 voiced = av > 0.3
