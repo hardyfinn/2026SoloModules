@@ -42,7 +42,7 @@ struct Tapeizer : Module {
 		configParam(AGE_PARAM, 0.f, 1.f, 0.2f, "Age", "%", 0.f, 100.f)->description =
 			"State of the whole rig: head wear and dirt, azimuth, worn pinch roller and belts, calibration drift, drop-outs, hiss and hum.";
 		configParam(MIX_PARAM, 0.f, 1.f, 1.f, "Mix (dry to wet)", "%", 0.f, 100.f);
-		configParam(OUTPUT_PARAM, -12.f, 12.f, 0.f, "Output level", " dB");
+		configParam(OUTPUT_PARAM, -12.f, 12.f, 0.f, "Output level", " dB")->randomizeEnabled = false;
 
 		configParam(TRIM_PARAM, 0.f, 24.f, 0.f, "Desk trim (drive into the channel amp)", " dB")->description = "Clean until it clips hard. The level is compensated afterwards.";
 		configParam(LOW_PARAM, -15.f, 15.f, 0.f, "Desk low shelf", " dB");

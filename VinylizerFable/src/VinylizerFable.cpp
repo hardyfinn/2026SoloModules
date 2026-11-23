@@ -126,7 +126,7 @@ struct VinylizerFable : Module {
 		configParam(NEEDLE_PARAM, 0.f, 1.f, 0.f, "Needle position (edge to end of side)", "%", 0.f, 100.f);
 		configButton(PLAY_PARAM, "Play side (needle travels across the side in real time)");
 		configParam(MIX_PARAM, 0.f, 1.f, 1.f, "Mix", "%", 0.f, 100.f);
-		configParam(OUT_PARAM, 0.f, 2.f, 1.f, "Output level", " dB", -10.f, 20.f);
+		configParam(OUT_PARAM, 0.f, 2.f, 1.f, "Output level", " dB", -10.f, 20.f)->randomizeEnabled = false;
 		configInput(IN_L, "Left / mono");
 		configInput(IN_R, "Right");
 		configInput(NEEDLE_INPUT, "Needle position CV (0-10 V)");

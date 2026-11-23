@@ -100,7 +100,7 @@ struct Gonzo : Module {
 		configParam(TUNE_PARAM, -48.f, 48.f, 0.f, "Tune", " semitones");
 		configParam(MUTE_PARAM, 0.f, 1.f, 0.f, "Mute (towel)", "%", 0.f, 100.f);
 		configParam(WIDTH_PARAM, 0.f, 1.f, 0.7f, "Stereo width", "%", 0.f, 100.f);
-		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", "%", 0.f, 100.f);
+		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", "%", 0.f, 100.f)->randomizeEnabled = false;
 		configSwitch(PITCHED_PARAM, 0.f, 1.f, 0.f, "Pitch", {"Size sets the pitch (tam-tam, wind)", "V/OCT sets the pitch for every type (0 V = C4)"});
 
 		configInput(VOCT_INPUT, "V/OCT");

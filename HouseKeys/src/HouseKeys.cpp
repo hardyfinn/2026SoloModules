@@ -76,7 +76,7 @@ struct HouseKeys : Module {
 		configSwitch(STAB_PARAM, 0.f, 9.f, 0.f, "Stab chord", {STAB_NAMES, STAB_NAMES + 10});
 		configParam(GRIT_PARAM, 0.f, 1.f, 0.5f, "Grit (converter and age; 50% is the real machine)", "%", 0.f, 100.f);
 		configParam(TAPE_PARAM, 0.f, 1.f, 0.f, "Tape", "%", 0.f, 100.f);
-		configParam(LEVEL_PARAM, 0.f, 1.f, 0.5f, "Level", " dB", -10.f, 40.f, 18.0618f);
+		configParam(LEVEL_PARAM, 0.f, 1.f, 0.5f, "Level", " dB", -10.f, 40.f, 18.0618f)->randomizeEnabled = false;
 		configInput(VOCT_INPUT, "V/OCT (polyphonic)");
 		configInput(GATE_INPUT, "Gate (polyphonic)");
 		configInput(VEL_INPUT, "Velocity 0 to 10 V (polyphonic)");

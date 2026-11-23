@@ -140,7 +140,7 @@ struct Krka : Module {
 			configParam<TimeQuantity>(pid(c, P_TIME), 0.f, 1.f, 0.55f, n + " time");
 			configParam(pid(c, P_RESP), -1.f, 1.f, 0.f, n + " response (bends the level axis)", "%", 0.f, 100.f);
 			configParam(pid(c, P_WARP), -1.f, 1.f, 0.f, n + " warp (bends the time axis)", "%", 0.f, 100.f);
-			configParam(pid(c, P_LEVEL), 0.f, 1.f, 1.f, n + " level", "%", 0.f, 100.f);
+			configParam(pid(c, P_LEVEL), 0.f, 1.f, 1.f, n + " level", "%", 0.f, 100.f)->randomizeEnabled = false;
 			configSwitch(pid(c, P_GATE), 0.f, 1.f, 0.f, n + " gate mode", {"One-shot", "Gate: hold at the peak while TRIG is high"});
 			configSwitch(pid(c, P_ANALOG), 0.f, 1.f, 0.f, n + " retrigger", {"Digital: restart from the beginning", "Analog: restart from where it is"});
 			configParam(pid(c, P_PHASE), 0.f, 1.f, 1.f, n + " phase (starts this far through the previous channel in a chain)", "%", 0.f, 100.f);

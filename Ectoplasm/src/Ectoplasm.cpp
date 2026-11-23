@@ -96,7 +96,7 @@ struct Ectoplasm : engine::Module {
 		getParamQuantity(BANK)->snapEnabled = true;
 		configParam(TEMPO, 30, 300, 120, "Tempo (when no clock is patched)", " BPM");
 		getParamQuantity(TEMPO)->snapEnabled = true;
-		configParam(DRIVE, 0, 1, .5f, "Drive: volume to the middle, then saturation, then fuzz");
+		configParam(DRIVE, 0, 1, .5f, "Drive: volume to the middle, then saturation, then fuzz")->randomizeEnabled = false;
 		configParam(FILTER, 0, 1, .5f, "DJ filter: low-pass left, high-pass right, off in the middle");
 		configParam(GATE, 0, 1, 0, "Gate: slice gating (off at minimum)");
 		configParam(RETRIG, 0, 1, 0, "Retrig: probability of stutters", "%", 0, 100);

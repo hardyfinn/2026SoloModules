@@ -58,7 +58,7 @@ struct Rimbaud : Module {
 		configParam(WIRES_PARAM, 0.f, 1.f, 0.5f, "Wires (12 <-> 42 strands)", "%", 0.f, 100.f);
 		configParam(SYMP_PARAM, 0.f, 1.f, 0.5f, "Sympathy (how hard EXT pushes on the heads)", "%", 0.f, 100.f);
 		configParam(MIC_PARAM, 0.f, 1.f, 0.3f, "Mic (MIX output: top mic <-> bottom mic)", "%", 0.f, 100.f);
-		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", "%", 0.f, 100.f);
+		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", "%", 0.f, 100.f)->randomizeEnabled = false;
 		configButton(HIT_PARAM, "Hit");
 
 		configInput(VOCT_INPUT, "V/OCT (tune)");

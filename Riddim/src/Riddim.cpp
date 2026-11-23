@@ -57,7 +57,7 @@ struct Riddim : Module {
 		configParam(TUNE_PARAM, -12.f, 12.f, 0.f, "Tune", " st");
 		configParam(DECAY_PARAM, 0.5f, 2.f, 1.f, "Decay", "x");
 		configParam(TONE_PARAM, 0.f, 1.f, 0.5f, "Tone", "%", 0.f, 100.f);
-		configParam(LEVEL_PARAM, 0.f, 1.2f, 0.8f, "Level", "%", 0.f, 100.f);
+		configParam(LEVEL_PARAM, 0.f, 1.2f, 0.8f, "Level", "%", 0.f, 100.f)->randomizeEnabled = false;
 		configParam(SWING_PARAM, 0.f, 1.f, 0.f, "Swing", "%", 0.f, 100.f);
 		configParam(MUTATE_PARAM, 0.f, 1.f, 0.f, "Mutate", "%", 0.f, 100.f);
 		configParam(CRUSH_PARAM, 0.f, 1.f, 0.f, "Crush", "%", 0.f, 100.f);
@@ -65,7 +65,7 @@ struct Riddim : Module {
 		configSwitch(VAR_PARAM, 0.f, 2.f, 0.f, "Variation", {"A", "Auto (B every 4th bar)", "B"});
 		configButton(FILL_PARAM, "Fill (last beat of this bar)");
 		for (int i = 0; i < 10; i++) {
-			configParam(VOICE_LEVEL_PARAM + i, 0.f, 1.f, 0.8f, std::string(TRACK_NAMES[i]) + " level", "%", 0.f, 100.f);
+			configParam(VOICE_LEVEL_PARAM + i, 0.f, 1.f, 0.8f, std::string(TRACK_NAMES[i]) + " level", "%", 0.f, 100.f)->randomizeEnabled = false;
 			configOutput(VOICE_OUTPUT + i, std::string(TRACK_NAMES[i]) + " out (removes it from the mix)");
 		}
 		configInput(CLOCK_INPUT, "Clock (16ths)");

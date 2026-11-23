@@ -40,8 +40,8 @@ struct Ageng : Module {
 		configParam(KTUNE_PARAM, -12.f, 12.f, 0.f, "Kempul tune", " semitones");
 		configParam(KRING_PARAM, 0.5f, 8.f, 2.5f, "Kempul ring", " s");
 		configSwitch(ALT_PARAM, 0.f, 1.f, 0.f, "Alternate", {"Off: GONG plays the first gong", "On: GONG alternates the two gongs (wadon / lanang)"});
-		configParam(GLEVEL_PARAM, 0.f, 1.f, 1.f, "Gong level");
-		configParam(KLEVEL_PARAM, 0.f, 1.f, 0.8f, "Kempul level");
+		configParam(GLEVEL_PARAM, 0.f, 1.f, 1.f, "Gong level")->randomizeEnabled = false;
+		configParam(KLEVEL_PARAM, 0.f, 1.f, 0.8f, "Kempul level")->randomizeEnabled = false;
 		configInput(GONG_INPUT, "Gong trigger");
 		configInput(GONG2_INPUT, "Second gong trigger");
 		configInput(KEMPUL_INPUT, "Kempul trigger");

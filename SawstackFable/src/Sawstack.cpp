@@ -73,6 +73,7 @@ struct Sawstack : Module {
 		configParam(AMP_PARAM, 0.f, 1.f, 0.f, "Amplitude (VCA offset)", "%", 0.f, 100.f)->description =
 			"Opens the VCA by itself. Leave at zero to play the VCA from envelope 2 (normalled to the AMP input).";
 		configParam(OUTPUT_PARAM, 0.f, 1.f, 1.f, "Output level", "%", 0.f, 100.f)->description = "At full the output is 10 V peak to peak.";
+		getParamQuantity(OUTPUT_PARAM)->randomizeEnabled = false;
 		configParam(FREQ_ATT_PARAM, -1.f, 1.f, 0.f, "FREQ CV amount", "%", 0.f, 100.f);
 		configParam(SPREAD_ATT_PARAM, -1.f, 1.f, 0.f, "SPREAD CV amount", "%", 0.f, 100.f);
 		configParam(TIMBRE_ATT_PARAM, -1.f, 1.f, 0.f, "TIMBRE CV amount", "%", 0.f, 100.f);

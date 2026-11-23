@@ -99,7 +99,7 @@ struct Gongoozler : Module {
 		configParam(ROAR_PARAM, 0.f, 1.f, 0.35f, "Roar (the plate stretching: growl and downward sweep on hard hits)", "%", 0.f, 100.f);
 		configParam(MUTE_PARAM, 0.f, 1.f, 0.f, "Mute (a towel on the gong)", "%", 0.f, 100.f);
 		configParam(WIDTH_PARAM, 0.f, 1.f, 0.7f, "Stereo width", "%", 0.f, 100.f);
-		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", "%", 0.f, 100.f);
+		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", "%", 0.f, 100.f)->randomizeEnabled = false;
 		configButton(HIT_PARAM, "Hit");
 
 		configInput(VOCT_INPUT, "V/OCT (tune; on tuned gongs 0 V = C4, see right-click menu)");
