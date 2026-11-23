@@ -42,7 +42,11 @@ static const int NBOARD = 48;       // soundboard modes
 static const int NBANK = NKEYS * 2; // sympathetic strings (2 partials per key)
 static const int NNOISE = 32;       // action noise events at once
 static const int NTAPS = 13;        // direct + 12 reflections per ear
-static const float PHANTOM = 3e4f;  // ~ EA/4 of the string: tension change per (slope)^2, N
+static const float PHANTOM = 3e4f;
+// action noise levels (calibrated against a mf note: knocks about -28 dB, ticks and rustles lower)
+static const float THUMP = 0.08f;    // N into the soundboard (x300 there)
+static const float TICK = 0.002f;   // air, before x60
+static const float RUSTLE = 0.0006f;  // ~ EA/4 of the string: tension change per (slope)^2, N
 
 // ---------------------------------------------------------------- controls
 struct Controls {
@@ -183,8 +187,10 @@ struct Voice {
 
 // ---------------------------------------------------------------- action noises
 enum Dest { TO_BOARD, TO_AIR, TO_BUS };
+// Knocks are smooth pulses (a Hann bump, no hiss: a key hitting felt is not noisy);
+// rustles and swishes are filtered noise.
 struct NoiseEvent {
-	bool on = false;
+	bool on = false, pulse = false;
 	int wait = 0, att = 1, n = 0;
 	float env = 0.f, dec = 0.99f, gain = 0.f;
 	Biquad bp;
@@ -218,7 +224,7 @@ struct Engine {
 
 	// sympathetic strings (pedal down, or the undamped top)
 	float kpr[NBANK], kpi[NBANK], kzr[NBANK], kzi[NBANK], kin[NBANK], kw[NBANK], kdm[NBANK];
-	float kinG[NBANK], kgg[NBANK];   // input gain with played keys muted; damper factor at this pedal
+	float kinG[NBANK], kgg[NBANK], klift[NBANK];   // input gain with played keys muted; damper factor at this pedal
 	float kggPedal = -1.f;
 	bool bankBusy = false;
 
@@ -809,6 +815,7 @@ struct Engine {
 		}
 		NoiseEvent& e = ev[best];
 		e.on = true;
+		e.pulse = false;
 		e.dest = dest;
 		e.wait = (int)(waitS * fs);
 		e.att = std::max(1, (int)(attS * fs));
@@ -817,6 +824,28 @@ struct Engine {
 		e.dec = std::exp(-6.91f / (decS * fs));
 		e.gain = gain;
 		e.bp.bandpass(fc, q, fs);
+		e.bp.clear();
+	}
+
+	// a smooth knock of length durS, through a resonant filter (lowpass when q < 0)
+	void addPulse(int dest, float fc, float q, float durS, float gain, float waitS = 0.f) {
+		if (gain <= 0.f) return;
+		int best = 0;
+		float bestEnv = 1e9f;
+		for (int i = 0; i < NNOISE; i++) {
+			if (!ev[i].on) { best = i; bestEnv = -1.f; break; }
+			if (ev[i].env < bestEnv) { bestEnv = ev[i].env; best = i; }
+		}
+		NoiseEvent& e = ev[best];
+		e.on = true;
+		e.pulse = true;
+		e.dest = dest;
+		e.wait = (int)(waitS * fs);
+		e.att = std::max(2, (int)(durS * fs));
+		e.n = 0;
+		e.env = 1.f;
+		e.gain = gain;
+		if (q < 0.f) e.bp.lowpass(fc, -q, fs); else e.bp.bandpass(fc, q, fs);
 		e.bp.clear();
 	}
 
@@ -888,13 +917,13 @@ struct Engine {
 		v->hT = 0;
 		// key bottoms on the keybed just before the hammer lands
 		float nz = c.noise * keyNoise[n] * (0.6f + 0.8f * c.wear);
-		addNoise(TO_BOARD, 95.f + 40.f * urand(c.serial, n, F_NOISE + 5), 0.9f, 0.0008f, 0.014f, 1.75f * nz * std::pow(vel, 1.5f), std::max(0.f, m.delay - 0.0012f));
+		addPulse(TO_BOARD, 160.f + 60.f * urand(c.serial, n, F_NOISE + 5), -0.8f, 0.005f, THUMP * nz * std::pow(vel, 1.5f) * (1.f - 0.4f * n / 87.f), std::max(0.f, m.delay - 0.0012f));
 		if (c.wear > 0.3f && urand(c.serial, n, F_CLICK) < c.wear - 0.2f)
-			addNoise(TO_AIR, 2600.f, 2.f, 0.0002f, 0.003f, 0.02f * nz * vel, 0.f);
+			addPulse(TO_AIR, 2600.f, 3.f, 0.0004f, TICK * nz * vel, 0.f);
 		if (c.hammer > 0.85f && !c.felt)
-			addNoise(TO_AIR, 5200.f, 0.8f, 0.0001f, 0.0025f, 0.12f * (c.hammer - 0.85f) * 6.f * ve, m.delay);
+			addPulse(TO_AIR, 4800.f, 2.f, 0.0002f, TICK * 4.f * (c.hammer - 0.85f) * 6.f * ve, m.delay);
 		if (c.felt)
-			addNoise(TO_AIR, 4200.f, 0.7f, 0.001f, 0.015f, 0.006f * nz * vel, m.delay);
+			addNoise(TO_AIR, 3000.f, 0.7f, 0.002f, 0.012f, RUSTLE * nz * vel, m.delay);
 	}
 
 	void noteOff(int n) {
@@ -904,12 +933,12 @@ struct Engine {
 		if (held[n] > 0) return;
 		float nz = c.noise * keyNoise[n] * (0.6f + 0.8f * c.wear);
 		// key and hammer come back: a light double knock
-		addNoise(TO_BOARD, 170.f, 1.f, 0.0005f, 0.01f, 0.25f * nz, 0.f);
-		addNoise(TO_AIR, 1200.f, 1.5f, 0.0003f, 0.004f, 0.03f * nz, 0.012f);
+		addPulse(TO_BOARD, 200.f, -0.8f, 0.004f, THUMP * 0.09f * nz, 0.f);
+		addPulse(TO_AIR, 1400.f, 3.f, 0.0005f, TICK * 0.15f * nz, 0.012f);
 		if (n < nNoDamper && pedalS < 0.5f) {
 			Voice* v = voiceFor(n);
 			if (v && v->level > 1e-4f)
-				addNoise(TO_AIR, 700.f, 1.f, 0.002f, 0.025f, 0.015f * nz, 0.f);
+				addNoise(TO_AIR, 450.f, 0.8f, 0.004f, 0.02f, RUSTLE * 0.5f * nz, 0.f);
 		}
 	}
 
@@ -1100,15 +1129,15 @@ struct Engine {
 		if (std::fabs(pd) > 0.002f) {
 			float nz = c.noise * (0.6f + 0.8f * c.wear);
 			if (pedalPrev < 0.3f && pedalS >= 0.3f) {
-				addNoise(TO_BOARD, 85.f, 0.9f, 0.002f, 0.03f, 0.5f * nz);
+				addPulse(TO_BOARD, 140.f, -0.8f, 0.008f, THUMP * 0.6f * nz);
 				addNoise(TO_BUS, 3000.f, 0.5f, 0.03f, 0.15f, 1.2f * c.symp);
-				addNoise(TO_AIR, 2500.f, 0.6f, 0.03f, 0.12f, 0.004f * nz);
+				addNoise(TO_AIR, 2500.f, 0.6f, 0.03f, 0.12f, RUSTLE * 0.3f * nz);
 				if (c.wear > 0.5f && noise() > 0.4f)
-					addNoise(TO_AIR, 1700.f + 600.f * noise(), 14.f, 0.02f, 0.09f, 0.01f * nz * (c.wear - 0.5f) * 2.f);
+					addNoise(TO_AIR, 1700.f + 600.f * noise(), 14.f, 0.02f, 0.09f, RUSTLE * nz * (c.wear - 0.5f) * 2.f);
 			}
 			if (pedalPrev > 0.3f && pedalS <= 0.3f) {
-				addNoise(TO_BOARD, 120.f, 1.f, 0.003f, 0.035f, 0.35f * nz);
-				addNoise(TO_AIR, 900.f, 0.8f, 0.004f, 0.04f, 0.004f * nz);
+				addPulse(TO_BOARD, 170.f, -0.8f, 0.008f, THUMP * 0.45f * nz);
+				addNoise(TO_AIR, 500.f, 0.8f, 0.004f, 0.03f, RUSTLE * 0.4f * nz);
 			}
 			pedalPrev = pedalS;
 		}
@@ -1119,11 +1148,21 @@ struct Engine {
 			NoiseEvent& e = ev[i];
 			if (!e.on) continue;
 			if (e.wait > 0) { e.wait--; continue; }
-			if (e.n < e.att) e.env = (float)(++e.n) / e.att;
-			else e.env *= e.dec;
-			float x = e.bp.process(noise()) * e.env * e.gain;
+			float x;
+			if (e.pulse) {
+				float src = 0.f;
+				if (e.n < e.att) src = 0.5f - 0.5f * std::cos(2.f * kPi * e.n / e.att);
+				e.n++;
+				x = e.bp.process(src) * e.gain;
+				if (e.n > e.att + (int)(0.06f * fs)) { e.on = false; e.env = 0.f; }
+				else e.env = e.n < e.att ? 1.f : 0.5f;
+			} else {
+				if (e.n < e.att) e.env = (float)(++e.n) / e.att;
+				else e.env *= e.dec;
+				x = e.bp.process(noise()) * e.env * e.gain;
+				if (e.n >= e.att && e.env < 1e-4f) e.on = false;
+			}
 			if (e.dest == TO_BOARD) nBoard += x; else if (e.dest == TO_AIR) nAir += x; else nBus += x;
-			if (e.n >= e.att && e.env < 1e-4f) e.on = false;
 		}
 
 		// strings
@@ -1172,11 +1211,14 @@ struct Engine {
 				kggPedal = pedal;
 				for (int n = 0; n < NKEYS; n++) {
 					float da = n < nNoDamper ? (1.f - pedal) * (1.f - pedal) : 0.f;
-					for (int p = 0; p < 2; p++) kgg[n * 2 + p] = 1.f - da * kdm[n * 2 + p];
+					for (int p = 0; p < 2; p++) {
+						kgg[n * 2 + p] = 1.f - da * kdm[n * 2 + p];
+						klift[n * 2 + p] = 1.f - da;   // a string with its damper down hardly answers at all
+					}
 				}
 			}
 			for (int i = nStart * 2; i < NBANK; i++) {
-				float a = (kpr[i] * kzr[i] - kpi[i] * kzi[i]) * kgg[i] + kinG[i] * drive;
+				float a = (kpr[i] * kzr[i] - kpi[i] * kzi[i]) * kgg[i] + kinG[i] * klift[i] * drive;
 				float b = (kpr[i] * kzi[i] + kpi[i] * kzr[i]) * kgg[i];
 				kzr[i] = a; kzi[i] = b;
 				bank += kw[i] * b;

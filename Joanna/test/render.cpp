@@ -405,6 +405,20 @@ int main(int argc, char** argv) {
 		for (int i = 0; i < 48000; i++) e->process(base, 0.f);
 		CHECK(std::fabs(e->outL) < 1e-6f && std::fabs(e->outR) < 1e-6f, "silence is silent");
 	}
+	// 19. action noise: smooth knocks, no hiss tail through the room (2.0.1 fix)
+	{
+		Take n = play(base, {{0.f, KEY_C4, 0.8f, 0.f}}, 0.4f);
+		Controls q = base; q.noise = 0.f;
+		Take z = play(q, {{0.f, KEY_C4, 0.8f, 0.f}}, 0.4f);
+		std::vector<float> d(n.l.size());
+		for (size_t i = 0; i < d.size(); i++) d[i] = n.l[i] - z.l[i];
+		float knock = rmsDb(d, 0.f, 0.06f) - rmsDb(z.l, 0.f, 0.06f);
+		auto p = spectrum(n.l, (int)(0.03f * SR), 8192);
+		double hi = 0, all = 0;
+		for (int i = 1; i < 4096; i++) { all += p[i]; if (i * SR / 8192 > 8000.f) hi += p[i]; }
+		float hiss = 10.f * std::log10(hi / all + 1e-30);
+		CHECK(knock < -20.f && knock > -45.f && hiss < -90.f, "C4 key thump %.0f dB under the note; above 8 kHz after the attack %.0f dB", knock, hiss);
+	}
 	// 18. speed
 	{
 		Controls c = base; c.pedal = 1.f;
