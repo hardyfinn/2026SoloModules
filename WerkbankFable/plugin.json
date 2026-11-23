@@ -1,0 +1,81 @@
+{
+  "slug": "WerkbankFable",
+  "name": "Werkbank Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Takt",
+      "name": "TAKT",
+      "description": "Two-row 16/32-step pitch sequencer with built-in interval quantiser, live transpose and eight patterns",
+      "tags": [
+        "Sequencer",
+        "Quantizer"
+      ]
+    },
+    {
+      "slug": "Blech",
+      "name": "BLECH",
+      "description": "Six analog rhythm-box drum voices played by triggers or pads, with DYNAMICS, PITCH and TONE pedal inputs",
+      "tags": [
+        "Drum",
+        "Synth voice"
+      ]
+    },
+    {
+      "slug": "Zap",
+      "name": "ZAP",
+      "description": "Synth percussion: a pinged resonant filter with a swept pitch",
+      "tags": [
+        "Drum",
+        "Synth voice",
+        "Polyphonic"
+      ]
+    },
+    {
+      "slug": "Vokoder",
+      "name": "VOKODER",
+      "description": "20-band vocoder with voiced/unvoiced switching, formant shift, freeze and a built-in carrier",
+      "tags": [
+        "Vocoder",
+        "Effect"
+      ]
+    },
+    {
+      "slug": "Sprecher",
+      "name": "SPRECHER",
+      "description": "Speech synthesiser: type words, clock them, sing them by V/OCT. Formant and speech-chip engines, seven languages for numbers",
+      "tags": [
+        "Speech",
+        "Synth voice"
+      ]
+    },
+    {
+      "slug": "Orchester",
+      "name": "ORCHESTER",
+      "description": "Optical-disc keyboard: looped choir, strings, flute and five more, with disc wobble",
+      "tags": [
+        "Synth voice",
+        "Polyphonic"
+      ]
+    },
+    {
+      "slug": "Dynamo",
+      "name": "DYNAMO",
+      "description": "Two-oscillator ladder-filter bass and lead voice",
+      "tags": [
+        "Synth voice",
+        "Polyphonic"
+      ]
+    }
+  ]
+}

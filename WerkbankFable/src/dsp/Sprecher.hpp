@@ -189,7 +189,7 @@ struct SpScheduler {
 	int hop = 240, cnt = 0;
 	bool pending = false, finished = false;
 	std::vector<SpFrame> next;
-	void init(double fs) { hop = (int)std::nearbyint(SP_CTRL * fs); cnt = 0; active = false; pending = false; k = 0;
+	void init(double fs) { hop = (int)std::nearbyint(SP_CTRL * fs); cnt = 0; pos = 0.0; active = false; pending = false; k = 0;
 		row = {500, 1500, 2500, 0, 0, 0, 3000, 2000, 0, 0, 0, 0}; }
 	void start(std::vector<SpFrame>&& f) { next = std::move(f); pending = true; }
 	double progress() const { return frames.empty() ? 0.0 : std::min(1.0, (double)k / frames.size()); }
@@ -215,6 +215,39 @@ struct SpScheduler {
 		return b;
 	}
 	bool busy() const { return active || pending; }
+
+	// ---- live use in the module: no allocation on the audio thread
+	double pos = 0.0;   // frames left until the next boundary
+	void reserve(size_t n) { frames.reserve(n); next.reserve(n); }
+	// copy a word in (into reserved storage); it starts at the next frame boundary
+	void startCopy(const std::vector<SpFrame>& f) {
+		size_t m = std::min(f.size(), next.capacity());
+		next.assign(f.begin(), f.begin() + m);
+		pending = true;
+	}
+	// one sample with frames advancing at RATE x 5 ms. Same frame logic as tick().
+	bool tickRate(bool gateHigh, bool holdOn, double rate) {
+		finished = false;
+		bool b = false;
+		if (pos <= 1e-9) {
+			b = true;
+			pos += 1.0;
+			if (pending) { frames.swap(next); next.clear(); pending = false; k = 0; active = !frames.empty(); }
+			if (active) {
+				if (k < frames.size()) {
+					row = frames[k];
+					bool lastHold = frames[k][10] > 0 && (k + 1 >= frames.size() || frames[k + 1][10] == 0);
+					if (!(holdOn && lastHold && gateHigh)) k++;
+				} else {
+					SpFrame c = frames.back();
+					row = {c[0], c[1], c[2], 0, 0, 0, 3000, 2000, 0, 0, 0, 0};
+					active = false; finished = true;
+				}
+			}
+		}
+		pos -= rate / hop;
+		return b;
+	}
 };
 
 inline void spReson(double f, double bw, double fs, double& A, double& B, double& C) {
