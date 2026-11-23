@@ -1,7 +1,7 @@
 {
   "slug": "Gongoozler",
   "name": "Gongoozler",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "license": "MIT",
   "brand": "Haer",
   "author": "Haer",
@@ -17,7 +17,22 @@
       "slug": "Gongoozler",
       "name": "Gongoozler",
       "description": "Gong and tam-tam physical model: 256 modes, tam-tam, wind gong, opera gong and bossed (gamelan) gong; a hard hit blooms from a low hum into a shimmering wash, opera gongs bend in pitch, bossed gongs beat slowly; mallet, strike position, towel mute and hand grab",
-      "tags": ["Drum", "Physical Modeling", "Synth Voice"]
+      "tags": [
+        "Drum",
+        "Physical Modeling",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Gonzo",
+      "name": "Gonzo",
+      "description": "The Gongoozler gong engine pushed past real gongs: 2 cm to 20 m, mode spacing LAW and ORDER (harmonic to scattered), DENSITY, BOW and audio EXCITE, freeze, reversed tilt, and a bloom that can sink into the lows instead of climbing",
+      "tags": [
+        "Drum",
+        "Physical Modeling",
+        "Synth Voice",
+        "Effect"
+      ]
     }
   ]
 }

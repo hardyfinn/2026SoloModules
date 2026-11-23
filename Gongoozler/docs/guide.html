@@ -88,4 +88,37 @@ img{max-width:100%}
 <h2>How it works, briefly</h2>
 <p>Each gong type has its own list of plate modes (flat plates follow Chladni's law, so modes are sparse low and crowded high; tuned gongs add a boss note and partials). Non-round modes come in near-identical pairs, which beat. The bloom is an energy cascade through seven octave bands: each band hands energy to the one above at a rate that grows with its own loudness, so it switches on only for hard hits and never adds energy that wasn't there. Roar is the stretching of the plate (Berger tension) as an energy-conserving force, so it can't run away. Not yet heard inside VCV Rack.</p>
 </div>
+
+<div class="page" style="page-break-before:always;padding-top:9mm">
+<h1 style="font-size:20pt">GONZO</h1>
+<div class="sub">The same engine pushed past real gongs · 36 HP · in the Gongoozler plugin (2.1.0)</div>
+<div class="two">
+<img src="../panel-preview-gonzo.png" style="width:84mm">
+<div>
+<p>At its <b>violet ticks</b> Gonzo is a Gongoozler tam-tam. Every knob goes further than a real gong can: the ticks show where the real range sits, everything past them is invented physics.</p>
+<p>The right-click menu has 8 starting points that show the range: <b>Sinking sun</b>, <b>Glass organ</b>, <b>Bowed sheet 8 m</b>, <b>Laser gong</b>, <b>Crotale rain</b>, <b>Whale</b>, <b>Resonator</b> (patch drums into EXCITE), and back to the plain tam-tam.</p>
+<div class="box">Gongoozler itself is untouched: it renders bit-for-bit the same as before.</div>
+</div></div>
+<h2>What goes beyond</h2>
+<table>
+<tr><th>Control</th><th>Range</th><th>What it does</th></tr>
+<tr><td>SIZE</td><td>2 cm .. 20 m</td><td>crotale pings to sheets whose lowest modes are below hearing (you hear them through ROAR and BLOOM).</td></tr>
+<tr><td>PITCH switch</td><td>SIZE / V/OCT</td><td>up: every type, tam-tam too, takes its lowest mode from V/OCT (0 V = C4).</td></tr>
+<tr><td>LAW</td><td>x0.25 .. x2</td><td>mode spacing. Squeeze it and the plate's modes crowd together towards a string or pipe; stretch it for bar and glass spacing.</td></tr>
+<tr><td>ORDER</td><td>-1 .. +1</td><td>left pulls every mode onto a whole harmonic (singing, organ-like); right scatters them at random.</td></tr>
+<tr><td>DENSITY</td><td>3 .. 100 %</td><td>how many modes exist: a handful of tones (bell, bar) up to the full 256.</td></tr>
+<tr><td>BEAT</td><td>0 .. 3</td><td>past the tick, the beating pairs detune into chorus and clusters.</td></tr>
+<tr><td>MALLET</td><td>click .. shove</td><td>a 13-microsecond click up to a 0.2-second push that is pure sub thump.</td></tr>
+<tr><td>BOW</td><td>0 .. 100 %</td><td>rubs the plate continuously, so it swells and drones without any hits (CV 0-10 V).</td></tr>
+<tr><td>EXCITE jack</td><td>audio</td><td>any audio drives the plate at the strike position: the gong as a resonator for drums, voices or feedback.</td></tr>
+<tr><td>DECAY</td><td>blip .. freeze</td><td>quarter-second blips up to minutes; fully right, it never dies (HAND or MUTE still stop it).</td></tr>
+<tr><td>TILT</td><td>-1 .. +1</td><td>right of centre is a real gong (highs die first); left makes the lows die first, leaving glassy highs hanging.</td></tr>
+<tr><td>BLOOM</td><td>sink .. climb</td><td>right: energy climbs into the wash. Left: it sinks, so a bright hit collapses into a swelling hum.</td></tr>
+<tr><td>BUILD / THRESH</td><td>5 ms .. 20 s / x0.01 .. x100</td><td>how fast the bloom moves, and how hard you must hit before it starts (left: a whisper blooms).</td></tr>
+<tr><td>GLIDE / ROAR</td><td>±36 st / 0 .. 2</td><td>laser zaps and dive bombs; stretch force up to 4x a real plate.</td></tr>
+</table>
+<h2>The Gonzo demo (gonzo-demo.wav)</h2>
+<img src="gonzo-demo-spectrogram.png" style="width:50%">
+<p style="font-size:8.5pt;color:#7a6e5c;margin:1mm 0">0 s Sinking sun. 7 s Glass organ playing an F minor arpeggio (three Gonzos). 16 s Bowed sheet, 8 m, no hits. 25 s Laser gong. 30 s Crotale rain. 37 s Whale. 47 s Resonator with a drum loop in EXCITE.</p>
+</div>
 </body></html>

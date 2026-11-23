@@ -10,3 +10,4 @@ __pycache__/
 test/render
 *.wav
 test/demo
+test/demo_gonzo

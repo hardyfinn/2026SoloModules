@@ -69,6 +69,17 @@ struct Controls {
 	float width = 0.7f;
 	float level = 1.f;
 	bool hand = false;
+
+	// ---- Gonzo (the extended module). Neutral defaults: Gongoozler never touches these.
+	bool beyond = false;     // wider size range, freeze, energy safety limit
+	bool pitchAll = false;   // every type takes its lowest mode from tune (0 = C4)
+	float law = 1.f;         // mode-spacing exponent multiplier (ratio -> ratio^law)
+	float order = 0.f;       // -1 snap modes to whole harmonics .. +1 scatter them
+	float density = 1.f;     // fraction of modes that exist
+	float threshMul = 1.f;   // bloom threshold multiplier
+	float bow = 0.f;         // continuous rubbing excitation 0..1
+	float excite = 0.f;      // audio input sample (volts * 0.1)
+	bool freeze = false;     // no natural decay at all
 };
 
 static inline float clampf(float x, float a, float b) { return std::min(std::max(x, a), b); }
@@ -116,9 +127,18 @@ struct Engine {
 	float cF1 = -1.f, cPitch = -1.f, cBeat = -1.f, cFLast = -1.f, cTlow = -1.f, cFd = -1.f;
 	float cMute = -1.f, cHand = -1.f, cWidth = -1.f;
 	int cType = -1;
+	bool cFreeze = false;
 	bool modesDirty = true;
+	bool modesDirtyA = true;         // strike weights need refreshing after new modes
 	bool idle = false;
 	int mLive = N;                  // per-sample loop runs over modes 0 .. mLive-1
+	// Gonzo
+	float effR[N] = {};             // mode ratios after LAW / ORDER (cached)
+	float ordJit[N] = {}, keepR[N] = {};
+	float cLaw = -1.f, cOrder = -9.f, cDensity = -1.f;
+	float aPos = -1.f;              // POSITION the strike weights were last made for
+	float outTrim = 1.f;            // keeps level steady when DENSITY thins the modes
+	Rng rngBow;
 	float stretch = 0.f;            // ROAR: S = sum cpp x^2, kept from the last sample
 	int band[N] = {};
 
@@ -155,6 +175,8 @@ struct Engine {
 	static constexpr float EGLIDE = 2.0f;     // energy that gives the full GLIDE
 	static constexpr float OUT_GAIN = 6.0f;
 	static constexpr float SMAX = 50.f;
+	float BOW_GAIN = 0.0035f;
+	float EXCITE_GAIN = 0.015f;
 	static constexpr float ROAR_G = 1500.f;
 
 	float outL = 0.f, outR = 0.f;
@@ -218,6 +240,7 @@ struct Engine {
 	void makeModes(int type, int cast) {
 		typeNow = type; castNow = cast;
 		modesDirty = true;
+		modesDirtyA = true;
 		Rng g;
 		g.seed(7000u + (uint32_t) cast * 7919u + (uint32_t) type * 104729u);
 		int k = 0;
@@ -261,6 +284,16 @@ struct Engine {
 			if (md[i].twinOf >= 0 && md[i].kind == PLATE) phi[i] = phi[md[i].twinOf] + PI * 0.5f;
 		}
 		for (int i = M; i < N; i++) { x[i] = v[i] = 0.f; e[i] = r[i] = a[i] = gn[i] = 0.f; }
+		// Gonzo's own random numbers (separate generator, so Gongoozler's casts don't move)
+		Rng g2;
+		g2.seed(91000u + (uint32_t) cast * 7919u + (uint32_t) type * 104729u);
+		for (int i = 0; i < M; i++) {
+			ordJit[i] = g2.bi();
+			keepR[i] = g2.uni() * 0.999f;
+			if (md[i].kind == PARTIAL || i < 4) keepR[i] = 0.f;      // the note itself always stays
+			if (md[i].twinOf >= 0) { keepR[i] = keepR[md[i].twinOf]; ordJit[i] = ordJit[md[i].twinOf]; }
+		}
+		aPos = -1.f;
 	}
 
 	// ---------------------------------------------------------------- the strike
@@ -296,10 +329,11 @@ struct Engine {
 		if (f[0] == 0.f) updateBlock(c);
 		float rr = 0.03f + 0.95f * clampf(pos, 0.f, 1.f);
 		for (int k = 0; k < M; k++) a[k] = strikeWeight(k, rr);
+		aPos = clampf(pos, 0.f, 1.f);
 		vel = clampf(vel, 0.f, 1.5f);
 		// contact time: hard stick 0.15 ms .. big soft beater 20 ms; harder hits
 		// squash the felt and make the contact shorter (Hertz contact law)
-		float tau = 0.00015f * std::pow(130.f, clampf(mallet, 0.f, 1.f));
+		float tau = 0.00015f * std::pow(130.f, clampf(mallet, -0.5f, 1.5f));
 		tau *= std::pow(std::max(vel, 0.05f) / 0.75f, -0.2f);
 		pulseLen = std::max(2, (int) (tau * fs));
 		pulsePos = 0;
@@ -312,7 +346,7 @@ struct Engine {
 	// ---------------------------------------------------------------- per block
 	void updateBlock(const Controls& c) {
 		if (typeNow != c.type || castNow != c.cast) makeModes(c.type, c.cast);
-		const float D = clampf(c.size, 15.f, 160.f);
+		const float D = c.beyond ? clampf(c.size, 2.f, 2000.f) : clampf(c.size, 15.f, 160.f);
 		const float th = c.thick;
 		const float dt = 1.f / fs;
 		const float bdt = BLOCK * dt;
@@ -322,10 +356,29 @@ struct Engine {
 		float f1;
 		if (c.type == TAMTAM) f1 = 34.f * std::pow(90.f / D, 2.f) * (0.55f + 0.9f * th);
 		else if (c.type == WIND) f1 = 52.f * std::pow(90.f / D, 2.f) * (0.55f + 0.9f * th);
-		else if (c.followPitch) f1 = 261.63f;
+		else if (c.followPitch || c.pitchAll) f1 = 261.63f;
 		else if (c.type == OPERA) f1 = 330.f * std::pow(30.f / D, 1.5f) * (0.7f + 0.6f * th);
 		else f1 = 62.f * std::pow(90.f / D, 1.5f) * (0.7f + 0.6f * th);
+		if (c.pitchAll && !tuned) f1 = 261.63f;
 		f1 *= std::exp2(c.tune);
+		if (c.beyond) f1 = clampf(f1, 0.5f, 4000.f);
+
+		// ---- Gonzo: mode ratios after LAW and ORDER (cached; plain ratios otherwise)
+		bool ratiosMoved = false;
+		if (c.law != cLaw || c.order != cOrder || modesDirty) {
+			cLaw = c.law; cOrder = c.order; ratiosMoved = true;
+			for (int k = 0; k < nDense; k++) {
+				float rk = md[k].ratio;
+				if (c.law != 1.f) rk = std::pow(rk, c.law);
+				if (c.order < 0.f) {
+					float h = std::max(1.f, std::round(rk));
+					rk = std::exp(std::log(rk) + (std::log(h) - std::log(rk)) * (-c.order));
+				} else if (c.order > 0.f) {
+					rk *= std::exp(0.35f * c.order * ordJit[k]);
+				}
+				effR[k] = rk;
+			}
+		}
 
 		// ---- band energies -> cascade (energy-conserving: drained below, injected above)
 		for (int i = 0; i < NBAND; i++) bandE[i] = 0.f;
@@ -341,13 +394,15 @@ struct Engine {
 			if (md[k].kind != HIGH && k < 24) Eglide += E;
 		}
 		// thicker gongs and tuned gongs need harder hits before they bloom
-		float eth = ETH * (0.4f + 1.6f * th * th) * (tuned ? 3.f : 1.f) * (c.type == WIND ? 0.6f : 1.f);
+		float eth = ETH * (0.4f + 1.6f * th * th) * (tuned ? 3.f : 1.f) * (c.type == WIND ? 0.6f : 1.f) * c.threshMul;
 		float Tb = 0.06f * std::pow(40.f, c.build);  // 60 ms .. 2.4 s for the lowest band
-		float bl = c.bloom * (tuned ? 0.6f : 1.f);
+		float bl = std::fabs(c.bloom) * (tuned ? 0.6f : 1.f);
+		const bool sink = c.bloom < 0.f;  // Gonzo: energy flows down instead of up
 		for (int i = 0; i < NBAND; i++) {
 			float s = bandE[i] / (std::max(cnt[i], 1) * eth);
 			float s15 = s * std::sqrt(s);
 			float rate = bl / (Tb * std::pow(0.72f, (float) i)) * s15 / (1.f + s15);
+			if (sink && i == 0) rate = 0.f;     // sinking: the lowest band has nowhere to go
 			flux[i] = rate * bandE[i];          // energy per second leaving band i
 			drain[i] = 0.5f * rate;             // amplitude damping that removes it
 		}
@@ -359,7 +414,7 @@ struct Engine {
 		pitchMul = std::exp2(c.glide / 12.f * gx);
 
 		// ---- frequencies (only recomputed when something that moves them changed)
-		const bool fNeed = f1 != cF1 || pitchMul != cPitch || c.beat != cBeat || modesDirty;
+		const bool fNeed = f1 != cF1 || pitchMul != cPitch || c.beat != cBeat || modesDirty || ratiosMoved;
 		if (fNeed) {
 			cF1 = f1; cPitch = pitchMul; cBeat = c.beat;
 			float fLast = 0.f;
@@ -371,7 +426,7 @@ struct Engine {
 					if (d.kind == PARTIAL) fk = base + (0.25f + 6.f * c.beat) * d.hz * d.tw;
 					else fk = base * (1.f + (0.0006f + 0.012f * c.beat * c.beat) * d.tw);
 				} else {
-					fk = f1 * d.ratio * pitchMul;
+					fk = f1 * effR[k] * pitchMul;
 				}
 				f[k] = fk;
 				fLast = std::max(fLast, fk);
@@ -400,10 +455,13 @@ struct Engine {
 		// ---- everything that depends only on the frequencies and the slow knobs:
 		// sin(), exp() and the band of each mode. Cached, because the knobs and the
 		// pitch usually sit still while the gong rings; this was most of the CPU.
-		const bool own = fNeed || Tlow != cTlow || fd != cFd || lamMute != cMute || lamHand != cHand
-		                 || c.width != cWidth || c.type != cType;
+		const float dampKey = c.damp >= 0.f ? fd : c.damp;
+		const bool own = fNeed || Tlow != cTlow || dampKey != cFd || lamMute != cMute || lamHand != cHand
+		                 || c.width != cWidth || c.type != cType || c.density != cDensity || c.freeze != cFreeze;
 		if (own) {
-			cTlow = Tlow; cFd = fd; cMute = lamMute; cHand = lamHand; cWidth = c.width; cType = c.type;
+			cTlow = Tlow; cFd = dampKey; cMute = lamMute; cHand = lamHand; cWidth = c.width; cType = c.type;
+			cDensity = c.density; cFreeze = c.freeze;
+			outTrim = c.density < 1.f ? std::pow(std::max(c.density, 0.03f), -0.25f) : 1.f;
 			for (int i = 0; i < NBAND; i++) gsum[i] = 0.f;
 			for (int k = 0; k < M; k++) {
 				float fk = f[k];
@@ -413,12 +471,14 @@ struct Engine {
 				float hw = d.kind == PARTIAL ? 0.3f : 1.f;
 				hwk[k] = hw;
 				gsum[bi] += hw * hw;  // (modes above Nyquist count here too, as in 2.0.0)
-				float T60 = Tlow / (1.f + fk / fd);
+				float T60 = c.damp >= 0.f ? Tlow / (1.f + fk / fd)
+				                          : Tlow / (1.f + 4000.f * c.damp * c.damp / fk);  // Gonzo: lows die first
 				if (d.kind == PARTIAL) T60 *= (c.type == BOSSED ? 1.6f : 1.2f);
 				else if (tuned) T60 *= 0.45f;
 				T60 = std::max(T60, 0.03f);
-				float lam = 6.91f / T60 + lamMute * (0.6f + 0.4f * std::min(fk / 2000.f, 1.f)) + lamHand * (1.f + std::min(fk / 3000.f, 1.f));
-				if (fk < 0.45f * fs) {
+				bool alive = keepR[k] < c.density;
+				float lam = (c.freeze ? 0.f : 6.91f / T60) + lamMute * (0.6f + 0.4f * std::min(fk / 2000.f, 1.f)) + lamHand * (1.f + std::min(fk / 3000.f, 1.f));
+				if (fk < 0.45f * fs && alive) {
 					e[k] = 2.f * std::sin(PI * fk * dt);
 					rOwn[k] = std::exp(-lam * dt);
 					float pr = std::min(300.f / fk, 4.f);
@@ -447,10 +507,33 @@ struct Engine {
 			float inflow = flux[i - 1];
 			sig[i] = cGsum[i] > 0.f ? std::sqrt(inflow / (fs * cGsum[i])) : 0.f;
 		}
-		for (int i = 0; i < NBAND; i++) rDrain[i] = drain[i] > 0.f ? std::exp(-drain[i] * dt) : 1.f;
+		if (sink) {
+			// Gonzo: band i receives what band i+1 loses
+			for (int i = 0; i < NBAND; i++) {
+				float inflow = i + 1 < NBAND ? flux[i + 1] : 0.f;
+				sig[i] = cGsum[i] > 0.f ? std::sqrt(inflow / (fs * cGsum[i])) : 0.f;
+			}
+		}
+		float lamSafe = 0.f;
+		if (c.beyond) {
+			// Gonzo safety: with BOW / EXCITE into a frozen gong, energy could grow forever
+			float Eall = 0.f;
+			for (int i = 0; i < NBAND; i++) Eall += bandE[i];
+			if (Eall > 60.f) lamSafe = 20.f * (Eall / 60.f - 1.f);
+		}
+		for (int i = 0; i < NBAND; i++) {
+			float dl = drain[i] + lamSafe;
+			rDrain[i] = dl > 0.f ? std::exp(-dl * dt) : 1.f;
+		}
+		if ((c.bow > 0.f || c.excite != 0.f) && (c.position != aPos || modesDirtyA)) {
+			float rr = 0.03f + 0.95f * clampf(c.position, 0.f, 1.f);
+			for (int k = 0; k < M; k++) a[k] = strikeWeight(k, rr);
+			aPos = c.position;
+		}
+		modesDirtyA = false;
 		// whatever leaves the top band (and anything with nowhere to go) becomes air
-		topFlux = flux[NBAND - 1];
-		for (int i = 0; i < NBAND - 1; i++) if (cGsum[i + 1] == 0.f) topFlux += flux[i];
+		topFlux = sink ? 0.f : flux[NBAND - 1];
+		if (!sink) for (int i = 0; i < NBAND - 1; i++) if (cGsum[i + 1] == 0.f) topFlux += flux[i];
 		airAmp = std::sqrt(topFlux);
 
 		bool noise = false;
@@ -473,7 +556,7 @@ struct Engine {
 		for (int i = 0; i < NBAND; i++) Etot += bandE[i];
 		meter = std::min(1.f, std::sqrt(Etot) * 0.5f);
 		// nothing rings and nothing is being fed in: the mode loop would only add zeros
-		idle = Etot == 0.f && !noise && pulsePos >= pulseLen && airAmp == 0.f;
+		idle = Etot == 0.f && !noise && pulsePos >= pulseLen && airAmp == 0.f && c.bow == 0.f && c.excite == 0.f;
 	}
 
 	// ---------------------------------------------------------------- per sample
@@ -487,6 +570,10 @@ struct Engine {
 			sA = pulseAmp * 0.5f * (1.f - std::cos(2.f * PI * ph));
 			pulsePos++;
 		}
+		// Gonzo: BOW rubs the plate with noise, EXCITE drives it with outside audio
+		if (c.bow > 0.f) sA += c.bow * c.bow * BOW_GAIN * rngBow.bi();
+		if (c.excite != 0.f) sA += c.excite * EXCITE_GAIN;
+		if (sA != 0.f) idle = false;
 		// cascade noise (one unit-variance white noise drives all the receiving modes;
 		// each mode only keeps its own frequency, so they ring independently)
 		float n = rng.bi() * 1.7320508f;
@@ -526,7 +613,7 @@ struct Engine {
 
 		dcL += (L - dcL) * 0.0015f; L -= dcL;
 		dcR += (R - dcR) * 0.0015f; R -= dcR;
-		float g = OUT_GAIN * c.level;
+		float g = OUT_GAIN * c.level * outTrim;
 		outL = 10.f * std::tanh(L * g * 0.1f);
 		outR = 10.f * std::tanh(R * g * 0.1f);
 	}

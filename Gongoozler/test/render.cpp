@@ -178,6 +178,69 @@ int main(int argc, char** argv) {
 		CHECK(st0 > 1.5f && st1 < 0.3f * st0, "glide did not bend and return");
 	}
 
+	// ---- 3b. Gonzo (the extended module): extreme settings stay safe
+	{
+		Rng g; g.seed(777);
+		float worst = 0.f;
+		int bad = 0;
+		for (int t = 0; t < 150; t++) {
+			Render r;
+			Controls& c = r.c;
+			c.beyond = true;
+			c.type = g.next() % NTYPES; c.size = 2.f * std::pow(1000.f, g.uni()); c.thick = g.uni(); c.beat = 3 * g.uni();
+			c.glide = 72 * g.uni() - 36; c.cast = g.next() % 16; c.position = g.uni(); c.mallet = 2 * g.uni() - 0.5f;
+			c.decay = 1.9f * g.uni() - 0.4f; c.freeze = g.uni() < 0.25f; c.damp = 2 * g.uni() - 1; c.bloom = 2 * g.uni() - 1;
+			c.build = 2.3f * g.uni() - 0.7f; c.roar = 2 * g.uni(); c.tune = 8 * g.uni() - 4; c.pitchAll = g.next() & 1;
+			c.law = std::exp2(3 * g.uni() - 2); c.order = 2 * g.uni() - 1; c.density = 0.03f + 0.97f * g.uni();
+			c.threshMul = std::pow(10.f, 4 * g.uni() - 2); c.bow = g.uni() < 0.4f ? g.uni() : 0.f;
+			bool ex = g.uni() < 0.3f;
+			for (int h = 0; h < 5; h++) {
+				r.eng.trigger(1.5f * g.uni(), c);
+				int n = (int) ((0.1f + 0.5f * g.uni()) * FS);
+				for (int i = 0; i < n; i++) {
+					if (ex) c.excite = 0.5f * g.bi();
+					r.eng.process(c); r.L.push_back(r.eng.outL); r.R.push_back(r.eng.outR);
+				}
+			}
+			r.run(3.0f);
+			for (size_t i = 0; i < r.L.size(); i++) {
+				float m = std::max(std::fabs(r.L[i]), std::fabs(r.R[i]));
+				if (!std::isfinite(m)) m = 1e9f;
+				worst = std::max(worst, m);
+			}
+			for (int k = 0; k < N; k++) if (!std::isfinite(r.eng.x[k]) || std::fabs(r.eng.x[k]) > 100.f) { bad++; break; }
+		}
+		printf("Gonzo: 150 random extreme patches (bow, freeze, audio excite), loudest sample %.2f V\n", worst);
+		CHECK(bad == 0 && worst <= 10.01f, "Gonzo state blew up in %d patches", bad);
+	}
+	// ---- 3c. Gonzo sinking bloom: a bright hit must get darker over time
+	{
+		Render r;
+		r.c.beyond = true; r.c.mallet = 0.05f; r.c.bloom = -0.85f; r.c.build = 0.7f; r.c.threshMul = 0.1f; r.c.decay = 0.9f; r.c.damp = 0.f;
+		r.eng.trigger(1.f, r.c);
+		r.run(3.f);
+		float c0, c1, d, h;
+		analyse(r.L, 0.05f, c0, d, h);
+		analyse(r.L, 2.5f, c1, d, h);
+		printf("Gonzo sink: centroid %.0f Hz at 50 ms -> %.0f Hz at 2.5 s\n", c0, c1);
+		CHECK(c1 < 0.5f * c0, "sinking bloom did not darken");
+	}
+	// ---- 3d. Gonzo ORDER -1: every mode on a whole harmonic
+	{
+		Engine e; e.setSampleRate(FS);
+		Controls c; c.beyond = true; c.order = -1.f; c.pitchAll = true; c.beat = 0.f;
+		e.trigger(0.5f, c);
+		e.process(c);
+		float worstCents = 0.f;
+		for (int k = 0; k < e.nDense; k++) {
+			if (e.md[k].twinOf >= 0 || e.f[k] > 20000.f) continue;
+			float h = e.f[k] / 261.63f;
+			worstCents = std::max(worstCents, std::fabs(1200.f * std::log2(h / std::round(h))));
+		}
+		printf("Gonzo ORDER -1: worst mode %.3f cents off a harmonic\n", worstCents);
+		CHECK(worstCents < 1.f, "ORDER -1 left modes off the harmonics");
+	}
+
 	// ---- 4. speed
 	{
 		Render r;
