@@ -1,0 +1,80 @@
+
+void clock_in_do_update() {
+#ifdef INCLUDE_ECTOCORE
+  if (clock_in_activator < 0) {
+#else
+  if (clock_in_activator < 1) {
+#endif
+    clock_in_activator++;
+  } else {
+    clock_in_do = true;
+    clock_in_last_last_time = clock_in_last_time;
+    clock_in_last_time = time_us_32();
+    clock_in_beat_total++;
+    clock_in_ready = true;
+    if (variable_splice_reset == VARIABLE_SPLICE_RESET_CLOCK)
+      variable_splice_reset = VARIABLE_SPLICE_RESET_READY;
+  }
+  if (playback_stopped) {
+    playback_was_stopped_clock = true;
+    clock_in_beat_total = 0;
+  } else if (playback_was_stopped_clock) {
+    playback_was_stopped_clock = false;
+    clock_in_beat_total = 0;
+  }
+}
+
+void clock_handling_up(int time_diff) {
+  // printf("[clockhandling] clock_handling_up: %d %d\n", time_diff, bpm_new);
+  clock_in_diff_2x = time_diff * 2;
+  uint16_t bpm_new = round(30000000.0 / (float)(time_diff));
+  if (bpm_new > 30 && bpm_new < 300) {
+    sf->bpm_tempo = bpm_new;
+  }
+  clock_in_do_update();
+}
+
+void clock_handling_down(int time_diff) {
+  // printf("[zeptocore] clock_handling_down: %d\n", time_diff);
+}
+
+void clock_handling_start() {
+  // printf("[clockhandling] clock_handling_start\n");
+#ifdef INCLUDE_ECTOCORE
+  if (clock_in_activator < 0) {
+#else
+  if (clock_in_activator < 1) {
+#endif
+    clock_in_activator++;
+  } else {
+    bool restart_from_stop = false;
+    // Stop phase publication before arming the explicit restart below.
+    cancel_repeating_timer(&timer);
+#ifdef INCLUDE_ECTOCORE
+    restart_from_stop = playback_stopped ||
+        (clock_start_stop_sync && audio_callback_in_mute && !button_mute);
+    if (restart_from_stop) {
+      AR_CALL(audio_restart_arm());
+      // Transport restart must unmute even without the optional renderer wake
+      // optimization (including the shared desktop engine).
+      button_mute = false;
+      trigger_button_mute = false;
+    }
+#endif
+    clock_in_do = true;
+    clock_in_last_last_time = clock_in_last_time;
+    clock_in_last_time = time_us_32();
+    clock_in_beat_total = 0;
+    // Until the first complete interval arrives, the held tempo must also
+    // provide the clock-loss timeout. A zero timeout would mute the first slice.
+    if (clock_in_diff_2x == 0)
+      clock_in_diff_2x = (uint32_t)round(60000000.0 / sf->bpm_tempo);
+    playback_was_stopped_clock = false;
+    variable_splice_reset = VARIABLE_SPLICE_RESET_NONE;
+    clock_in_ready = true;
+    do_restart_playback = true;
+    timer_step();
+    update_repeating_timer_to_bpm(sf->bpm_tempo);
+    if (restart_from_stop) audio_i2s_request_render();
+  }
+}
