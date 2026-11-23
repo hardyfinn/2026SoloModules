@@ -171,8 +171,8 @@ struct Sawstack : Module {
 		for (int c = 0; c < channels; c++) {
 			double g1 = g1On ? inputs[GATE1_INPUT].getPolyVoltage(c) : 0.0;
 			double g2 = g2On ? inputs[GATE2_INPUT].getPolyVoltage(c) : g1;
-			double fall1 = clamp(f1k * std::exp2(f1a * inputs[FALL1_INPUT].getPolyVoltage(c)), 0.0005, 20.0);
-			double fall2 = clamp(f2k * std::exp2(f2a * inputs[FALL2_INPUT].getPolyVoltage(c)), 0.0005, 20.0);
+			double fall1 = std::min(std::max(f1k * std::exp2(f1a * inputs[FALL1_INPUT].getPolyVoltage(c)), 0.0005), 20.0);
+			double fall2 = std::min(std::max(f2k * std::exp2(f2a * inputs[FALL2_INPUT].getPolyVoltage(c)), 0.0005), 20.0);
 			bool end1, end2;
 			double e1 = env1[c].process(g1, r1, fall1, age, args.sampleRate, end1);
 			double e2 = env2[c].process(g2, r2, fall2, age, args.sampleRate, end2);
@@ -185,7 +185,7 @@ struct Sawstack : Module {
 			double richCv = richOn ? inputs[RICH_INPUT].getPolyVoltage(c) : e1 * 10.0;
 			double ampCv = ampOn ? inputs[AMP_INPUT].getPolyVoltage(c) : e2 * 10.0;
 			double pitch = sm[0] + inputs[VOCT_INPUT].getPolyVoltage(c) + fa * inputs[FREQ_INPUT].getPolyVoltage(c);
-			pitch = clamp(pitch, -10.0, 10.0);
+			pitch = std::min(std::max(pitch, -10.0), 10.0);
 			double spread = sm[1] + sa * inputs[SPREAD_INPUT].getPolyVoltage(c) * 0.1;
 			double timbre = sm[2] + ta * inputs[TIMBRE_INPUT].getPolyVoltage(c) * 0.1;
 			double rich = sm[3] + ra * richCv * 0.1;
