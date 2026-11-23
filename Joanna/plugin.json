@@ -1,0 +1,23 @@
+{
+  "slug": "Joanna",
+  "name": "Joanna",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Joanna",
+      "name": "Joanna",
+      "description": "Physical model of an upright home piano and its room: felt hammers, beating unisons, two-stage decay, sympathetic strings, years since tuning, wear and age, three pedals, lid and wall, living room to church hall",
+      "tags": ["Physical Modeling", "Synth Voice", "Polyphonic", "Reverb"]
+    }
+  ]
+}
