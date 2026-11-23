@@ -942,8 +942,8 @@ function anything() {
 	case 'fills': c.fills = v; sendStrip(); return;
 	case 'hands': if (!handsGuard) setHands(v); return;
 	case 'timing': case 'weight': case 'slop': case 'risk':
-		c[m] = v; outlet(0, m, v); return;
-	case 'copy': c.copy = v; outlet(0, 'wear', v); return;
+		c[m] = v / 100; outlet(0, m, v / 100); return;      // the dials read 0 to 100
+	case 'copy': c.copy = v / 100; outlet(0, 'wear', v / 100); return;
 	case 'mode':
 		c.mode = v;
 		if (v === 1) S.routineAnchor = Math.ceil((S.B + 0.25) / 4) * 4;
