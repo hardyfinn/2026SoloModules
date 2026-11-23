@@ -6,6 +6,7 @@ without stepping on each other.
 
 | Folder | Module | What it is |
 |---|---|---|
+| [Paddock](Paddock/) | Swerve, Gallop, Tumble | Blasser-style coupled circuits: a bounce oscillator, four bounce oscillators bounding each other, five touch-coupled rhythm cores with gongs |
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
 | [Datamatic](Datamatic/) | Datamatic, Test Pattern | Ryoji Ikeda style: numbers (pi, primes, text, CV) become interlocking gates at up to 16x the clock, played by hard-edged sine, click and noise voices |
 | [Krka](Krka/) | Krka | Four function generators with 260 shapes, 16 chain algorithms, assignable CV and 18 presets (Zadar-style, no menus) |
