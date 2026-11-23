@@ -1,0 +1,23 @@
+{
+  "slug": "Ectoplasm",
+  "name": "Ectoplasm",
+  "version": "2.1.0",
+  "license": "GPL-3.0-only",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Ectoplasm",
+      "name": "Ectoplasm",
+      "description": "Break slicer and mangler running the open-source Ectocore firmware by Zack Scholl (Infinite Digits): every hidden shift function on its own knob, CV for most controls, a text display, and plain WAV folders",
+      "tags": ["Sampler", "Sequencer", "Random", "Effect"]
+    }
+  ]
+}

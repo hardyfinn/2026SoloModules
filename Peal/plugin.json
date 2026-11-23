@@ -1,0 +1,29 @@
+{
+  "slug": "Peal",
+  "name": "Peal",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Peal",
+      "name": "Peal",
+      "description": "Change ringing sequencer: 4-12 bells, one bell per clock; Plain Hunt, Plain Bob, Little Bob, Grandsire, Stedman, Cambridge Surprise and a self-mutating Wander method; bob and single calls by hand, trigger or chance; open handstroke gap; a gate per bell, pitch, poly row and lead-end/rounds triggers",
+      "tags": ["Sequencer", "Random", "Polyphonic", "Visual"]
+    },
+    {
+      "slug": "BellFoundry",
+      "name": "Bell Foundry",
+      "description": "Twelve cast bells (modal synthesis) to ring from Peal: church, handbell or gamelan profile, metal, thickness, size, crack, clapper; true-harmonic, old or ombak tuning; heard from the ringing chamber, the churchyard or across town",
+      "tags": ["Oscillator", "Physical Modeling", "Polyphonic", "Drum"]
+    }
+  ]
+}

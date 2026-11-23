@@ -1,0 +1,23 @@
+{
+  "slug": "HaerChirp",
+  "name": "Chirp",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Chirp",
+      "name": "Chirp",
+      "description": "Pitch-swept chirp voice: one fast glide that fades, the shape behind kicks, zaps, bats, frogs, crickets, birds and (looped) cicadas; trains of up to 16 chirps, pitch-contour and envelope outputs for modulation, polyphonic",
+      "tags": ["Drum", "Synth voice", "Oscillator", "Envelope generator", "Polyphonic"]
+    }
+  ]
+}

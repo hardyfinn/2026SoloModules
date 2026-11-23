@@ -1,0 +1,17 @@
+{
+ "plugin": "HaerChirp",
+ "model": "Chirp",
+ "version": "2.0.0",
+ "params": [
+  {"value": 0.300000, "id": 0},
+  {"value": 0.583333, "id": 1},
+  {"value": 0.749285, "id": 2},
+  {"value": 0.600000, "id": 3},
+  {"value": 0.841601, "id": 4},
+  {"value": 0.550000, "id": 5},
+  {"value": 0.000000, "id": 6},
+  {"value": 0.500000, "id": 7},
+  {"value": 0.000000, "id": 8},
+  {"value": 0.000000, "id": 9}
+ ]
+}

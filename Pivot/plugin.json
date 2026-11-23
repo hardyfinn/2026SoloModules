@@ -1,0 +1,23 @@
+{
+  "slug": "Pivot",
+  "name": "Pivot",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Pivot",
+      "name": "Pivot",
+      "description": "Metric modulation clock: follows Live's clock and walks a chain of up to 8 tempo pivots (old note = new note, e.g. dotted 8th becomes the beat), snapping or gliding, with a ghost clock of the tempo you left and a LAND mode that brings you home exactly on Live's bar line",
+      "tags": ["Clock generator", "Clock modulator", "Sequencer", "Visual"]
+    }
+  ]
+}

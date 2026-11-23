@@ -1,0 +1,123 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Vinylizer Fable manual</title>
+<style>
+@page { size: A4; margin: 16mm 15mm; }
+body { font-family: Inter, "Helvetica Neue", Arial, sans-serif; color: #1d1b20; font-size: 10.2pt; line-height: 1.45; }
+h1 { font-size: 26pt; margin: 0 0 2mm; } h1 span { color: #c2702e; }
+h2 { font-size: 14pt; margin: 7mm 0 2mm; border-bottom: 1.5px solid #c2702e; padding-bottom: 1mm; page-break-after: avoid; }
+h3 { font-size: 11pt; margin: 4mm 0 1mm; page-break-after: avoid; }
+.lead { font-size: 11.5pt; color: #444; }
+img { width: 100%; border-radius: 2mm; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0; font-size: 9.6pt; }
+td, th { border-bottom: 1px solid #ddd; padding: 1.2mm 1.5mm; vertical-align: top; text-align: left; }
+th { background: #f3ece3; }
+.box { background: #f6f2ec; border-left: 3px solid #c2702e; padding: 2mm 3mm; margin: 3mm 0; }
+.recipe { page-break-inside: avoid; border: 1px solid #e2d8cc; border-radius: 2mm; padding: 2mm 3mm; margin: 3mm 0; }
+.recipe b.t { color: #c2702e; }
+.sec { page-break-inside: avoid; }
+code { font-size: 9.4pt; }
+</style></head><body>
+<h1>Vinylizer <span>Fable</span></h1>
+<p class="lead">One 50 HP VCV Rack module that puts audio through the whole chain of a 1990s record, modelled from the physics of cutting, pressing and playing a groove. Nothing is mixed over the sound: everything you hear comes from what the medium does to the signal. Two expanders, Master and Pressing, add the master tape or early digital source in front of the lathe and the faults of a poor pressing in the groove.</p>
+<img src="../panel-preview.png">
+
+<h2>How the chain works</h2>
+<p>A record is cut with the <b>RIAA recording curve</b>: bass turned down by about 20 dB, treble turned up by about 20 dB. The phono preamp does the exact opposite. Vinylizer Fable always runs this pair, so with every process switched off the module is flat. Everything in between (the cutter, the groove, the stylus, the cartridge, the preamp input) works on the <i>pre-emphasised</i> signal, with its treble boosted. That is the secret of the vinyl sound: distortion in the middle of the chain falls mostly on the top end, and the playback curve then pushes it back down, so it turns into softness and density instead of grit.</p>
+<p>Signal order: <b>ELLIPTIC</b> → record curve and cut level → <b>CUT</b> excursion limit → <b>HF LIMIT</b> → <b>CUT</b> head → <b>MEDIUM</b> → <b>PLATTER</b> (the groove is read) → <b>TRACKING</b> and <b>TRACING</b> (run at 4x the sample rate, in real micrometres of groove wall) → <b>CARTRIDGE</b> → <b>ARM</b> → <b>PHONO</b>.</p>
+<div class="box">The output is level-matched: turning CUT LEVEL up makes the groove hotter (more distortion, more limiting) but does not make the module louder. That is how a real hot cut feels after the volume knob is set.</div>
+
+<h2>The record (right-hand side)</h2>
+<table>
+<tr><th>Control</th><th>What it does</th></tr>
+<tr><td>Display</td><td>The disc from above with the stylus on it, the format, the groove radius, groove speed, HF limiter and excursion gain reduction, tracking angle error, groove pitch, and how much the side length forced the cut level down.</td></tr>
+<tr><td>FORMAT</td><td>Steps through presets: 7" 45 (4 min side, +3 dB), 12" 45 club single (7 min, +6 dB), EP 33 (12 min, +3 dB), LP 33 (20 min, 0 dB), DUB PLATE (10" 45 acetate, 6 min, +6 dB). Sets DISC, RPM, SIDE, LEVEL and MEDIUM, and puts the needle at the edge. Change anything afterwards and the display says CUSTOM. Also in the right-click menu.</td></tr>
+<tr><td>DISC, RPM</td><td>7", 10" or 12", and 33 or 45 rpm. They set the outer and inner radius of the music and how fast the groove passes the stylus.</td></tr>
+<tr><td>NEEDLE</td><td>Where the stylus is, from the edge to the end of the music. Near the end the groove moves slowly (about 0.21 m/s on an LP versus 0.51 m/s at the edge), so the same treble is packed into a shorter length of groove: that is <b>inner groove distortion</b>. Note that the end of the music depends on SIDE: a short 12" ends far from the label and never gets that bad. NEEDLE CV: 0-10 V adds to the knob.</td></tr>
+<tr><td>PLAY SIDE</td><td>Press (or trigger the PLAY jack) and the needle travels across the side in real time, over SIDE minutes, so a long patch slowly gets thicker towards the end, like the last track on side B. Press again to stop. Right-click: loop back to the edge at the end.</td></tr>
+<tr><td>MIX, OUTPUT</td><td>Dry/wet (the dry is delayed to line up with the wet, so in-between settings don't comb filter) and output level.</td></tr>
+<tr><td>IN L / IN R, OUT L / OUT R</td><td>Stereo. A mono input on IN L feeds both sides.</td></tr>
+</table>
+<p>Each of the ten processes has an <b>ON</b> button (lit = on) so you can hear what it adds, and a <b>CV</b> jack under it for its main control (the name is printed over the jack). 0 to 10 V sweeps the whole range of that control on top of the knob; negative voltages pull it down.</p>
+
+<h2>The ten processes</h2>
+<div class="sec"><h3>1 ELLIPTIC: bass to mono</h3>
+<p>Out-of-phase bass makes the cutter move up and down. Too much and it lifts out of the lacquer or digs through it, so mastering engineers folded the bass to mono with an "elliptical equaliser". This one fades the side (L−R) signal below <b>FREQ</b> (40-300 Hz). <b>AMOUNT</b> is how much of the side is removed, the switch picks a 6, 12 or 24 dB/oct slope. Stereo bass synths and reverb tails collapse to the centre and the low end gets solid.</p></div>
+<div class="sec"><h3>2 HF LIMIT: cutter protection</h3>
+<p>High frequencies need enormous cutter acceleration and can burn out the cutter head coils, so a fast limiter sat in front of the lathe. It looks at the <i>acceleration</i> of the treble band (above <b>FREQ</b>, 3-12 kHz) after the record curve, not its level, so sharp hats and sibilance get caught while steady highs mostly pass. Like the cutting-room units of the period, it doesn't turn a band down: it slides a low-pass filter's corner down for as long as the treble is too hot, which sounds softer than a de-esser. <b>THRESH</b> sets where it starts, <b>RELEASE</b> how fast it lets go. The GR light shows it working. A lot of the "records sound smooth on top" feeling comes from here.</p></div>
+<div class="sec"><h3>3 CUT: cut level, side length and the cutter head</h3>
+<p><b>LEVEL</b> (−12 to +9 dB) is how hot the groove is cut. <b>SIDE</b> (4-25 minutes) is how much music has to fit. The module works out the groove pitch the engineer would need; long sides get narrower grooves, which means a lower cut level (shown on the display as <i>side cut</i>), a higher bass high-pass (up to 60 Hz on very long sides) and a tighter <b>excursion limiter</b>, which turns the bass down whenever the groove wall would swing further than about half the space between grooves (EXC light). Short 12" singles sound big and loud; a 25-minute LP side sounds smaller and politer, which is exactly why DJs bought 12"s. <b>HEAD</b> goes from a modern cutter, flat past 20 kHz, to an older one that rolls off around 16 kHz with a slight peak.</p>
+<p>The cut also has a <b>depth limit</b>. Out-of-phase bass moves the cutter up and down: going up it lifts out of the lacquer, going down it can only dig so deep. When the vertical swing passes those limits the groove flattens (EXC light). With ELLIPTIC on this never happens on normal material; switch ELLIPTIC off and feed it wide stereo bass to hear why engineers used it.</p></div>
+<div class="sec"><h3>4 MEDIUM: lacquer, DMM or dub plate</h3>
+<p><b>LACQ</b>: a normal pressing; three plating generations soften the very top. <b>DMM</b>: direct metal mastering, cut into copper; tighter and brighter, with very little groove echo. <b>DUB</b>: a soft acetate dub plate played directly. <b>ECHO</b> is the faint copy of the music one turn of the record away, printed through the thin wall between neighbouring grooves (louder when the grooves are closer, so long sides have more). By default it is post-echo, because a live module can't see the future; right-click <i>True pre-echo</i> delays the whole output by one turn (1.8 s at 33, 1.3 s at 45) and gives you the real pre-echo before every loud entry. <b>WEAR</b> (0-100 plays) wears away the shortest wavelengths first, so it dulls the inner grooves sooner than the outer ones, and it rounds off treble peaks. Pressed vinyl barely changes; a dub plate is dull after 30-40 plays, just like the real thing.</p></div>
+<div class="sec"><h3>5 TRACING: the stylus shape</h3>
+<p>The groove is cut by a sharp chisel but read by a rounded tip, which can't get into tight curves. The module rolls a circle of the real tip radius along the groove wall, in micrometres, at 4x the sample rate, so the distortion is the geometry itself: mostly 2nd harmonic, growing with level, treble and closeness to the label. <b>SPH</b> (0.7 mil spherical, the DJ standard), <b>ELL</b> (elliptical), <b>FINE</b> (fine line) set the radius; smaller tips trace better. <b>AMOUNT</b> scales the effect (1 = real, 2 = exaggerated). The contact point is found between samples, so the distortion grows smoothly with level: each 6 dB louder doubles it.</p>
+<p>The groove wall also gives way slightly under the tip. The contact patch is a few micrometres long, set by the tracking force, the tip radius and how soft the material is (acetate is softer than vinyl), and wavelengths close to that length are averaged out. At the edge of an LP that costs almost nothing; at the end of the side, with a 0.7 mil tip at 2.5 g, 15 kHz is about 4 dB down. Heavier tracking widens the patch, so DJ-weight tracking really is duller on the inner tracks.</p>
+<p>A nice physical detail: for a mono signal the tracing distortion comes out on the <i>vertical</i> axis, which a stereo cartridge reads as L−R. Sum the output to mono and much of it cancels, which is why mono records always sounded cleaner on the inner tracks.</p></div>
+<div class="sec"><h3>6 TRACKING: arm geometry and mistracking</h3>
+<p>A pivoted arm meets the groove at a slightly wrong angle across most of the side (zero at two null points set by <b>BAER</b>/<b>STEV</b> alignment). That shifts the reading point as the groove swings and adds some more 2nd harmonic. The display shows the angle. The stylus is only held against each groove wall by the tracking <b>FORCE</b> (0.75-5 g). When the wall drops away faster than that force can accelerate the stylus, it leaves the wall and lands again: the buzzy breakup on loud sibilance and hot treble. The SKIP light shows it. <b>BALANCE</b> is skating force: off centre, one wall gets less force and that channel breaks up first. The cantilever is a spring too: on a big low swing it pulls the stylus back toward the middle, and if the tracking force can't beat it, the stylus leaves the wall on the bass as well. That is the skipping DJs fought on bass-heavy 12"s: a +9 dB 40 Hz kick throws the stylus at 0.75 g but not at 3 g. Light forces, hot cuts, elliptical tips and hi-fi cartridges (lighter tip mass, softer cantilever) make it easier to hear.</p>
+<p>The cartridge also sits at a slightly different vertical angle from the cutting stylus (about 3 degrees here), which adds a little 2nd harmonic to the vertical (L−R) signal.</p></div>
+<div class="sec"><h3>7 CARTRIDGE: coil and load</h3>
+<p>A moving magnet cartridge is a coil with real inductance. With the cable and preamp capacitance (<b>LOAD</b>, 50-600 pF) it forms a resonant filter: a peak in the top octave, then a fall. More capacitance pulls the peak down and darkens it, exactly as a long cable does. <b>DJ</b> is a high-output DJ cartridge (720 mH, from the Shure M44-7 data sheet, which asks for a 400-500 pF load; with that load the top is noticeably softer), <b>HIFI</b> a home moving magnet, <b>MC</b> a moving coil (no inductance effect, a small lift at the very top; LOAD does nothing). The coil's eddy-current losses are modelled too, which keeps the resonance broad. <b>STEREO</b> is channel separation (10-40 dB), which gets worse in the treble. <b>AZIMUTH</b> tilts the stylus so one channel leaks more than the other.</p></div>
+<div class="sec"><h3>8 ARM: resonance and warps</h3>
+<p>The arm's mass and the cartridge's springiness resonate at <b>RES</b> (5-20 Hz). Below it the arm follows the groove and nothing is heard; around it there is a bump. <b>DAMP</b> sets how sharp the bump is. <b>WARP</b> (0-1.5 mm) bends the record once per turn, making slow vertical movement around the resonance (the woofer pumping you see on a warped record) and a little wow, because the stylus tilts forward and back as it rides the warp.</p></div>
+<div class="sec"><h3>9 PLATTER: speed</h3>
+<p><b>ECCENTRIC</b> is how far off centre the hole was punched (0-1 mm). The groove speed then rises and falls once per turn, by more near the label because the same offset is a bigger part of a smaller circle: the classic slow "seasick" wobble of a cheap pressing. <b>WOW</b> and <b>FLUTTER</b> are the motor and drive: <b>DIRECT</b> drive is very steady (a slight once-per-turn servo movement), <b>BELT</b> wanders slowly with belt stretch, <b>CHEAP</b> is a portable deck. There is no pitch fader: a live module can't play its input faster than it arrives.</p></div>
+<div class="sec"><h3>10 PHONO: the preamp</h3>
+<p>Applies the RIAA playback curve after an input stage that can overload, because the input sees the treble-boosted signal. <b>TUBE</b>: soft, asymmetric saturation and a little 2nd harmonic. <b>OPAMP</b>: clean until it hits the rails. <b>DJ</b>: a typical budget club-mixer phono input, with less headroom and a curve that is slightly bass-heavy and dull on top. This is a generalisation, not a measurement of a particular mixer. <b>GAIN</b> drives the input (level-matched afterwards), the OVL light shows overload. <b>TOLERANCE</b> shifts the curve's corner frequencies the way 5% parts do, tilting the bass up or down by a dB or two. <b>SUBSONIC</b> has three positions: OFF, <b>IEC</b> (the 1976 IEC amendment to the RIAA curve, a gentle 6 dB/oct roll-off from 20 Hz that many 80s and 90s stages built in) and <b>18Hz</b>, a steeper 12 dB/oct rumble filter. The input overload is modelled as one threshold on the full pre-emphasised signal; real stages vary with frequency and circuit.</p></div>
+
+<h2>The two expanders</h2>
+<p>Two more modules in the same plugin add what happened before the lathe and at the pressing plant. They have no audio jacks of their own. Place <b>Master</b> touching the <b>left</b> edge of Vinylizer Fable and <b>Pressing</b> touching its <b>right</b> edge. The green LINK light on each comes on when it is connected, and its controls then act inside the main module. Each has its own ON button. Use either one alone or both.</p>
+<img src="../expanders-preview.png" style="width:62%;display:block;margin:2mm auto">
+
+<div class="sec"><h3>MASTER: what the cutting engineer was handed (12 HP, left)</h3>
+<p>MASTER works on the audio before process 1, so everything it adds (tape hiss included) is then cut, pressed and played like the music.</p>
+<table>
+<tr><th style="width:22%">Control</th><th>What it does</th></tr>
+<tr><td>SOURCE</td><td><b>1/2" TAPE</b> at 30 ips: clean and extended. <b>1/4" TAPE</b> at 15 ips: a head bump in the bass, softer top, more hiss, saturates sooner. <b>1630</b>: the 80s CD mastering format, steep filters at 44.1 kHz. <b>DAT</b>: the usual 90s source for dance 12"s, cleaner converters. <b>CD MASTER</b>: the finished CD master sent to the lathe; use it with LOUD.</td></tr>
+<tr><td>DRIVE</td><td>Level into the tape. Treble saturates first, then the bass thickens. Tape sources only. CV input.</td></tr>
+<tr><td>PRINT</td><td>Print-through: loud passages leak to the next layer on the reel and come back as a faint dull echo about one turn of the reel later (0.8 s at 30 ips, 1.6 s at 15 ips). Tape sources only.</td></tr>
+<tr><td>NR</td><td>Noise reduction decoded with the alignment off by up to 3 dB either way. The treble then moves with the level: left of centre it dulls quiet passages, right of centre it brightens them. Centre is correct. Tape sources only.</td></tr>
+<tr><td>HISS</td><td>Tape hiss, on the master and so under everything that follows. Higher on quarter-inch.</td></tr>
+<tr><td>CONVERT</td><td>Converter quality, for the digital sources and the delay line. Left: an early converter with a filter that rings near 20 kHz and small level-dependent errors. Right: transparent.</td></tr>
+<tr><td>LOUD</td><td>CD-style peak limiting before the cut, 0 to 10 dB, level made up afterwards. Flat-topped waves make HF LIMIT, the cutter and the stylus work much harder. The red light shows limiting. CV input.</td></tr>
+<tr><td>BITS</td><td>16 or 14 bit word length for the digital sources and the delay line. Full scale is 10 V, so quiet signals show it most.</td></tr>
+<tr><td>EMPHASIS</td><td>Early digital masters could carry treble pre-emphasis. OK: decoded properly. BRIGHT: the flag was missed, so the boost stays in. DULL: de-emphasis applied to a master that never had it.</td></tr>
+<tr><td>DELAY</td><td>Many lathes needed the audio a moment early to set groove spacing, and sent the cutting signal through a digital delay. ON passes a tape source through the converter as well, the reason plenty of "analogue" 80s LPs went through an early 16-bit converter.</td></tr>
+</table></div>
+
+<div class="sec"><h3>PRESSING: the plant, the plastic and the life of the disc (14 HP, right)</h3>
+<p>PRESSING changes the shape of the groove wall before the stylus reads it. Nothing is mixed over the output: roughness, dust and scratches are displacements in the groove, so the chosen stylus, cartridge and phono stage shape them as they shape the music. Surface noise is mostly vertical, so much of it cancels when you sum to mono, as on a real record.</p>
+<table>
+<tr><th style="width:22%">Control</th><th>What it does</th></tr>
+<tr><td>STOCK</td><td><b>VIRGIN</b>: quiet. <b>REGRIND</b>: recycled vinyl, about 12 dB more rush, with gritty patches. <b>STYRENE</b>: injection-moulded 7" single, bright when new and harder under the tip, but wears fast. <b>FLEXI</b>: cut 6 dB lower, bass removed below 70 Hz, extra wow. <b>PICTURE DISC</b>: a constant coarse hiss, about 19 dB above virgin vinyl.</td></tr>
+<tr><td>NOISE</td><td>Amount of wall roughness. Part is steady and part rises with groove modulation, so the noise breathes with loud passages. 1 is normal for the stock. CV input.</td></tr>
+<tr><td>NON-FILL</td><td>Patches where the vinyl did not fill the stamper: a short tearing sound on one wall at the same point of each turn for a few turns, then it moves on. The light shows a patch passing.</td></tr>
+<tr><td>STAMPER</td><td>How many discs the stamper has pressed, from new to 3000. A tired stamper rounds off the shortest groove shapes, so the treble loss is worse toward the label, and raises the noise. CV input.</td></tr>
+<tr><td>WEIGHT</td><td>Disc weight, 90 to 180 g. Thin discs warp more (it adds to ARM's WARP) and ring under the stylus, which smears the bass slightly.</td></tr>
+<tr><td>DUST</td><td>Dust particles in the groove, each a small bump read by the stylus, and fluff that builds up on the tip as you play: treble fades, then it mistracks. The light shows the fluff. <b>CLEAN</b> (button and trigger) blows it off. At 0 there are no ticks at all. CV input.</td></tr>
+<tr><td>SCRATCH</td><td>Depth of the scratches. <b>ADD</b> (button and trigger) makes a radial scratch at the current needle position, which then ticks once per turn while the needle is near it, with the thump of the arm behind it. Up to 11 are kept and saved with the patch. A deep one can throw the stylus. "Remove added scratches" is in the right-click menu.</td></tr>
+<tr><td>CUE BURN</td><td>Wear where a DJ back-cued: the first seconds of the side are duller and noisier, the rest is not.</td></tr>
+<tr><td>TURN out</td><td>A trigger once per turn of the record (every 1.8 s at 33, 1.33 s at 45). Clock anything from it.</td></tr>
+<tr><td>SKIP out</td><td>A gate while the stylus has left the groove, from mistracking or a deep scratch.</td></tr>
+</table>
+<p>The right-click menu has six presets: Test pressing, 1983 budget reissue, Chart 7" late in the run, Flexi from a magazine, White label 12", Charity-shop LP.</p>
+<div class="box">DUST and SCRATCH start at zero, so a new Pressing module gives you the plant's faults only: rush, non-fill, stamper wear and thin vinyl. Turn those two up only if you want ticks.</div></div>
+
+<h2>Patch recipes</h2>
+<div class="recipe"><b class="t">Club 12" off the shelf.</b> FORMAT to 12" 45. DJ cartridge, SPH stylus, FORCE 3 g, DIRECT drive, PHONO DJ. Feed it a mixdown. Bass goes mono, hats get tamed by HF LIMIT, the top gets the DJ cartridge's peak and fall. Then crank LEVEL to +9 and watch EXC and GR light on the kicks.</div>
+<div class="recipe"><b class="t">Last track on side B.</b> FORMAT LP 33, SIDE 25, HIFI cartridge, TUBE stage. Press PLAY SIDE with a long drone or pad. Over 25 minutes the needle moves in, the treble thickens and loses air, and you can hear inner groove distortion creep in. To hear the end at once, turn NEEDLE fully right.</div>
+<div class="recipe"><b class="t">Rinsed dub plate.</b> FORMAT DUB PLATE. WEAR 40, ECHO 0.6, ECCENTRIC 0.4. Patch a slow LFO into the MEDIUM CV jack to wear and "un-wear" the plate. Use on breaks and sub basslines.</div>
+<div class="recipe"><b class="t">Cheap deck at a party.</b> DRIVE CHEAP, WOW 0.7, FLUTTER 0.5, ECCENTRIC 0.6, WARP 0.8, ARM DAMP 0.2, SUBSONIC OFF. Light FORCE (1.25 g) and BALANCE pushed to one side so one channel breaks up on loud hats.</div>
+<div class="recipe"><b class="t">Mistracking as an effect.</b> CUT LEVEL +9, HF LIMIT off, stylus ELL, HIFI cartridge, FORCE fully left. Sequence FORCE from the TRACKING CV jack: low notes stay clean, bright notes shatter.</div>
+<div class="recipe"><b class="t">Mono check.</b> Turn everything on with NEEDLE fully right and listen to OUT L only, then sum both outputs into one mixer channel. A lot of the tracing distortion vanishes in mono, as it did on real records.</div>
+<div class="recipe"><b class="t">Just the warmth.</b> Turn off PLATTER and ARM, leave the rest on, MIX at 60%. The dry is time-aligned so there is no phasing; you get the vinyl density without any movement.</div>
+
+<div class="recipe"><b class="t">1983 budget reissue (needs Pressing).</b> Pressing preset "1983 budget reissue", main FORMAT LP 33, SIDE 25, HIFI cartridge. Thin, recycled, late in the stamper's life. Sum the outputs to mono and hear the rush drop.</div>
+<div class="recipe"><b class="t">Mid-90s CD master on vinyl (needs Master).</b> SOURCE CD MASTER, LOUD 6 to 8. Main module 12" 45 with HF LIMIT on. Compare LOUD at 0: the limited version lights GR far more and the hats turn to grit at the end of the side.</div>
+<div class="recipe"><b class="t">Early digital LP, 1984 (needs Master).</b> SOURCE 1630, CONVERT fully left, BITS 14, EMPHASIS BRIGHT. Glassy, thin and slightly hard. Flip EMPHASIS to OK to hear how much of "early digital" was that one mistake.</div>
+<div class="recipe"><b class="t">Record-locked delay (needs Pressing).</b> Patch TURN to a delay's clock or a sequencer's reset. With one ADD scratch you get a tick once per turn, and everything clocked from TURN stays locked to it, wow included.</div>
+<div class="recipe"><b class="t">Fluff build-up.</b> DUST 0.7 and play a long passage. The top fades over a minute or two, then the sound breaks up. Send a trigger to CLEAN every 16 bars for a filter-opening effect that is really someone blowing on the stylus.</div>
+
+<h2>Notes</h2>
+<p>A 5 V peak at the input becomes a 12 cm/s groove velocity at 0 dB cut level, a normal programme peak on a hot record (the 5 cm/s reference level is about 1 V). Disc dimensions follow JIS S 8502 (music between 293 and 115 mm diameter on a 12"). The DJ cartridge's inductance and load come from Shure's M44-7 sheet. Tip masses, compliances and the cartridge resonances are typical values rather than measurements of any one product. The module adds about 13 ms of delay (12 ms of it is the room the platter needs to wobble), or one turn more with true pre-echo. It runs the stylus section at 4x the sample rate at 44.1/48 kHz, 2x at 88.2/96 kHz. The Master and Pressing figures (tape saturation, converter errors, noise levels for each stock, stamper life) are typical values from memory of the literature. They are not measurements and have not yet been tuned by ear in Rack.</p>
+</body></html>

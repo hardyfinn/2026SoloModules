@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Ectoplasm guide</title>
+<style>
+body{font-family:Inter,Helvetica,Arial,sans-serif;color:#1c2440;margin:14mm 16mm;font-size:10.5pt;line-height:1.45}
+h1{font-size:26pt;margin:0}h2{font-size:13pt;margin:16px 0 4px;color:#b06f10}
+.sub{color:#556;margin:2px 0 12px}
+.wrap{display:flex;gap:18px;align-items:flex-start}.wrap img{width:62mm;border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:9.5pt}td{border-top:1px solid #dde;padding:3px 6px;vertical-align:top}td:first-child{font-weight:700;white-space:nowrap}
+.note{background:#f4efe2;padding:8px 10px;border-radius:6px;font-size:9.5pt}
+.pg{page-break-before:always}
+</style></head><body>
+<h1>Ectoplasm</h1>
+<div class="sub">Break slicer and mangler, 24 HP, VCV Rack 2 · version 2.0.0 · Hær<br>
+Sound engine: the open-source Ectocore firmware by Zack Scholl / Infinite Digits (GPL-3)</div>
+<div class="wrap"><img src="panel-preview.png"><div>
+<h2 style="margin-top:0">In one minute</h2>
+<ol>
+<li>Right-click &gt; <b>Choose sample folder…</b> and pick a folder of breaks. Plain WAVs work. Put the BPM in the file name, like <i>amen 172bpm.wav</i>.</li>
+<li>Patch <b>L</b> and <b>R</b> to your mixer. It plays straight away at the sample's tempo.</li>
+<li>Patch a 2 PPQN clock into <b>CLOCK</b>. With Live as master that's CV Tools' clock at 1/8, or any VCV clock at x2. Ectoplasm locks to it.</li>
+<li>Turn up <b>BREAK</b> for effects, then move <b>AMEN</b> to the middle for random slice loops.</li>
+<li>Shape it with the <b>TAP</b> band (drive, DJ filter, gate) and the <b>MODE</b> band (digital grit).</li>
+</ol>
+<div class="note">Both bands are the Ectocore's hidden "hold TAP / hold MODE" functions, which get their own knobs here. A knob only acts when you move it (or its CV moves), just like on the hardware.</div>
+</div></div>
+
+<h2>Top section</h2>
+<table>
+<tr><td>BREAK</td><td>How often the current rune's effects fire, from 0 to 100%. The ring is the firmware's own LED wheel.</td></tr>
+<tr><td>GRIMOIRE</td><td>Picks which of the 7 runes (effect sets) BREAK uses. Edit them under right-click &gt; Grimoire. Its 16 effects are saturate, shaper, fuzz, bitcrush, time stretch, delay, comb, beat repeat, tighten, reverb, pan, scratch, filter, repitch, reverse and tape stop.</td></tr>
+<tr><td>AMEN</td><td>Fully left plays straight. In the middle, it loops 1 to 32 randomly chosen slices. Fully right is generative, with new slices and a fill every two bars. Turn it to fully right and back to re-roll.</td></tr>
+<tr><td>JUMP</td><td>In the middle, nothing happens. To the right, it jumps to a random slice and comes back in time. To the left, it jumps and carries on from there, which drifts more.</td></tr>
+<tr><td>SAMPLE · BANK</td><td>The sample within the bank, and which bank (only banks that hold samples count).</td></tr>
+<tr><td>TEMPO</td><td>Sets the BPM when nothing is patched into CLOCK.</td></tr>
+<tr><td>MODE · MULT</td><td>MODE sets what TRIG outputs: Kick, Snare, Transient or Random (shown by the four lights and on the display). MULT: tap to multiply the CLK output, hold to divide it.</td></tr>
+<tr><td>TAP · PLAY</td><td>Tap tempo (without a clock), and start/stop.</td></tr>
+</table>
+<h2>The two bands</h2>
+<table>
+<tr><td>DRIVE</td><td>Volume up to 12 o'clock, then saturation, then fuzz.</td></tr>
+<tr><td>FILTER</td><td>DJ filter: low-pass to the left, high-pass to the right, off in the middle.</td></tr>
+<tr><td>GATE</td><td>Chops each slice short. It's off at minimum.</td></tr>
+<tr><td>RETRIG</td><td>The chance of stutter retriggers.</td></tr>
+<tr><td>PITCH</td><td>Pitch down to the left, up to the right.</td></tr>
+<tr><td>AMIGA · SATURATE · SMEAR · JITTER · CHAOS</td><td>The Mode layer's digital degraders: lo-fi resampling, digital saturation, smear, timing jitter and "trembler" chaos. Small amounts go a long way.</td></tr>
+</table>
+
+<h2 class="pg">Jacks</h2>
+<table>
+<tr><td>CLOCK</td><td>2 PPQN clock in (two pulses per beat).</td></tr>
+<tr><td>RESET</td><td>Makes the next clock pulse beat 1. Send it with, or just before, a clock pulse.</td></tr>
+<tr><td>PLAY</td><td>A trigger toggles start/stop.</td></tr>
+<tr><td>AMEN · BREAK · SAMPLE</td><td>The Ectocore's own CVs. AMEN CV picks slices directly: the AMEN knob sets the start of the range and JUMP sets its end. Set Jump, Repeat or Split under right-click &gt; Device settings &gt; Amen CV behavior.</td></tr>
+<tr><td>BANK · GRIM</td><td>0 to 10 V sweeps across the banks / runes, added to the knob.</td></tr>
+<tr><td>TEMPO</td><td>10 BPM per volt, added to the knob. It's ignored while CLOCK is patched.</td></tr>
+<tr><td>DRIVE · GATE · RETRIG</td><td>0 to 10 V, added to the knob. FILTER and PITCH: ±5 V around the knob.</td></tr>
+<tr><td>TRIG · CLK</td><td>TRIG fires on the drum hits chosen by MODE. CLK is the clock out (×/÷ with MULT).</td></tr>
+</table>
+
+<h2>Samples</h2>
+<p><b>Plain WAV folders:</b> a folder of WAVs fills bank 1, then bank 2 (16 files per bank). Alternatively, a folder of sub-folders makes each sub-folder one bank. Each file is cut into 16 equal slices. The BPM comes from the file name, or from the loop length. Files under a second, with no BPM in the name, play as one-shots. Any rate, bit depth or channel count loads. Nothing is written to your folder.<br>
+<b>Sample-manager folders</b> (from Infinite Digits' free sample manager or ectocore.rocks) load exactly as on the hardware, with hand-placed slices, kick/snare/transient markers and settings. TRIG's Kick, Snare and Transient modes need those markers. With plain WAVs, use Random.</p>
+
+<h2>Three patches to try</h2>
+<p><b>1. Detroit break bed.</b> Use a clock from Live (CV Tools via the disting NT, 2 PPQN) into CLOCK. Set AMEN at about 10 o'clock (short random loops), BREAK at 20%, FILTER slightly left. Send TRIG in Kick mode to your 909 kick so it follows the break's kicks. Variation: slowly sweep FILTER with a 16-bar LFO.</p>
+<p><b>2. Autechre-ish mutation.</b> Patch Marbles' X1 into AMEN CV (Repeat behavior) and a slow random into GRIM. Set JUMP to 2 o'clock and RETRIG to 30%. Add CHAOS at 15% and JITTER at 10%. Variation: send TRIG (Random) into Marbles' clock so the break re-clocks its own randomness.</p>
+<p><b>3. Arrangement moves.</b> Sequence BANK CV from Long Form (or any slow step sequencer) to change sections. Use PLAY triggers for drops, and RESET on the downbeat to bring everything back in time. GATE with a rising envelope makes a build.</p>
+
+<h2>Credits</h2>
+<p>Ectoplasm runs the Ectocore / EZEPTOCORE firmware by Zack Scholl (Infinite Digits), from github.com/schollz/_core, under GPL-3.0. Ectoplasm is GPL-3.0 too, and its source is in hardyfinn/2026SoloModules (folder Ectoplasm). The panel and the Hær logo are Haer's own. No breaks are bundled. Infinite Digits' own free Rack plugin (EZEPTOCORE, with an Ectocore panel option) is the original 8 HP layout.</p>
+</body></html>
