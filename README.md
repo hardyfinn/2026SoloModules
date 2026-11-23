@@ -7,6 +7,7 @@ without stepping on each other.
 | Folder | Module | What it is |
 |---|---|---|
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
+| [Gongoozler](Gongoozler/) | Gongoozler | Gong and tam-tam physical model: tam-tam, wind, opera and bossed gongs; hard hits bloom into a shimmering wash |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.

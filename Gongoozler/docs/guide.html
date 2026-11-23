@@ -1,0 +1,91 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Gongoozler guide</title>
+<style>
+body{font-family:Inter,Helvetica,Arial,sans-serif;color:#1d1b18;margin:0;font-size:9.6pt;line-height:1.38}
+.page{padding:11mm 14mm 6mm}
+h1{font-size:24pt;margin:0 0 2mm;letter-spacing:.04em}
+h2{font-size:12pt;margin:4mm 0 1.5mm;color:#8a5a14;border-bottom:1px solid #e2d2b5;padding-bottom:1mm}
+.sub{color:#7a6e5c;margin-bottom:5mm}
+table{border-collapse:collapse;width:100%;font-size:8.9pt}
+td,th{border-bottom:1px solid #eee3cf;padding:0.9mm 2mm;vertical-align:top;text-align:left}
+th{background:#f6efe2}
+td:first-child{font-weight:700;white-space:nowrap}
+.two{display:flex;gap:8mm;align-items:flex-start}
+.box{background:#f8f3ea;border-left:3px solid #d2a04e;padding:2mm 4mm;margin:3mm 0}
+img{max-width:100%}
+.brk{page-break-before:always}
+</style></head><body>
+<div class="page">
+<h1>GONGOOZLER</h1>
+<div class="sub">Gong and tam-tam physical model for VCV Rack · Hær · 2.0.0 · 28 HP · MIT</div>
+<div class="two">
+<img src="../panel-preview.png" style="width:80mm">
+<div>
+<p>One gong, hung and ready. Patch a trigger into <b>TRIG</b>, take <b>OUT L</b> (mono) or both outs (stereo), and pick a starting point from the <b>right-click menu</b>.</p>
+<p>Inside are up to 256 ringing modes, laid out like a real plate. What makes a gong a gong is what happens <i>after</i> the hit:</p>
+<ul>
+<li><b>Bloom</b>: a hard hit starts as a low "bwong", then over a second or two the energy climbs up the spectrum into a roaring, shimmering wash. Soft hits stay clean. This is the famous tam-tam swell.</li>
+<li><b>Roar</b>: the plate stretches as it bends, so loud hits growl and sweep downwards as they settle.</li>
+<li><b>Glide</b>: opera gongs bend in pitch and slide back as they die away.</li>
+<li><b>Beat</b>: paired tones beat slowly, the "ombak" pulse of a gamelan gong.</li>
+</ul>
+<div class="box">Velocity matters more here than on most drums: the bloom, roar and glide all grow with how hard you hit. Patch <b>VEL</b> (0 to 10 V). Unpatched, every hit is 7.5 V.</div>
+</div></div>
+
+<h2>The four gong types (TYPE knob)</h2>
+<table>
+<tr><th>Type</th><th>What it is</th><th>Pitch</th></tr>
+<tr><td>1 Tam-tam</td><td>Big flat orchestral gong with no clear note. Deep hum, then the biggest bloom.</td><td>Set by SIZE and THICK; TUNE and V/OCT transpose.</td></tr>
+<tr><td>2 Wind gong</td><td>Thinner Chinese flat gong. Blooms easily and quickly into a bright, crashing roar.</td><td>Set by SIZE; TUNE and V/OCT transpose.</td></tr>
+<tr><td>3 Opera gong</td><td>Small Peking-opera gong with one clear note. The big one falls in pitch (GLIDE +), the small one rises (GLIDE −).</td><td rowspan="2">Plays notes: 0 V at V/OCT = C4, plus TUNE. (Right-click to let SIZE set the pitch instead.)</td></tr>
+<tr><td>4 Bossed gong</td><td>Gamelan gong ageng, kempul or Thai gong with a raised boss: warm, nearly harmonic note that beats slowly.</td></tr>
+</table>
+
+<h2>Controls</h2>
+<table>
+<tr><th>Control</th><th>What it does</th></tr>
+<tr><td>SIZE</td><td>Diameter, 20 to 150 cm. Bigger is lower, longer and more sluggish to bloom.</td></tr>
+<tr><td>THICK</td><td>Thin gongs bloom at gentle hits; thick ones need a real whack.</td></tr>
+<tr><td>BEAT</td><td>How strongly paired tones beat. On bossed gongs it is the ombak speed and depth.</td></tr>
+<tr><td>GLIDE</td><td>Pitch bend at a full hit, −7 to +7 semitones. + starts high and falls back, − starts low and rises. Softer hits bend less (by the square of the loudness, like the real thing).</td></tr>
+<tr><td>CAST</td><td>Which individual gong (16 castings, each slightly different).</td></tr>
+<tr><td>POSITION</td><td>Where you hit: centre (the boss on tuned gongs, the deep hum on a tam-tam) out to the edge (more clang). Read at each hit.</td></tr>
+<tr><td>MALLET</td><td>Hard stick (bright, clanky) to big soft beater (dark start, then the bloom does the work). Read at each hit.</td></tr>
+<tr><td>DECAY / DAMP</td><td>How long it rings, and how fast the highs die compared with the lows.</td></tr>
+<tr><td>BLOOM / BUILD</td><td>How much of a hard hit climbs into the wash, and how slowly it climbs (fast is a crash, slow is a swell).</td></tr>
+<tr><td>TUNE</td><td>±24 semitones, added to V/OCT.</td></tr>
+<tr><td>ROAR</td><td>The plate stretching: growl, smear and a downward sweep on hard hits. Turn it down for a cleaner gong.</td></tr>
+<tr><td>MUTE</td><td>A towel on the gong (MUTE jack adds 0 to 10 V on top).</td></tr>
+<tr><td>HAND jack</td><td>A hand grabbing the gong. A trigger grabs it for 200 ms; a held gate keeps holding.</td></tr>
+<tr><td>WIDTH / LEVEL / HIT</td><td>Stereo spread, output level (up to about ±8 V on big hits) and a manual hit button (7.5 V velocity).</td></tr>
+<tr><td>CV row</td><td>V/OCT, then POSITION, MALLET, DECAY, BLOOM (±5 V sweeps the whole knob) and GLIDE (1 V = 1 semitone).</td></tr>
+</table>
+</div>
+
+<div class="page" style="padding-top:0">
+<h2>Starting points (right-click)</h2>
+<table>
+<tr><td>Tam-tam, 36"</td><td>Soft beater, centre-ish strike, big slow bloom. Try one hit with VEL at 10 V and wait.</td></tr>
+<tr><td>Wind gong, 24"</td><td>Fast roaring wash. Feed it a fast clock with rising VEL for a swell, then one hard hit.</td></tr>
+<tr><td>Opera gong, large</td><td>Falls about 2.5 semitones on hard hits.</td></tr>
+<tr><td>Opera gong, small</td><td>Rises about 2.5 semitones. Pair it with the large one for the Peking-opera "dang ... ching" pattern.</td></tr>
+<tr><td>Gong ageng</td><td>Big gamelan gong, C2, long ring with slow ombak beating.</td></tr>
+<tr><td>Kempul / Thai gong</td><td>Smaller bossed gong, C3; play melodies with V/OCT.</td></tr>
+</table>
+
+<h2>Patch ideas for the EP</h2>
+<ul>
+<li><b>Arrangement marker.</b> One tam-tam hit at the start of a new section, VEL 10 V, BUILD around 60 %. The bloom peaks a second or two later and works as a riser into the drop without a white-noise sweep.</li>
+<li><b>Self-mutating gong line.</b> Marbles X into VEL and POSITION, a slow LFO into BLOOM. Every hit is a different gong, and only the loud ones bloom, so the pattern breathes on its own.</li>
+<li><b>Pitched bossed gongs from chords.</b> Hapax or Weighted / The Changes into V/OCT (type 4). Kempul on the off-beats, gong ageng on bar 4 of each phrase.</li>
+<li><b>Choked hits.</b> Gate from your drum sequencer into HAND, set to close just before the next kick: big gong attack without the tail mud.</li>
+<li><b>Glide as modulation.</b> Opera gong with an envelope or random into the GLIDE jack: each hit bends a different amount.</li>
+</ul>
+
+<h2>The demo (gongoozler-demo.wav)</h2>
+<img src="demo-spectrogram.png" style="width:62%">
+<p style="font-size:9pt;color:#7a6e5c">0 s tam-tam: three soft touches, one big hit that blooms (the bright wash arriving after the hit), a hand grabs it at 11 s. 12 s opera gongs, large falling and small rising. 19.5 s gamelan: kempul on the beats, gong ageng closing each phrase. 31 s wind gong roll, a big hit, then a towel. Also: hit-*.wav, each starting point hit soft, medium, hard.</p>
+
+<h2>How it works, briefly</h2>
+<p>Each gong type has its own list of plate modes (flat plates follow Chladni's law, so modes are sparse low and crowded high; tuned gongs add a boss note and partials). Non-round modes come in near-identical pairs, which beat. The bloom is an energy cascade through seven octave bands: each band hands energy to the one above at a rate that grows with its own loudness, so it switches on only for hard hits and never adds energy that wasn't there. Roar is the stretching of the plate (Berger tension) as an energy-conserving force, so it can't run away. Not yet heard inside VCV Rack.</p>
+</div>
+</body></html>

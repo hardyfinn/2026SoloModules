@@ -1,0 +1,23 @@
+{
+  "slug": "Gongoozler",
+  "name": "Gongoozler",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Gongoozler",
+      "name": "Gongoozler",
+      "description": "Gong and tam-tam physical model: 256 modes, tam-tam, wind gong, opera gong and bossed (gamelan) gong; a hard hit blooms from a low hum into a shimmering wash, opera gongs bend in pitch, bossed gongs beat slowly; mallet, strike position, towel mute and hand grab",
+      "tags": ["Drum", "Physical Modeling", "Synth Voice"]
+    }
+  ]
+}
