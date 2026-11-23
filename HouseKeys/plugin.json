@@ -1,0 +1,23 @@
+{
+  "slug": "HouseKeys",
+  "name": "House Keys",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "HouseKeys",
+      "name": "House Keys",
+      "description": "Polyphonic keyboard voice: 100 sounds of late-80s Detroit and Chicago house through models of five machines (4-operator FM, analog poly, phase distortion, 8-bit wavetable, 8-bit sampler), with stab chords, twin unit, chorus and tape",
+      "tags": ["Synth voice", "Polyphonic", "Digital"]
+    }
+  ]
+}
