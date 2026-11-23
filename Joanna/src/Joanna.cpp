@@ -74,7 +74,7 @@ struct Joanna : Module {
 		configParam(ROOM_PARAM, 0.f, 1.f, 0.35f, "Room (box room <-> front room <-> hall)", "%", 0.f, 100.f);
 		configParam(FURNISH_PARAM, 0.f, 1.f, 0.35f, "Furnish (carpet, curtains and sofa <-> bare boards)", "%", 0.f, 100.f);
 		configParam<DistanceQuantity>(DISTANCE_PARAM, 0.f, 1.f, 0.4f, "Distance (where you listen)");
-		configParam(LEVEL_PARAM, 0.f, 2.f, 1.f, "Level", "%", 0.f, 100.f);
+		configParam(LEVEL_PARAM, 0.f, 2.f, 1.f, "Level", "%", 0.f, 100.f)->randomizeEnabled = false;   // Ctrl+R never changes the volume
 		configSwitch(PEDAL_PARAM, 0.f, 1.f, 0.f, "Sustain pedal", {"up", "down"});
 		configSwitch(SOFT_PARAM, 0.f, 1.f, 0.f, "Soft pedal (hammers move closer to the strings)", {"off", "on"});
 		configSwitch(FELT_PARAM, 0.f, 1.f, 0.f, "Felt (practice felt between hammers and strings)", {"off", "on"});
