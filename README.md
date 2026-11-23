@@ -19,6 +19,7 @@ without stepping on each other.
 | [Bore](Bore/) | Scanner, Bore Room | MRI scanner from the inside: real pulse sequences through three coils, pump and bore, plus the bore as a reverb |
 | [Pivot](Pivot/) | Pivot | Metric modulation clock: a chain of OLD note = NEW note tempo pivots that follows Live's clock, glides, and lands back on Live's bar lines |
 | [VinylizerFable](VinylizerFable/) | Vinylizer Fable | The sound of a 90s record from the physics of cutting, pressing and playback, in ten switchable processes (no crackle) |
+| [Chirp](Chirp/) | Chirp | Pitch-swept chirp voice: kicks, zaps, bats, frogs, crickets, birds, looped cicadas; pitch contour and envelope outs |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
