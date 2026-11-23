@@ -24,6 +24,7 @@ without stepping on each other.
 | [Chirp](Chirp/) | Chirp | Pitch-swept chirp voice: kicks, zaps, bats, frogs, crickets, birds, looped cicadas; pitch contour and envelope outs |
 | [Groover](Groover/) | Groover | Ableton grooves (.agr / .mid) on VCV drums: grooved clock, 8 trigger lanes, accent CV |
 | [ClapfallFable](ClapfallFable/) | Clapfall | Multi-particle percussion: modelled claps, snaps, sticks and drum-machine pulses, from an 808 clap to applause |
+| [Menagerie](Menagerie/) | Menagerie | Macro oscillator with 16 engines of our own (none from Plaits or Braids) behind SHAPE, TEXTURE and LIFE |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
