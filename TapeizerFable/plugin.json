@@ -1,0 +1,23 @@
+{
+  "slug": "TapeizerFable",
+  "name": "Tapeizer Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Tapeizer",
+      "name": "Tapeizer",
+      "description": "Cheap 80s and 90s tape recording in one module: desk, noise reduction, a multitrack deck and a master deck, with STRENGTH and AGE",
+      "tags": ["Effect", "Dynamics", "Distortion", "Noise", "Polyphonic"]
+    }
+  ]
+}
