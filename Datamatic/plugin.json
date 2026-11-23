@@ -1,0 +1,29 @@
+{
+  "slug": "Datamatic",
+  "name": "Datamatic",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Datamatic",
+      "name": "Datamatic",
+      "description": "Data-driven rhythm after Ryoji Ikeda: pi, e, primes, Fibonacci, counting, text, seeded random or a CV become a 4-64 bit loop that four interlocking gate lanes read at up to 16x the clock, with accelerating rolls, cuts to digital silence and bit mutation",
+      "tags": ["Sequencer", "Random", "Clock modulator", "Visual"]
+    },
+    {
+      "slug": "TestPattern",
+      "name": "Test Pattern",
+      "description": "Four hard-edged Ikeda voices for Datamatic: a sub sine, a sine tone (low, 1 kHz test tone or very high) with left/right beating, single-sample clicks and white noise bursts; no envelopes, one LINK cable from Datamatic",
+      "tags": ["Drum", "Oscillator", "Noise", "Synth voice"]
+    }
+  ]
+}
