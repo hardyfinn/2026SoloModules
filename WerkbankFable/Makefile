@@ -17,3 +17,11 @@ test/render: test/render.cpp test/ref_data.h test/parse_cases.h $(wildcard src/d
 test: test/render
 	mkdir -p test/out
 	./test/render test/out
+
+# A 16-bar demo played by the same engines: make demo
+test/demo: test/demo.cpp $(wildcard src/dsp/*.hpp)
+	$(CXX) -O2 -std=c++17 test/demo.cpp -o test/demo
+.PHONY: demo
+demo: test/demo
+	mkdir -p test/out
+	./test/demo test/out/demo.wav

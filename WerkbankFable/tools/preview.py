@@ -59,7 +59,7 @@ tmp = OUT + ".svg"; open(tmp, "w").write(svg)
 pw, ph = int(W * 5), int(H * 5)
 open(tmp + ".html", "w").write(f'<html><body style="margin:0;background:#111"><img src="{os.path.basename(tmp)}" style="width:{pw}px;height:{ph}px"></body></html>')
 js = f"""const {{chromium}} = require('playwright');
-(async () => {{ const b = await chromium.launch(); const p = await b.newPage({{viewport: {{width: {pw}, height: {ph}}}, deviceScaleFactor: 1}});
+(async () => {{ const b = await chromium.launch(); const p = await b.newPage({{viewport: {{width: {pw}, height: {ph}}}, deviceScaleFactor: 2}});
 await p.goto('file://{tmp}.html'); await p.waitForTimeout(400);
 await p.screenshot({{path: '{OUT}'}}); await b.close(); }})();"""
 open(OUT + ".js", "w").write(js)
