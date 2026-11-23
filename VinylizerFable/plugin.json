@@ -1,0 +1,51 @@
+{
+  "slug": "VinylizerFable",
+  "name": "Vinylizer Fable",
+  "version": "2.2.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "VinylizerFable",
+      "name": "Vinylizer Fable",
+      "description": "The sound of a 90s record from the physics of the chain, no crackle: elliptic EQ, cutter HF limiter, record curve and cut level, lacquer / DMM / dub plate, stylus tracing and inner groove distortion, tracking and mistracking, MM cartridge loading, arm resonance and warps, platter wow, and the phono preamp",
+      "tags": [
+        "Effect",
+        "Distortion",
+        "Equalizer",
+        "Filter",
+        "Visual"
+      ]
+    },
+    {
+      "slug": "VinylMaster",
+      "name": "Vinylizer Master",
+      "description": "Expander for Vinylizer Fable (place on its left): the master handed to the cutting engineer. Half-inch or quarter-inch tape with drive, print-through, noise reduction error and hiss, 1630 and DAT early digital converters, emphasis mistakes, the lathe's digital delay line, and CD-style limiting",
+      "tags": [
+        "Expander",
+        "Effect",
+        "Distortion",
+        "Limiter"
+      ]
+    },
+    {
+      "slug": "VinylPressing",
+      "name": "Vinylizer Pressing",
+      "description": "Expander for Vinylizer Fable (place on its right): a poor pressing, made in the groove and read by the stylus. Virgin, regrind, styrene, flexi and picture disc stock, surface noise, non-fill, stamper wear, disc weight, dust and stylus fluff, scratches, cue burn, with once-per-turn and skip outputs",
+      "tags": [
+        "Expander",
+        "Effect",
+        "Noise",
+        "Clock generator"
+      ]
+    }
+  ]
+}

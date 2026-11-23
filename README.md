@@ -18,6 +18,7 @@ without stepping on each other.
 | [Gongoozler](Gongoozler/) | Gongoozler, Gonzo | Gong and tam-tam physical model (tam-tam, wind, opera, bossed; hard hits bloom), plus Gonzo, the same engine pushed past real gongs |
 | [Bore](Bore/) | Scanner, Bore Room | MRI scanner from the inside: real pulse sequences through three coils, pump and bore, plus the bore as a reverb |
 | [Pivot](Pivot/) | Pivot | Metric modulation clock: a chain of OLD note = NEW note tempo pivots that follows Live's clock, glides, and lands back on Live's bar lines |
+| [VinylizerFable](VinylizerFable/) | Vinylizer Fable | The sound of a 90s record from the physics of cutting, pressing and playback, in ten switchable processes (no crackle) |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
