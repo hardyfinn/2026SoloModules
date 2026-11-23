@@ -10,6 +10,7 @@ without stepping on each other.
 | [Riddim](Riddim/) | Riddim | Dancehall riddim drum machine: 24 classic riddims, each with its machine flavour, ten synthesised voices |
 | [CymbolismFable](CymbolismFable/) | Cymbolism, Cymbolism Extended | Physical cymbal: ten types computed from their geometry, nonlinear crash bloom, stick, mallet, rods, brush and bow; Extended adds morph, warp, tuning to scales, sustain, freeze, stereo and more |
 | [Heathrow](Heathrow/) | Heathrow | Stereo phaser / flanger with through-zero, a second switchable engine and 6 memory slots |
+| [Joanna](Joanna/) | Joanna | Physical model of an upright home piano and its room: felt hammers, beating unisons, years since tuning, wear, age, three pedals, lid, wall and room |
 | [Datamatic](Datamatic/) | Datamatic, Test Pattern | Ryoji Ikeda style: numbers (pi, primes, text, CV) become interlocking gates at up to 16x the clock, played by hard-edged sine, click and noise voices |
 | [Krka](Krka/) | Krka | Four function generators with 260 shapes, 16 chain algorithms, assignable CV and 18 presets (Zadar-style, no menus) |
 | [Lindenmayer](Lindenmayer/) | Sprout, Graft, Bloom | L-system sketches: a rhythm that grows, drum rules that rewrite themselves, chords grown by rules |
