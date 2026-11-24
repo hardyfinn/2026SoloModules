@@ -1,0 +1,23 @@
+{
+  "slug": "BentSheetMetalFable",
+  "name": "Bent Sheet Metal Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "BentSheetMetal",
+      "name": "Bent Sheet Metal",
+      "description": "A strip of spring steel that keeps ringing while you bend it, flex it through flat, dip it in water and bow it. The shape sets the pitch. Musical saw, flexatone, wobble board, thunder sheet and water gong, with every range pushed past real.",
+      "tags": ["Synth voice", "Physical modeling", "Drone", "Effect"]
+    }
+  ]
+}
