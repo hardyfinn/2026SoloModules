@@ -31,3 +31,20 @@ Things the Walker build had to decide that WALKER-BUILD-INSTRUCTIONS.md did not,
 8. **Not checked by ear.** The soul and house cells, and the 4 ms late decision in cable mode, behave as specified in the tests; they have not been listened to by Hardy yet.
 9. **Demos** (`tools/make_walker_demos.py`): Comper through Joanna with Comper's ROOTS off (as with Walker attached), Walker linked sample by sample exactly as the modules are in Rack, General MIDI drums for context (none on the ballads). Trios are balanced to equal bass and piano RMS with drums at 0.4. The ACTIVITY, LOOSE, ATTACK and tone tours keep the Medium Swing trio's gains so level changes from the controls can be heard.
 10. **Panel.** NEW is a button next to SEED in the PLAYER row; the PLUCK and LINK lights sit at the end of the HANDS row. The panel is drawn by `res/make_walker_panel.py`.
+
+# Rider build decisions (Opus, 2026-11-24)
+
+Things the Rider build had to decide that RIDER-BUILD-INSTRUCTIONS.md did not, or where the module differs from it.
+
+1. **Display counters.** The display needs to tell a big fill from a small one and see a bomb. The engine gained `lastFill` (the size `pickFill` returned in this plan) and a `bombs` counter in `Stats`. Neither draws a random number, so the 174 golden parts are untouched.
+2. **Beat tolerance.** Section 10 asks for beats within 1e-9 in the linked and clock tests, but the golden file stores beats rounded to 7 decimals, so the tests use 1e-6 (as the player test does). Voices, velocities and stroke order are exact. The behaviour tests compare the host with itself and use 1e-9.
+3. **Log order.** The host logs strokes as they are played; a stroke with an early offset can be played before one planned ahead of it. The tests sort the log by plan order before comparing with the golden case.
+4. **Stopping.** While Comper is stopped the queued strokes are kept but not played, and play on when it runs again; a reset clears them.
+5. **Cable clock.** `RiderHost::cableTransport` is a copy of Walker's (median of three periods, snap to the pulse, hold at 1.5 pulses), as Walker's was a copy of Comper's. Phi advances after the bar is planned and the strokes fired, so the first pulse is exactly beat 0.
+6. **Resampling.** At rates other than 48 kHz the kit's stream is read with 4-point Hermite interpolation between the two middle points of the last four kit samples: one kit sample more delay than at 48 kHz, where the kit's sample is used directly. Over an 8-bar take the output energy is within 0.05 dB of the 48 kHz render at 44.1 and 96 kHz.
+7. **Cost.** 2.4 to 2.5% of one core at 48 kHz on preset 02 (x86 build machine, `-O3 -funsafe-math-optimizations`), with the 104 band filters always running. No economies were needed.
+8. **Panel.** 30 HP. ENERGY is the large knob. LOOSE is a normal knob (it sits in the HANDS row under the PLAYER captions). The lights HIT, LINK, FILL end the HANDS/KIT row; the six sound knobs are spread across the third row; inputs are spread across the top jack row and the ten outputs fill the bottom row. Drawn by `res/make_rider_panel.py`, preview by `tools/preview_rider.py`.
+9. **The module struct is `RiderModule`** (the engine is `rider::Rider`); the model slug is `Rider`.
+10. **Link.** `LinkPort` uses `Module::Expander`; a neighbour that is not Comper, Walker or Rider is ignored. More than one of a kind in a row does not crash: each section is taken from the nearest side that has it.
+11. **Demos** (`tools/make_rider_demos_cpp.py`): all three hosts linked sample by sample in `tools/render_trio.cpp`, with Walker's off-beat notes reaching Rider and BAND reaching Comper (density, velocity) and Walker (activity, level). Not checked by ear by the builder.
+12. **Output knee.** At kit x 18 a single loud stroke stays under about 8 V, but a big fill at high ENERGY can pile up to 17 V for a few milliseconds (preset 02, bar 16). The host leaves everything below 8 V untouched and rounds off above it towards 12 V (`RiderHost::knee`). In the 12 preset takes it touches fewer than 50 samples per take. The kit test checks the kit itself, before the knee.

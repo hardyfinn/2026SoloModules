@@ -1,6 +1,6 @@
 # Comper Fable
 
-Two modules: **Comper**, a jazz piano comping player, and **Walker**, its upright bass player.
+Three modules: **Comper**, a jazz piano comping player, **Walker**, its upright bass player, and **Rider**, its drummer.
 
 A jazz piano comping player for VCV Rack 2. It plays chords the way a pianist accompanies: rootless,
 shell, quartal and spread voicings that move by the smallest steps from chord to chord, swung two-bar
@@ -30,15 +30,29 @@ sequencer (it learns the tune on the first pass), or be played as an upright bas
 - Design: [docs/WALKER-BUILD-INSTRUCTIONS.md](docs/WALKER-BUILD-INSTRUCTIONS.md); the line is `tools/proto/walker_ref.py`, the sound `tools/proto/upright_ref.py`
 - Walker chapter in the manual; build notes in [docs/DECISIONS.md](docs/DECISIONS.md)
 
+## Rider
+
+A jazz drummer for Comper and Walker. Put the three in a row (any order) and they play as a trio with no cables:
+Rider keeps time on the ride, comps on snare and bass drum, catches the pianist's pushes (it is told Comper's rhythm
+figure for each bar just before it starts), keeps clear of Walker's off-beat notes, and sets up the ends of phrases
+and the top of each chorus. Swing, bossa, ballad (brushes), soul and house. It plays a modelled jazz kit fitted to
+recordings (partials, a noise wash in 26 bands, the stick click), stereo out, plus six triggers and their velocities.
+A BAND knob lets its ENERGY lead Comper and Walker. It also runs alone from a clock.
+
+- 30 HP. 12 presets, paired with Comper's and Walker's
+- Design: [docs/RIDER-BUILD-INSTRUCTIONS.md](docs/RIDER-BUILD-INSTRUCTIONS.md); the player is `tools/proto/rider_ref.py`, the kit `tools/proto/rider_kit_ref.py`
+- Rider chapter in the manual; build notes in [docs/DECISIONS.md](docs/DECISIONS.md)
+
 ## Build
 
     make RACK_DIR=path/to/Rack-SDK dist
 
-Offline checks (the C++ engines must reproduce 99 Comper takes and 97 Walker lines from the reference engines note
-for note, and the upright must match the reference sound in 62 cases), MIDI and WAV renders of every preset, no Rack needed:
+Offline checks (the C++ engines must reproduce 99 Comper takes, 97 Walker lines and 174 Rider drum parts from the
+reference engines note for note, the upright must match the reference sound in 62 cases and the kit in 69), MIDI and WAV renders of every preset, no Rack needed:
 
     make test
 
+Rider panel: `python3 res/make_rider_panel.py`. Rider demos: `python3 tools/make_rider_demos_cpp.py OUTDIR`.
 Walker panel: `python3 res/make_walker_panel.py`. Demos: `python3 tools/make_walker_demos.py OUTDIR` (needs the Joanna folder next to this one).
 
 Panel: `python3 res/make_panel.py` (needs `pip install fonttools`). Presets: `python3 tools/proto/export_presets.py`.

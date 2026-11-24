@@ -234,7 +234,7 @@ struct RiderHost {
 			l = o[0]; r = o[1];
 		}
 		double g = 18.0 * in.kit.level;
-		out.L = (float)(l * g); out.R = (float)(r * g);
+		out.L = (float)knee(l * g); out.R = (float)knee(r * g);
 		for (int i = 0; i < NUM_TG; i++) {
 			out.trig[i] = trigLeft[i] > 0 ? 10.f : 0.f;
 			if (trigLeft[i] > 0) trigLeft[i]--;
@@ -242,6 +242,15 @@ struct RiderHost {
 		}
 		out.energy = (float)(10.0 * std::max(0.0, std::min(1.0, in.rp.energy)));
 		t += dt; sampleNow++;
+	}
+
+	// a safety knee for the rare pile-up of loud strokes (a big fill at full energy can sum past 15 V):
+	// untouched below 8 V, rounding off towards 12 V
+	static double knee(double x) {
+		double ax = std::fabs(x);
+		if (ax <= 8.0) return x;
+		double y = 8.0 + 4.0 * std::tanh((ax - 8.0) / 4.0);
+		return x < 0 ? -y : y;
 	}
 
 	// ---------------------------------------------------------------- display

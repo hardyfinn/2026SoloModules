@@ -103,6 +103,8 @@ When a CV or POLY chord changes between Comper's own hits, Comper lets go of wha
 
 **RESET** goes back to the start of the chart, lets go of everything, and (by default) replays the same take from the top. Right-click *Reset replays the same take* to turn that off.
 
+With **Rider** in the row, Rider hears each bar's rhythm figure before Comper plays it and can catch the pushes; with Rider's BAND knob up, Rider's ENERGY also moves Comper's DENSITY and velocities.
+
 ## Inputs and outputs
 
 | Jack | |
@@ -184,12 +186,14 @@ It can also follow chord cables from any other sequencer, or be played as an upr
 
 ## Quick start
 
-1. Put Walker directly to the left or right of Comper, touching it. The **LINK** light comes on.
+1. Put Walker directly to the left or right of Comper, touching it (or with Rider between them). The **LINK** light comes on.
 2. Patch Walker **OUT** to a mixer or your audio interface, next to your piano.
 3. That is all. Walker plays as soon as Comper runs. With **FEEL** at FOLLOW it takes its feel from Comper's GROOVE: swing walks, bossa plays bossa, and so on.
 4. Try the presets in pairs: Walker's *01 Medium Swing* with Comper's *01 Medium Swing*, and so on. They are made for each other.
 
-When Walker sits next to Comper, Comper stops playing roots in the left hand (a pianist stops playing roots when a bassist arrives). To keep them, right-click Comper and tick *Keep roots with Walker attached*.
+When Walker sits next to Comper, Comper stops playing roots in the left hand (a pianist stops playing roots when a bassist arrives). To keep them, right-click Comper and tick *Keep roots with Walker in the row*.
+
+Add **Rider**, the drummer, anywhere in the same row (Comper, Walker and Rider touch in any order) and the three play as a trio with no cables. Walker's LINK light means a Comper is somewhere in the row.
 
 ## Words used in this chapter
 
@@ -293,7 +297,7 @@ Each is made for the Comper preset with the same number and name. All use seed 1
 
 ## Patch recipes
 
-**1. Piano trio.** Comper, Walker next to it, Comper into Joanna. Walker OUT and Joanna into a mixer. A drum module clocked from the same clock as Comper (Comper's CLOCK input). Pair the presets by number.
+**1. Piano trio.** Comper, Walker and Rider in a row, Comper into Joanna. Walker OUT, Rider LEFT and RIGHT and Joanna into a mixer. Pair the presets by number. (Before Rider: a drum module clocked from the same clock as Comper.)
 
 **2. Duo ballad.** Comper preset 03 or 11 with Walker preset 03 or 11, no drums. Turn AHEAD down a little and SUSTAIN up for long notes that bloom.
 
@@ -313,3 +317,148 @@ Each is made for the Comper preset with the same number and name. All use seed 1
 - In cable mode the first pass through a tune is plain (one note per beat, no lookahead), and a chord change in the tune is learned on the next pass.
 - What Walker plays comes from a reference engine designed offline (Python). The module reproduces it note for note (97 lines are tested). The sound was fitted to recordings of a real upright and approved by ear; the module matches the reference within 0.02 dB in 62 test cases. As with Comper, the line was checked by measurement, not by ear.
 - CPU: about 4% of one core for a fast walking line at 48 kHz (up to six notes ringing at once).
+
+# Rider
+
+**A jazz drummer for Comper and Walker.** Comper Fable 2.2, by Haer.
+
+![Rider panel](rider-panel.png)
+
+Rider is the drummer in Comper's band. Put it in the same row as Comper and Walker and it plays with them with no cables: it keeps time on the ride cymbal, talks with the pianist on snare and bass drum, catches the pianist's pushes, sets up the ends of phrases and the top of each chorus, and plays all of it on a modelled jazz kit, with sticks or with brushes. It sends stereo audio, and a trigger for each drum so you can play other drum modules from it too.
+
+It also plays on its own from a clock cable.
+
+## Quick start
+
+1. Put Rider in the row with Comper (and Walker if you have it), touching. Any order works. The **LINK** light comes on.
+2. Patch **LEFT** and **RIGHT** to your mixer.
+3. Start Comper. Rider plays from the first bar. With **FEEL** at FOLLOW it takes its feel from Comper's GROOVE.
+4. Load the presets in threes: Comper, Walker and Rider *01 Medium Swing*, and so on.
+
+## What a jazz drummer does
+
+A jazz drummer does five things at once, and Rider has a layer for each:
+
+1. **Time.** The ride cymbal's "ding, ding-a, ding, ding-a", the hi-hat closed by the foot on 2 and 4, and the bass drum on all four beats so quietly that it is felt more than heard (feathering). The ride pattern changes now and then, and gets busier as the energy rises; above 190 bpm it simplifies to quarter notes.
+2. **Conversation.** Snare and bass drum "comping": short accents and ghost notes in two-bar figures that are repeated and varied, never more than two in a row. Now and then a loud bass-drum accent (a "bomb").
+3. **Listening.** A drummer next to a pianist hears the pianist's rhythm and plays with it. Rider is told Comper's rhythm figure for each bar just before the bar starts. When the pianist pushes a chord onto the upbeat before the beat, Rider may catch it with a snare accent (or bass drum and cymbal when the band is loud). It stays out of the way of the pianist's other hits, answers on an upbeat when the piano has been quiet for a while, and keeps clear of Walker's off-beat notes.
+4. **Form.** At the end of every 4 and 8 bars, and into the top of each chorus, it plays a set-up: a short fill on the snare (with toms when it is big and loud), landing on the bass drum on the next 1, with a crash on a big one. If the pianist pushes the next chord on the "and of 4", the set-up lands there with the piano.
+5. **Shape.** ENERGY scales all of it: how loud, how busy, how many bombs and crashes, and which cymbal carries the time.
+
+And the **hands**: a slow drift that all four limbs share, a little scatter on every stroke, the snare a few milliseconds late, the hi-hat foot a little early, fills that push.
+
+## The feels
+
+| FEEL | |
+|---|---|
+| FOLLOW | Takes the feel from Comper's GROOVE. Alone it swings. |
+| SWING | Sticks: ride, hi-hat foot, feathered bass drum, comping, set-ups. |
+| BOSSA | Eighths on the closed hi-hat (on the ride above ENERGY 0.55), the bass drum's "one, and of two" figure, a two-bar cross-stick pattern. |
+| BALLAD | Brushes: one legato sweep on the snare each beat, taps on 2 and 4, soft brush accents. |
+| SOUL | Hi-hat eighths (sixteenths as it heats up), ride bell at high energy, a backbeat (cross-stick when quiet), syncopated bass drum. |
+| HOUSE | Four on the floor, open hi-hat off the beat, snare on 2 and 4. |
+
+The feel can change at any bar line.
+
+## PLAYER
+
+- **ENERGY** (large knob): how hard the band is playing. Everything follows it. The ENERGY input adds 0.1 per volt.
+- **COMP**: how much snare and bass drum conversation there is (and how often the soul and house drummer catches the pianist).
+- **LISTEN**: how much Rider follows the pianist: catching pushes, staying off the pianist's other hits, answering in the gaps. At 0 it plays its own figures regardless. It needs Comper on its chart (Comper following chord cables decides too late to be heard in advance).
+- **FILLS**: how often set-ups come at the ends of phrases and into the top of the chorus. At 0 only the FILL input asks for one.
+- **FEATHER**: the quiet bass drum on all four beats (swing). It drops out as ENERGY gets high, as a drummer's does.
+- **REPEAT**: how often the two-bar comping figure is kept rather than replaced.
+- **BAND**: how far ENERGY leads the rest of the band. At 0 (the default) nothing changes for Comper and Walker. Turned up, a high ENERGY makes Comper denser and louder and Walker busier and louder, and a low ENERGY calms them, all from the one knob or CV.
+- **SEED** and **NEW**: a different take from the same settings. A new seed starts at the next bar line.
+
+## HANDS
+
+- **LOOSE**: 0 is a drum machine, 1 a good drummer, 2.5 drunk. It scales the drift, the scatter on every stroke and the spread of loudness.
+- **AHEAD**: where the drummer sits against the beat, from laying back (0) to playing on top of it (1), up to 12 ms either way.
+
+## KIT
+
+The kit is a jazz kit: ride, crash, hi-hats, snare, bass drum and two toms, played with sticks, or with brushes in the BALLAD feel.
+
+- **RIDE**, **HATS**, **SNARE**, **KICK**, **TOMS**: the level of each part, 0 to 2 (RIDE covers ride, bell and crash; SNARE covers cross-stick and brushes).
+- **TUNE**: the drums, five semitones either way.
+- **DECAY**: how long the cymbals and hi-hats ring.
+- **BRIGHT**: dark to bright.
+- **WIDTH**: mono to the full stereo kit, as heard from overhead microphones.
+- **AGE**: an old kit: darker cymbals, dead heads, slack tuning, uneven strokes.
+- **LEVEL**: output level. A loud stroke peaks near 5 V at LEVEL 1. The rare pile-up of loud strokes in a big fill is rounded off above 8 V, so the output stays within 12 V.
+
+**How the kit was modelled.** Each voice was measured from recordings of a real jazz kit (sticks) and of brushes, in 26 frequency bands and over 4 seconds, at three to five loudnesses. A cymbal turned out not to be a few hundred ringing tones (a bank of them rings like whistles); it is a wash of noise whose colour and decay change over time, with a few true partials on top. So every voice is three parts: its measured **partials**, a **wash** of noise in 26 bands that each stroke tops up (which is also why a ride builds up and roars when played hard, as a real one does), and the **click** of the stick. Soft strokes are darker and have less click, as the recorded ones do. The brush sweep is the snare's wash held open by the hand, shaped by the gesture of the sweep.
+
+The lights: **HIT** flashes on every stroke; **LINK** shows a Comper in the row; **FILL** is lit while a set-up is played.
+
+The display shows the feel (a * when it follows Comper), the bar in the chorus, what the drummer just did (FILL, BIG FILL, CAUGHT when it caught a push, BOMB), where the time comes from (LINK, CLOCK or -) and the seed.
+
+## Inputs and outputs
+
+| Jack | |
+|---|---|
+| CLOCK, RESET | Without Comper: the clock (pulses per beat from the menu) and reset. The first pulse after a reset is beat 1 of bar 1. |
+| ENERGY, COMP, FILLS | CV added to the knobs, 0.1 per volt. |
+| FILL | A trigger: a set-up in the next bar (a big one when ENERGY is 0.5 or more). |
+| LAY OUT | A gate: no strokes while it is high. The drummer's place in the tune carries on, so it comes back in time. |
+| **LEFT**, **RIGHT** | The kit, stereo. |
+| **KICK**, **SNARE**, **HAT**, **RIDE**, **CRASH**, **TOM** | 1 ms, 10 V triggers for each stroke. SNARE includes cross-stick and brush taps; HAT includes the foot; RIDE includes the bell. Brush sweeps give no trigger. |
+| **VEL** | Six channels, in the same order: each holds its drum's last velocity, 0 to 10 V. |
+| **ENERGY** | The energy in use (knob plus CV), 0 to 10 V, so other modules can follow the drummer. |
+
+Right-click menu: *Clock pulses per beat* (1, 2, 4 or 24) and *Chorus length* (8, 12, 16 or 32 bars) for when there is no chart. Next to Comper on its chart, the chorus is the chart's length.
+
+## The link
+
+Comper, Walker and Rider tell each other what they need through the sides of the modules that touch, along a row of any order:
+
+- **Comper** sends the time (tempo, bar position, running, reset), the chart and groove, and its rhythm figure for each bar, just before the bar starts.
+- **Walker** sends where its planned notes fall off the beat, so Rider does not crowd them.
+- **Rider** sends its BAND amount, so Comper and Walker follow its ENERGY.
+
+Each module passes on what it hears from one side to the other, so the three need only to touch in a row. Comper stops playing roots when a Walker is anywhere in the row.
+
+## Using it alone
+
+Patch a clock into **CLOCK** and set the pulses per beat in the menu (24 for MIDI clock). Rider plays from the first pulse, and takes the tempo from the clock (it assumes 120 bpm until it has heard two pulses). Set *Chorus length* to the length of your tune so the set-ups fall at its top. A RESET pulse starts a fresh take at bar 1. With no Comper it plays its own figures, as a drummer who has not heard the tune would.
+
+## The 12 presets
+
+Each is made for the Comper and Walker presets with the same number and name.
+
+| Preset | |
+|---|---|
+| 01 Medium Swing | Swing at 132, every control at its default. |
+| 02 Fast Bebop Shells | Swing at 208: a little more energy, lighter feathering, on top of the beat, shorter cymbals. |
+| 03 Ballad | Brushes, quieter, a little loose. |
+| 04 Bossa | Bossa, steady figures, shorter cymbals. |
+| 05 Modal Quartal | Hot swing: more energy, more comping and fills, little feathering, a bright ride. |
+| 06 Open Spread | Gentle swing, sparse comping, longer cymbals. |
+| 07 Blues Shells | Busier swing with more fills, looser, a slightly aged kit. |
+| 08 Soul Sixteenths | Soul, a little tighter: drums tuned lower, shorter cymbals. |
+| 09 House Stabs | House, almost machine, tight and tuned low. |
+| 10 Out And Sparse | Sparse, free-leaning swing with a lot of comping and little repetition, an older kit. |
+| 11 Solo Piano Roots | Quiet brushes for a duo, an older kit. |
+| 12 Duo Listening | Swing with a little more comping. |
+
+## Patch recipes
+
+**1. The trio with no cables.** Comper, Walker and Rider in a row, Comper into Joanna. Joanna, Walker OUT and Rider LEFT/RIGHT into a mixer. Load the three presets with the same number. Comper's RUN starts the band.
+
+**2. Rider alone under your own sequence.** Your sequencer's clock into Rider's CLOCK (pulses per beat from the menu), its reset into RESET, and *Chorus length* set to the length of your pattern. FEEL to SOUL or HOUSE for straight grooves, SWING for jazz.
+
+**3. Following a soloist.** A soloist's audio through an envelope follower into Rider's ENERGY input (and ENERGY knob down a little): the drummer gets louder and busier as the soloist does. Add Comper's LISTEN with the same soloist into Comper's SOLO.
+
+**4. Triggers into another kit.** KICK, SNARE, HAT, RIDE, CRASH and TOM into the trigger inputs of any drum modules, and VEL's channels (split with a poly-to-mono module) into their accent or level inputs. Turn Rider's LEVEL down to hear only the other kit, or mix both.
+
+**5. The whole band builds.** BAND up to 1, ENERGY at 0, and a slow rising CV (a long envelope or a slow LFO) into the ENERGY input over 32 bars: the drummer, the bass and the piano grow together, from a whisper to the full band. Set up a FILL trigger at the peak.
+
+**6. Breaks.** A gate into LAY OUT for a bar of silence before the top of the chorus, and a trigger into FILL the bar before to set it up.
+
+## Notes and limits
+
+- 4/4 only. No trading fours yet (planned for a later version).
+- What Rider plays comes from a reference player designed offline (Python, `tools/proto/rider_ref.py`); the module reproduces it stroke for stroke (174 drum parts are tested, 12 of them next to Comper's own host). The kit was fitted to recordings and approved by ear; the module matches the reference kit to within 0.01 dB in 69 test cases.
+- Rider plans each bar about a twelfth of a beat before it starts, so it never looks further ahead than the coming bar.
+- CPU: about 2.5% of one core at 48 kHz for the fast bebop preset (measured on the build machine). The kit always runs at 48 kHz inside and is resampled at other rates.
