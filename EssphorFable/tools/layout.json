@@ -1,0 +1,914 @@
+{
+"Essphor": {
+"W": 162.56,
+"H": 128.5,
+"comps": {
+"PITCH": [
+"big",
+11.0,
+27.0,
+"PITCH"
+],
+"RATE": [
+"big",
+31.0,
+27.0,
+"RATE"
+],
+"SIZE": [
+"big",
+51.0,
+27.0,
+"SIZE"
+],
+"CONTOUR": [
+"big",
+71.0,
+27.0,
+"CONTOUR"
+],
+"SCAN": [
+"big",
+91.0,
+27.0,
+"SCAN"
+],
+"SPRAY": [
+"big",
+111.0,
+27.0,
+"SPRAY"
+],
+"PATTERN": [
+"big",
+131.0,
+27.0,
+"PATTERN"
+],
+"WET": [
+"big",
+151.0,
+27.0,
+"WET"
+],
+"FEEDBACK": [
+"knob",
+11.0,
+52.2,
+"FEEDBACK"
+],
+"RAND_PITCH": [
+"knob",
+31.0,
+52.2,
+"R PITCH"
+],
+"RAND_RATE": [
+"knob",
+51.0,
+52.2,
+"R RATE"
+],
+"RAND_SIZE": [
+"knob",
+71.0,
+52.2,
+"R SIZE"
+],
+"RAND_AMP": [
+"knob",
+91.0,
+52.2,
+"R AMP"
+],
+"RAND_REV": [
+"knob",
+111.0,
+52.2,
+"R REV"
+],
+"AGE": [
+"knob",
+131.0,
+52.2,
+"AGE"
+],
+"SCALE": [
+"snap",
+151.0,
+52.2,
+"SCALE"
+],
+"RATE_MODE": [
+"button",
+24.0,
+37.0,
+null
+],
+"RATE_MODE_DISP": [
+"display",
+33.6,
+37.0,
+null
+],
+"SCAN_MODE": [
+"button",
+84.0,
+37.0,
+null
+],
+"SCAN_MODE_DISP": [
+"display",
+93.6,
+37.0,
+null
+],
+"SPRAY_MODE": [
+"button",
+104.0,
+37.0,
+null
+],
+"SPRAY_MODE_DISP": [
+"display",
+113.6,
+37.0,
+null
+],
+"WET_MODE": [
+"button",
+144.0,
+37.0,
+null
+],
+"WET_MODE_DISP": [
+"display",
+153.6,
+37.0,
+null
+],
+"FB_MODE": [
+"button",
+4.0,
+61.5,
+null
+],
+"FB_MODE_DISP": [
+"display",
+13.6,
+61.5,
+null
+],
+"RP_MODE": [
+"button",
+24.0,
+61.5,
+null
+],
+"RP_MODE_DISP": [
+"display",
+33.6,
+61.5,
+null
+],
+"SCALE_DISP": [
+"display",
+149.5,
+61.5,
+null
+],
+"PATTERN_DISP": [
+"display",
+131.0,
+37.0,
+null
+],
+"TEMPO": [
+"small",
+11.0,
+73.5,
+"TEMPO"
+],
+"LOCK": [
+"bezel",
+31.0,
+73.5,
+"LOCK"
+],
+"CLOCK_LIGHT": [
+"light",
+48.0,
+73.5,
+null
+],
+"GRAIN_LIGHT": [
+"light",
+56.0,
+73.5,
+null
+],
+"BUF_DISP": [
+"display",
+101.0,
+73.5,
+null
+],
+"PITCH_CV": [
+"jack",
+11.0,
+88.0,
+"PITCH"
+],
+"RATE_CV": [
+"jack",
+31.0,
+88.0,
+"RATE"
+],
+"SIZE_CV": [
+"jack",
+51.0,
+88.0,
+"SIZE"
+],
+"CONTOUR_CV": [
+"jack",
+71.0,
+88.0,
+"CONTOUR"
+],
+"SCAN_CV": [
+"jack",
+91.0,
+88.0,
+"SCAN"
+],
+"SPRAY_CV": [
+"jack",
+111.0,
+88.0,
+"SPRAY"
+],
+"PATTERN_CV": [
+"jack",
+131.0,
+88.0,
+"PATTERN"
+],
+"WET_CV": [
+"jack",
+151.0,
+88.0,
+"WET"
+],
+"FEEDBACK_CV": [
+"jack",
+11.0,
+102.5,
+"FEEDBACK"
+],
+"RAND_PITCH_CV": [
+"jack",
+31.0,
+102.5,
+"R PITCH"
+],
+"RAND_RATE_CV": [
+"jack",
+51.0,
+102.5,
+"R RATE"
+],
+"RAND_SIZE_CV": [
+"jack",
+71.0,
+102.5,
+"R SIZE"
+],
+"RAND_AMP_CV": [
+"jack",
+91.0,
+102.5,
+"R AMP"
+],
+"RAND_REV_CV": [
+"jack",
+111.0,
+102.5,
+"R REV"
+],
+"AGE_CV": [
+"jack",
+131.0,
+102.5,
+"AGE"
+],
+"VOCT": [
+"jack",
+151.0,
+102.5,
+"V/OCT"
+],
+"IN_L": [
+"jack",
+11.0,
+117.0,
+"IN L"
+],
+"IN_R": [
+"jack",
+31.0,
+117.0,
+"IN R"
+],
+"CLOCK": [
+"jack",
+51.0,
+117.0,
+"CLOCK"
+],
+"RESET": [
+"jack",
+71.0,
+117.0,
+"RESET"
+],
+"LOCK_IN": [
+"jack",
+91.0,
+117.0,
+"LOCK"
+],
+"GRAIN_OUT": [
+"out",
+111.0,
+117.0,
+"GRAIN"
+],
+"OUT_L": [
+"out",
+131.0,
+117.0,
+"OUT L"
+],
+"OUT_R": [
+"out",
+151.0,
+117.0,
+"OUT R"
+]
+},
+"disp": {
+"RATE_MODE_DISP": [
+12.6,
+4.6
+],
+"SCAN_MODE_DISP": [
+12.6,
+4.6
+],
+"SPRAY_MODE_DISP": [
+12.6,
+4.6
+],
+"WET_MODE_DISP": [
+12.6,
+4.6
+],
+"FB_MODE_DISP": [
+12.6,
+4.6
+],
+"RP_MODE_DISP": [
+12.6,
+4.6
+],
+"SCALE_DISP": [
+17.0,
+4.6
+],
+"PATTERN_DISP": [
+14.0,
+4.6
+],
+"BUF_DISP": [
+58.0,
+6.0
+]
+}
+},
+"EssphorRes": {
+"W": 81.28,
+"H": 128.5,
+"comps": {
+"CUTOFF": [
+"big",
+13.5,
+28.0,
+"CUTOFF"
+],
+"RES": [
+"knob",
+40.64,
+28.0,
+"RESONANCE"
+],
+"DECAY": [
+"knob",
+67.8,
+28.0,
+"DECAY"
+],
+"DECAY_MODE": [
+"button",
+60.8,
+38.0,
+null
+],
+"DECAY_MODE_DISP": [
+"display",
+70.2,
+38.0,
+null
+],
+"PITCH": [
+"knob",
+13.5,
+52.0,
+"PITCH"
+],
+"SLOPE": [
+"knob",
+40.64,
+52.0,
+"SLOPE"
+],
+"TONE": [
+"knob",
+67.8,
+52.0,
+"TONE"
+],
+"SCALE": [
+"snap",
+13.5,
+71.0,
+"SCALE"
+],
+"SCALE_DISP": [
+"display",
+15.5,
+79.6,
+null
+],
+"WET": [
+"knob",
+40.64,
+71.0,
+"WET"
+],
+"WET_MODE": [
+"button",
+33.64,
+79.6,
+null
+],
+"WET_MODE_DISP": [
+"display",
+43.04,
+79.6,
+null
+],
+"AGE": [
+"knob",
+67.8,
+71.0,
+"AGE"
+],
+"CUTOFF_CV": [
+"jack",
+8.6,
+93.0,
+"CUTOFF"
+],
+"RES_CV": [
+"jack",
+24.6,
+93.0,
+"RES"
+],
+"DECAY_CV": [
+"jack",
+40.64,
+93.0,
+"DECAY"
+],
+"PITCH_CV": [
+"jack",
+56.7,
+93.0,
+"PITCH"
+],
+"SLOPE_CV": [
+"jack",
+72.7,
+93.0,
+"SLOPE"
+],
+"TONE_CV": [
+"jack",
+8.6,
+105.5,
+"TONE"
+],
+"WET_CV": [
+"jack",
+24.6,
+105.5,
+"WET"
+],
+"AGE_CV": [
+"jack",
+40.64,
+105.5,
+"AGE"
+],
+"VOCT": [
+"jack",
+56.7,
+105.5,
+"V/OCT"
+],
+"IN_L": [
+"jack",
+8.6,
+118.0,
+"IN L"
+],
+"IN_R": [
+"jack",
+24.6,
+118.0,
+"IN R"
+],
+"OUT_L": [
+"out",
+56.7,
+118.0,
+"OUT L"
+],
+"OUT_R": [
+"out",
+72.7,
+118.0,
+"OUT R"
+]
+},
+"disp": {
+"DECAY_MODE_DISP": [
+12.6,
+4.6
+],
+"SCALE_DISP": [
+21.0,
+4.6
+],
+"WET_MODE_DISP": [
+12.6,
+4.6
+]
+}
+},
+"EssphorMod": {
+"W": 132.08,
+"H": 128.5,
+"comps": {
+"CLOCK": [
+"jack",
+101.0,
+9.5,
+null
+],
+"RESET": [
+"jack",
+122.0,
+9.5,
+null
+],
+"W_RATE": [
+"small",
+8.5,
+31.5,
+null
+],
+"W_AMOUNT": [
+"small",
+19.9,
+31.5,
+null
+],
+"W_PHASE": [
+"small",
+31.3,
+31.5,
+null
+],
+"W_OFFSET": [
+"small",
+42.7,
+31.5,
+null
+],
+"W_SKEW": [
+"small",
+54.1,
+31.5,
+null
+],
+"W_FOLD": [
+"small",
+65.5,
+31.5,
+null
+],
+"W_CURVE": [
+"small",
+76.9,
+31.5,
+null
+],
+"W_SPREAD": [
+"small",
+88.3,
+31.5,
+null
+],
+"W_OUT_A": [
+"out",
+117.0,
+31.5,
+null
+],
+"W_OUT_B": [
+"out",
+126.5,
+31.5,
+null
+],
+"W_RATE_MODE": [
+"button",
+95.2,
+26.5,
+null
+],
+"W_RATE_MODE_DISP": [
+"display",
+104.7,
+26.5,
+null
+],
+"W_SHAPE": [
+"button",
+95.2,
+34.5,
+null
+],
+"W_SHAPE_DISP": [
+"display",
+104.7,
+34.5,
+null
+],
+"R_RATE": [
+"small",
+8.5,
+58.5,
+null
+],
+"R_AMOUNT": [
+"small",
+19.9,
+58.5,
+null
+],
+"R_PHASE": [
+"small",
+31.3,
+58.5,
+null
+],
+"R_OFFSET": [
+"small",
+42.7,
+58.5,
+null
+],
+"R_LENGTH": [
+"small",
+54.1,
+58.5,
+null
+],
+"R_VARIATION": [
+"small",
+65.5,
+58.5,
+null
+],
+"R_SMOOTH": [
+"small",
+76.9,
+58.5,
+null
+],
+"R_SPREAD": [
+"small",
+88.3,
+58.5,
+null
+],
+"R_OUT_A": [
+"out",
+117.0,
+58.5,
+null
+],
+"R_OUT_B": [
+"out",
+126.5,
+58.5,
+null
+],
+"R_RATE_MODE": [
+"button",
+95.2,
+53.5,
+null
+],
+"R_RATE_MODE_DISP": [
+"display",
+104.7,
+53.5,
+null
+],
+"F_DELAY": [
+"small",
+8.5,
+85.5,
+null
+],
+"F_AMOUNT": [
+"small",
+19.9,
+85.5,
+null
+],
+"F_RISE": [
+"small",
+31.3,
+85.5,
+null
+],
+"F_FALL": [
+"small",
+42.7,
+85.5,
+null
+],
+"F_INPUT": [
+"small",
+54.1,
+85.5,
+null
+],
+"F_FILTER": [
+"small",
+65.5,
+85.5,
+null
+],
+"F_HOLD": [
+"small",
+76.9,
+85.5,
+null
+],
+"F_SPREAD": [
+"small",
+88.3,
+85.5,
+null
+],
+"F_OUT_A": [
+"out",
+117.0,
+85.5,
+null
+],
+"F_OUT_B": [
+"out",
+126.5,
+85.5,
+null
+],
+"F_IN_L": [
+"jack",
+97.5,
+85.5,
+null
+],
+"F_IN_R": [
+"jack",
+106.5,
+85.5,
+null
+],
+"A_ATTACK": [
+"small",
+8.5,
+112.5,
+null
+],
+"A_DECAY": [
+"small",
+19.9,
+112.5,
+null
+],
+"A_SUSTAIN": [
+"small",
+31.3,
+112.5,
+null
+],
+"A_RELEASE": [
+"small",
+42.7,
+112.5,
+null
+],
+"A_ATT_CURVE": [
+"small",
+54.1,
+112.5,
+null
+],
+"A_DEC_CURVE": [
+"small",
+65.5,
+112.5,
+null
+],
+"A_REL_CURVE": [
+"small",
+76.9,
+112.5,
+null
+],
+"A_SPREAD": [
+"small",
+88.3,
+112.5,
+null
+],
+"A_OUT_A": [
+"out",
+117.0,
+112.5,
+null
+],
+"A_OUT_B": [
+"out",
+126.5,
+112.5,
+null
+],
+"A_GATE": [
+"jack",
+97.5,
+112.5,
+null
+],
+"A_TRIG": [
+"bezel",
+106.9,
+112.5,
+null
+]
+},
+"disp": {
+"W_RATE_MODE_DISP": [
+10.5,
+4.6
+],
+"W_SHAPE_DISP": [
+10.5,
+4.6
+],
+"R_RATE_MODE_DISP": [
+10.5,
+4.6
+]
+}
+}
+}

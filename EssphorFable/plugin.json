@@ -1,0 +1,35 @@
+{
+  "slug": "EssphorFable",
+  "name": "Essphor Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Essphor",
+      "name": "Essphor",
+      "description": "Live rhythmic granular processor: clock-locked grains, scale-snapped pitch, stretch, position and delay scanning, lock, feedback, AGE",
+      "tags": ["Granular", "Effect", "Delay", "Sampler", "Clock"]
+    },
+    {
+      "slug": "EssphorRes",
+      "name": "Essphor Res",
+      "description": "Morphing 48-band tuned filter bank and resonator with scales, ring time and AGE",
+      "tags": ["Filter", "Effect", "Equalizer"]
+    },
+    {
+      "slug": "EssphorMod",
+      "name": "Essphor Mod",
+      "description": "Four modulators: wave, random steps, envelope follower and ADSR, each with a second spread output",
+      "tags": ["LFO", "Random", "Envelope follower", "Envelope generator", "Clock"]
+    }
+  ]
+}

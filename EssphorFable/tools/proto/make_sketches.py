@@ -1,9 +1,9 @@
 import numpy as np, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mosaic_proto import *
-HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.join(HERE, 'sketches')
-J = '/mnt/project-files/jazz-comping-vcv/sketches/'
-house, sr1 = readwav(J + '11-house-stabs.wav'); ballad, sr2 = readwav(J + '08-ballad-solo-piano-with-roots.wav')
+HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.environ.get('SKETCH_OUT', os.path.join(HERE, 'sketches'))
+J = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'source') + '/'
+house, sr1 = readwav(J + 'house-stabs-122bpm.wav'); ballad, sr2 = readwav(J + 'ballad-piano.wav')
 assert sr1 == SR and sr2 == SR
 BPM = 122.0; beat = 60/BPM; bar = 4*beat
 H = house[int(0.3*SR):int((0.3+8*bar)*SR)]            # 8 bars, A minor

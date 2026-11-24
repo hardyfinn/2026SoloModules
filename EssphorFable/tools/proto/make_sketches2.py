@@ -2,9 +2,9 @@ import numpy as np, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mosaic_proto as M, res_proto as R
 SR = 44100
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sketches')
-J = '/mnt/project-files/jazz-comping-vcv/sketches/'
-house, _ = M.readwav(J + '11-house-stabs.wav'); ballad, _ = M.readwav(J + '08-ballad-solo-piano-with-roots.wav')
+OUT = os.environ.get('SKETCH_OUT', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sketches'))
+J = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'source') + '/'
+house, _ = M.readwav(J + 'house-stabs-122bpm.wav'); ballad, _ = M.readwav(J + 'ballad-piano.wav')
 beat = 60/122.0; bar = 4*beat
 H = house[int(0.3*SR):int((0.3+4*bar)*SR)]; Bl = ballad[int(0.3*SR):int(12.3*SR)]
 def tail(x, s=3.0): return np.vstack([x, np.zeros((int(s*SR), 2))])
