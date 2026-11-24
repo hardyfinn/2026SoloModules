@@ -120,6 +120,7 @@ struct Engine {
 	long kclipN = 0;
 	double tripT = 0;
 	double kmul = 2.0;       // the stiffness bound is a sum of upper bounds; 2x still never blows up in the fuzz test
+	long clampN = 0;         // one-step clamps to the energy ceiling
 	long softN = 0;          // samples spent on the energy ceiling (diagnostics)
 	bool idle = false;
 
@@ -261,7 +262,11 @@ struct Engine {
 			// frequency. They are muted instead (at 2x oversampling that is above 22 kHz).
 			bool mute = f > 0.25 * fe;
 			f = std::min(f, 0.25 * fe);
-			w[j] = 2 * PI * f;
+			// A retune keeps each mode's energy: scale the state by old/new frequency, so a pitch jump does
+			// not suddenly multiply the energy (and the stretch) by the square of the ratio.
+			double wn = 2 * PI * f;
+			if (w[j] > 0 && wn != w[j]) { double rr = w[j] / wn; q[j] *= rr; qp[j] *= rr; }
+			w[j] = wn;
 			double t60 = c.decay * 9.0 / (1 + f / 700.0);
 			double al = 6.908 / t60 * (1 + c.damp * (8 + f / 40.0));
 			double e = std::exp(-al * T);
@@ -362,12 +367,12 @@ struct Engine {
 			double k = 1 - std::exp(-T / tau);
 			env += (ax - env) * k; env2 += (env - env2) * k;
 			pk = std::max(pk * (1 - T / 8.0), env2);
-			// The breaker also resets after a hold time (twice the follower time): without it, a loop that
+			// The breaker also resets after a hold of six follower times: without it, a loop that
 			// is pumped from the start can settle into a second tone while tripped and never recover.
 			if (!trip && env2 > 0.85 * pk && env2 > 0.3) { trip = 1; tripT = 0; }   // 0.3: well below any singing loop (1 to 15)
 			else if (trip) {
 				tripT += T;
-				if (env2 < 0.85 * pk * (1 - 0.9 * c.pump) || (c.pump > 0 && tripT > 1.2 * tau)) trip = 0;
+				if (env2 < 0.85 * pk * (1 - 0.9 * c.pump) || (c.pump > 0 && tripT > 6.0 * tau)) trip = 0;
 			}
 			double tg = (trip && c.pump > 0) ? 1 - 1.6 * c.pump : 1;
 			pg += (tg - pg) * (1 - std::exp(-T / 0.003));
@@ -444,27 +449,29 @@ struct Engine {
 			qp[j] = q[j]; q[j] = qn;
 		}
 		// Energy ceiling. Above it the plate loses amplitude smoothly (a soft limiter on the state, like a
-		// plate shedding energy into the air much faster when hammered). The settings where the model breaks
-		// up sit on this ceiling and stay musical; a hard reset is kept only for numbers that are no longer
-		// finite or for growth the soft loss cannot hold (100x the ceiling).
+		// plate shedding energy into the air much faster when hammered). Past 10x the ceiling the state is
+		// clamped back to it in one step (counted in clampN; at extreme random settings this happens a few
+		// times a minute at most and sounds like the plate choking). A reset (guards) is only for numbers
+		// that are no longer finite.
 		{
 			// The ceiling follows the energy the drive can put in; it falls slowly after the drive is cut so a
 			// ringing plate is not clamped.
 			double capNow = guardE * std::max(1.0, (c.drive / 90000.0) * (c.drive / 90000.0)) * std::max(1.0, c.tune * c.tune);
 			capHold = std::max(capNow, capHold * (1 - T / 1.5));
 			double cap = capHold;
-			if (!(E < 100 * cap)) {
+			if (!std::isfinite(E)) {
 				guards++;
-				for (int j = 0; j < N; j++) {
-					if (!std::isfinite(q[j]) || !std::isfinite(qp[j])) { q[j] = qp[j] = 0; }
-					q[j] *= 0.1; qp[j] *= 0.1;
-				}
+				std::memset(q, 0, sizeof q); std::memset(qp, 0, sizeof qp);
 				for (int cc = 0; cc < C; cc++) { Sprev[cc] = 0; Sbar[cc] = 0; }
-				E *= 0.01;
-				if (!std::isfinite(E)) E = 0;
-				if (!std::isfinite(L) || !std::isfinite(R)) L = R = 0;
+				E = 0; L = R = 0;
+			} else if (E > 10 * cap) {
+				clampN++;
+				double r = std::sqrt(cap / E);
+				for (int j = 0; j < N; j++) { q[j] *= r; qp[j] *= r; }
+				for (int cc = 0; cc < C; cc++) { Sprev[cc] *= r; Sbar[cc] *= r; }
+				E = cap;
 			} else if (E > cap) {
-				double r = 1.0 - 0.01 * (1.0 - cap / E);
+				double r = 1.0 - 0.05 * (1.0 - cap / E);
 				for (int j = 0; j < N; j++) { q[j] *= r; qp[j] *= r; }
 				softN++;
 			}

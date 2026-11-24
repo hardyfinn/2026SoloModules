@@ -96,7 +96,7 @@ static inline Mapped mapKnobs(const Knobs& k, Engine& e, Age* age) {
 	Controls& c = e.c;
 	Mapped m;
 	const double a = age ? clampd(k.age, 0.0, 1.0) : 0.0;
-	m.fs = C4 * std::pow(2.0, clampd(k.pitch, -4.0, 4.0));
+	m.fs = C4 * std::pow(2.0, clampd(k.pitch, -3.0, 3.0));
 	m.f1 = clampd(k.size, 10.0, 400.0);
 	e.f1 = m.f1;
 	c.posD = clampd(k.driverPos, 0.05, 0.95);

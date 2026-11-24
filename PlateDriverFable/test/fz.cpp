@@ -182,5 +182,5 @@ int main(int argc,char**argv){ int mode=atoi(argv[1]); GUARD = atof(argv[2]);
 		report(bad == 0, name, fmt("%d patches x %.0f s at %.1f kHz, %d bad, guard events %ld, ceiling %.2f%%. %s", patches, secs, host / 1000, (int)bad, (long)guards, 100.0 * softs / (patches * secs * host * 2), det.c_str()));
 	};
 
-fuzz(48000, 40, 6, "fz", mode);
+fuzz(48000, getenv("NP") ? atoi(getenv("NP")) : 40, getenv("SECS") ? atof(getenv("SECS")) : 6, "fz", mode);
 return 0;}

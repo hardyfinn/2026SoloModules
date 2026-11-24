@@ -21,7 +21,7 @@ Regenerate the panel with `python3 res/make_panel.py` (needs fonttools and the I
 
 ## Test results
 
-All 18 checks pass (`make test`). Speed: about 28% of one core on the cloud test machine in full roar at 48 kHz; the spec's target was 12% on Apple silicon, which has not been measured (see deviations).
+All 19 checks pass (`make test`). Speed: about 30% of one core on the cloud test machine in full roar at 48 kHz; the spec's target was 12% on Apple silicon, which has not been measured (see deviations).
 
 ## Deviations from the spec
 
@@ -30,10 +30,10 @@ The engine:
 1. **Double precision, not float.** In float the lowest modes detune audibly against the reference (the two-pole resonators at 96 kHz need more precision than float has for low frequencies). This is the main reason the module costs more CPU than the spec's target.
 2. **Modes above 0.25 of the engine rate are muted** instead of being clamped to 0.3 of it. Clamping piled every high mode onto one frequency at high pitches, which then blew up when stretched. At 2x oversampling this only removes modes above about 22 kHz.
 3. **Stability of the stretching.** The fuzz test found settings (high pitch, thin plate, high drive) where the stretch stiffness grew past what a step at the sample rate can follow, and the plate exploded. The engine now estimates that stiffness every sample (from the stretch gradient, including the amplitude-dependent terms) and scales the stretch forces back when it would exceed the headroom (twice a conservative bound). None of the reference scenes reach this limit, so the approved sound is unchanged.
-4. **Energy guard.** The spec's guard (halve every state above an energy of 1e9) fired at legitimate energies at high drive and high pitch. It is now a soft ceiling that scales with drive squared and tuning squared and falls slowly (1.5 s) after the drive is cut. Above it the plate loses amplitude smoothly; a hard reset is kept only for non-finite numbers or 100x the ceiling. No test triggers the hard reset.
-5. **PUMP breaker.** With PUMP up from the start (rather than faded in, as in the sketch) the breaker could trip at the noise floor and stay tripped, or settle into a second tone while tripped and never recover. The breaker now only arms once the loop is actually singing, and resets after a hold of 1.2x the RATE follower time.
+4. **Energy guard.** The spec's guard (halve every state above an energy of 1e9) fired at legitimate energies at high drive and high pitch. It is now a ceiling that scales with drive squared and tuning squared and falls slowly (1.5 s) after the drive is cut. Above it the plate loses amplitude smoothly; above 10x the ceiling the state is clamped back to it in one step (the plate chokes for a moment). A reset happens only if numbers stop being finite. The fuzz tests therefore allow clamps at extreme random settings (at most 0.1% of samples; in practice under 0.02%, in 19 of the 400 random patches at 48 kHz, mostly very low plates with very high GAIN) but no resets and no NaN; the reference scenes and presets have none. A pitch jump also keeps each mode's energy (the state is scaled by old/new frequency), so retuning does not kick the plate.
+5. **PUMP breaker.** With PUMP up from the start (rather than faded in, as in the sketch) the breaker could trip at the noise floor and stay tripped, or settle into a second tone while tripped and never recover. The breaker now only arms once the loop is actually singing, and resets after a hold of six RATE follower times (long enough that the reference `h-pump` scene still matches).
 6. **Drive scaling with pitch.** The spec's law did not pass test 6. Fitted instead: linear in frequency below C4, `x^2 (1 + C4 x / 700) / (1 + C4 / 700)` above, capped at C6. Result: the split point stays within 0.15 of C4's from C2 to C6.
-7. **Pitch range.** PITCH + V/OCT is clamped to four octaves either side of C4.
+7. **Pitch range.** PITCH + V/OCT together are clamped to three octaves either side of C4 (the knob's range). Further down, a transposed plate in TRACK PLATE could buckle under its own stretching and trip the guard.
 8. **RATTLE.** The contact damper of the reference (12) took 89% of the energy and the loop died. It is 2.0, and the knob maps to 0.78 of the reference range, capped at 0.85. Test 9 passes: 49% energy kept, +28 dB at 3 to 10 kHz.
 
 The tests:

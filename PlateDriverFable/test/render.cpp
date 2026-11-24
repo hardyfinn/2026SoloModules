@@ -98,7 +98,7 @@ static Run renderScene(const Scene& sc, double fe = 96000, int type = SHEET, int
 		if (e->meterN == 0) r.prT.push_back(e->pr);
 	}
 	r.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-	r.guards = e->guards; KCLIP = e->kclipN; SOFT = e->softN; delete e; return r;
+	r.guards = e->guards + e->clampN; KCLIP = e->kclipN; SOFT = e->softN; delete e; return r;
 }
 static std::vector<double> monoOf(const std::vector<float>& st) { std::vector<double> m(st.size() / 2); for (size_t i = 0; i < m.size(); i++) m[i] = 0.5 * ((double)st[2 * i] + st[2 * i + 1]); return m; }
 
@@ -165,7 +165,7 @@ static void presetTest(const std::string& out) {
 				double rms = std::sqrt(ss / (2.0 * 6 * 48000));
 				for (char& c : name) if (c == '_') c = ' ';
 				writeWav(out + fmt("/preset-%02d-%s.wav", idx, nm), st, 48000);
-				bool good = rms > 0.3 && ch.e->guards == 0;
+				bool good = rms > 0.3 && ch.e->guards == 0 && ch.e->clampN == 0;
 				if (!good) ok = false;
 				det += fmt("%s%s %.1f V rms, PR %.1f; ", good ? "" : "BAD ", name.c_str(), rms, prs / std::max(prn, 1));
 			}
@@ -442,7 +442,7 @@ int main(int argc, char** argv) {
 		return k;
 	};
 	auto fuzz = [&](double host, int patches, double secs, const char* name) {
-		std::atomic<int> next(0), bad(0); std::atomic<long> guards(0); std::mutex mu; std::string det;
+		std::atomic<int> next(0), bad(0); std::atomic<long> guards(0), clamps(0); std::atomic<int> clampedPatches(0); std::mutex mu; std::string det;
 		auto worker = [&]() {
 			for (;;) {
 				int p = next++; if (p >= patches) break;
@@ -458,13 +458,16 @@ int main(int argc, char** argv) {
 					if (!std::isfinite(L) || !std::isfinite(R)) nanSeen = true;
 					peak = std::max({peak, std::fabs(L), std::fabs(R)});
 				}
-				guards += ch.e->guards;
+				guards += ch.e->guards; clamps += ch.e->clampN; if (ch.e->clampN) clampedPatches++;
 				if (nanSeen || peak > 11.0 || ch.e->guards) { bad++; std::lock_guard<std::mutex> l(mu); if (det.size() < 300) det += fmt("patch %d type %d: %s peak %.1f guards %ld; ", p, k.type, nanSeen ? "NaN" : "", peak, ch.e->guards); }
 			}
 		};
 		std::vector<std::thread> th; int nt = std::max(1u, std::thread::hardware_concurrency());
 		for (int i = 0; i < nt; i++) th.emplace_back(worker); for (auto& t : th) t.join();
-		report(bad == 0, name, fmt("%d patches x %.0f s at %.1f kHz, %d bad, guard events %ld. %s", patches, secs, host / 1000, (int)bad, (long)guards, det.c_str()));
+		// Energy clamps (the plate choking at extreme settings, see README) are allowed but must stay rare:
+		// at most 0.1% of the engine samples. No resets, no NaN, output within 11 V.
+		double frac = 100.0 * clamps / (patches * secs * host * (host < 88200 ? 2 : 1));
+		report(bad == 0 && frac <= 0.1, name, fmt("%d patches x %.0f s at %.1f kHz, %d bad, resets %ld, energy clamps on %.4f%% of samples in %d patches. %s", patches, secs, host / 1000, (int)bad, (long)guards, frac, (int)clampedPatches, det.c_str()));
 	};
 	fuzz(48000, 400, 20, "10 fuzz (48k)");
 
