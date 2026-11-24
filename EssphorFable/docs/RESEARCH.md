@@ -4,7 +4,7 @@ Fable, 2026-11-24. The full proposal Hardy read is a Claude Doc: https://claude.
 
 ## What is being modelled
 
-The Torso Electronics S-4 has four stereo tracks, each a fixed chain of five device slots: Material (tape, disk or poly sampler), Granular (MOSAIC), Filter (RING), Color (DEFORM), Space (VAST). Essphor follows MOSAIC, Essphor Bank follows RING, and Essphor Mod follows the four modulator types (WAVE, RANDOM, FOLLOW, ADSR). The modules are not affiliated with Torso Electronics and carry none of its names.
+The Torso Electronics S-4 has four stereo tracks, each a fixed chain of five device slots: Material (tape, disk or poly sampler), Granular (MOSAIC), Filter (RING), Color (DEFORM), Space (VAST). Essphor follows MOSAIC, Essphor Res follows RING, and Essphor Mod follows the four modulator types (WAVE, RANDOM, FOLLOW, ADSR). The modules are not affiliated with Torso Electronics and carry none of its names.
 
 ## What the maker documents (docs.torsoelectronics.com/s4, read 23 and 24 November 2026)
 

@@ -21,12 +21,12 @@ Hardy's decisions that shaped this spec:
 | Slug | Name | Tags | Description |
 |---|---|---|---|
 | `Essphor` | Essphor | Granular, Effect, Delay, Sampler, Clock | "Live rhythmic granular processor: clock-locked grains, scale-snapped pitch, stretch, position and delay scanning, lock, feedback, AGE" |
-| `EssphorBank` | Essphor Bank | Filter, Effect, Equalizer | "Morphing 48-band tuned filter bank and resonator with scales, ring time and AGE" |
+| `EssphorRes` | Essphor Res | Filter, Effect, Equalizer | "Morphing 48-band tuned filter bank and resonator with scales, ring time and AGE" |
 | `EssphorMod` | Essphor Mod | LFO, Random, Envelope follower, Envelope generator, Clock | "Four modulators: wave, random steps, envelope follower and ADSR, each with a second spread output" |
 
 - No hardware brand or product names on the panels or in plugin.json. The manual and README may say once, in prose, which instrument the modules are modelled on, and that they are not affiliated with it.
-- Panels: text labels, Haer logo. Essphor about 32 HP, Essphor Bank about 16 HP, Essphor Mod about 26 HP. Adjust to fit.
-- Deliverables: C++ modules, panel SVGs from a script, factory presets (12 for Essphor, 8 for Essphor Bank, 4 for Essphor Mod), offline tests (`make test`), MANUAL.md, one PDF manual for the plugin with patch recipes, README, demo WAVs rendered by the C++ engine.
+- Panels: text labels, Haer logo. Essphor about 32 HP, Essphor Res about 16 HP, Essphor Mod about 26 HP. Adjust to fit.
+- Deliverables: C++ modules, panel SVGs from a script, factory presets (12 for Essphor, 8 for Essphor Res, 4 for Essphor Mod), offline tests (`make test`), MANUAL.md, one PDF manual for the plugin with patch recipes, README, demo WAVs rendered by the C++ engine.
 - The three modules are independent and connect with cables. Do not use Rack's expander mechanism.
 
 Voltage conventions for all three: audio internal = volts / 5. CV inputs add to their knob, with ±5 V covering the knob's whole range, and the sum is clamped to the range. No attenuverters. Gates and triggers at 1 V threshold (Rack's Schmitt trigger). R inputs are normalled to L.
@@ -84,7 +84,7 @@ SCAN by mode:
 
 The knob keeps its 0 to 1 position when the mode changes; only the meaning changes.
 
-Scales (canonical list for both Essphor and Essphor Bank, pitch classes above the root): CHROMATIC 0-11; MAJOR 0 2 4 5 7 9 11; MINOR 0 2 3 5 7 8 10; DORIAN 0 2 3 5 7 9 10; LYDIAN 0 2 4 6 7 9 11; SUPER LOCRIAN 0 1 3 4 6 8 10; MIXOLYDIAN 0 2 4 5 7 9 10; HEX AEOLIAN 0 3 5 7 8 10; HEX DORIAN 0 2 3 5 7 10; BLUES 0 3 5 6 7 10; PENTATONIC 0 3 5 7 10; HIRAJOSHI 0 2 3 7 8; KUMOI 0 2 3 7 9; IWATO 0 1 5 6 10; WHOLE TONE 0 2 4 6 8 10; PELOG 0 1 3 7 8; TETRATONIC 0 4 7 11; FIFTHS 0 7; OCTAVES 0; FREE (no quantising).
+Scales (canonical list for both Essphor and Essphor Res, pitch classes above the root): CHROMATIC 0-11; MAJOR 0 2 4 5 7 9 11; MINOR 0 2 3 5 7 8 10; DORIAN 0 2 3 5 7 9 10; LYDIAN 0 2 4 6 7 9 11; SUPER LOCRIAN 0 1 3 4 6 8 10; MIXOLYDIAN 0 2 4 5 7 9 10; HEX AEOLIAN 0 3 5 7 8 10; HEX DORIAN 0 2 3 5 7 10; BLUES 0 3 5 6 7 10; PENTATONIC 0 3 5 7 10; HIRAJOSHI 0 2 3 7 8; KUMOI 0 2 3 7 9; IWATO 0 1 5 6 10; WHOLE TONE 0 2 4 6 8 10; PELOG 0 1 3 7 8; TETRATONIC 0 4 7 11; FIFTHS 0 7; OCTAVES 0; FREE (no quantising).
 
 In Essphor the scale applies to the pitch *shift*: a shift of 0 is always allowed, and other shifts snap to the nearest interval of the scale (`quantise()` in the reference; ties go down).
 
@@ -149,7 +149,7 @@ Order in the record path: bandwidth, drive, hiss, word length.
 
 ---
 
-# Part B. Essphor Bank (resonator)
+# Part B. Essphor Res (resonator)
 
 ## 7. The bank
 
@@ -201,7 +201,7 @@ Output: `softlimit` as in section 2, then WET.
 
 Measured on the reference with the filter open, DECAY 0, CHROMATIC: −4.0 to +0.9 dB from 60 Hz to 6 kHz, −4.4 to +2.5 dB from 20 Hz to 18 kHz. It is a filter bank, not a wire; WET at 0 is the true bypass.
 
-### AGE on Essphor Bank
+### AGE on Essphor Res
 
 Fixed errors come from a seed created with the module and saved in the patch. Left and right use different seeds, so AGE also widens the stereo image.
 
@@ -330,7 +330,7 @@ Essphor (12). Each is a `.vcvm` with every parameter set.
 | 11 | Octave Ghost | DELAY SYNC 1/2, RATE 1/8, PITCH −12, SIZE 1/2 beat, CONTOUR +0.8, WET 0.4 |
 | 12 | Worn Sampler | Preset 02 with AGE 0.7 |
 
-Essphor Bank (8): Open Bank (default); Low-pass Classic (CUTOFF 700 Hz, RESONANCE 0.6); Pentatonic Ring (PENTATONIC, PITCH +9, DECAY 0.7, WET 0.6); Fifths Drone (FIFTHS, PITCH +3, DECAY 0.85, WET 0.5); Band-pass Shimmer (SLOPE 0, CUTOFF 900 Hz, RESONANCE 0.3, DECAY 0.55); Choke Sweep (CHOKE, MINOR, DECAY 0.8, patch an LFO to CUTOFF); Bright Glass (HIRAJOSHI, TONE +0.6, DECAY 0.65, PITCH +12); Old Bank (Pentatonic Ring with AGE 0.7).
+Essphor Res (8): Open Bank (default); Low-pass Classic (CUTOFF 700 Hz, RESONANCE 0.6); Pentatonic Ring (PENTATONIC, PITCH +9, DECAY 0.7, WET 0.6); Fifths Drone (FIFTHS, PITCH +3, DECAY 0.85, WET 0.5); Band-pass Shimmer (SLOPE 0, CUTOFF 900 Hz, RESONANCE 0.3, DECAY 0.55); Choke Sweep (CHOKE, MINOR, DECAY 0.8, patch an LFO to CUTOFF); Bright Glass (HIRAJOSHI, TONE +0.6, DECAY 0.65, PITCH +12); Old Bank (Pentatonic Ring with AGE 0.7).
 
 Essphor Mod (4): Slow Sine And Steps; Skewed Envelope Wave (SKEW +0.9, 1/4); Evolving Eight Steps (LENGTH 8, VARIATION 0.2, SMOOTH 0.3); Duck And Swell (FOLLOW AMOUNT −1, FALL 250 ms; ADSR slow).
 
