@@ -22,7 +22,14 @@ Regenerate the panel with `python3 res/make_panel.py` (needs fonttools and the I
 
 ## Test results
 
-TEST_RESULTS
+All 17 checks pass (`make test`, about 25 minutes on a 4-core cloud machine):
+
+- Reference match: the pure `saw` opening matches to 0.000 dB and 0.00 cents; every scene agrees with the reference at least as well as the reference agrees with itself.
+- Saw notes within 9 cents; bend pitch within 1.7%; water drops the bowed note 2.6 semitones and lighter than air raises it 1.6.
+- Fuzz: 400 random patches x 20 s at 48 kHz and 300 x 10 s at 44.1, 48 and 96 kHz: no NaN, no guard event, output within +-11 V. The stiffness limiter and the energy clamp do fire at extreme random settings (in most patches, briefly), as designed.
+- Silence: exactly 0 V after 60 s with nothing playing, at AGE 0 and 0.3.
+- Speed: 34% of one cloud core at 48 kHz in bowed roar, 50% with DIP 0.5. The spec's target was 20% on Apple silicon, which has not been measured; Apple silicon is usually much faster per core than the cloud machine.
+- Every preset sounds through the full module chain; Init peaks at 4.9 V.
 
 ## Deviations from the spec
 
