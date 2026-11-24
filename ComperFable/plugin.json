@@ -1,7 +1,7 @@
 {
   "slug": "ComperFable",
   "name": "Comper Fable",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "GPL-3.0-or-later",
   "brand": "Haer",
   "author": "Haer",
@@ -17,7 +17,23 @@
       "slug": "Comper",
       "name": "Comper",
       "description": "Jazz piano comping player: rootless, shell, quartal and spread voicings with real voice leading, swung two-bar rhythm figures that push into the next chord, a LOOSE knob for human hands, and a LISTEN input that leaves room for a soloist. Notes out; bring your own piano",
-      "tags": ["Sequencer", "Polyphonic", "Random", "Clock modulator"]
+      "tags": [
+        "Sequencer",
+        "Polyphonic",
+        "Random",
+        "Clock modulator"
+      ]
+    },
+    {
+      "slug": "Walker",
+      "name": "Walker",
+      "description": "Bass player for Comper: walking, two-feel, ballad, bossa, soul and house lines that lean into each chord, played on a modelled upright bass with a real pluck, a ringing body and human hands. Follows Comper with no cables. Audio and notes out",
+      "tags": [
+        "Sequencer",
+        "Synth voice",
+        "Physical modeling",
+        "Random"
+      ]
     }
   ]
 }

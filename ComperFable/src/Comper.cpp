@@ -1,6 +1,7 @@
 #include "plugin.hpp"
 #include "dsp/Host.hpp"
 #include "Progressions.hpp"
+#include "dsp/Link.hpp"
 
 using namespace comper;
 
@@ -44,6 +45,8 @@ struct Comper : Module {
 	int channels = 12;
 	bool bassEveryBar = false;
 	bool resetReplays = true;
+	bool keepRootsWithWalker = false;
+	uint32_t linkStamp = 0;
 	dsp::BooleanTrigger newTrig;
 	dsp::ClockDivider lightDiv;
 	int pendingSeed = -1;
@@ -160,7 +163,7 @@ struct Comper : Module {
 	}
 
 	void onReset() override {
-		ppbIndex = 0; channels = 12; bassEveryBar = false; resetReplays = true;
+		ppbIndex = 0; channels = 12; bassEveryBar = false; resetReplays = true; keepRootsWithWalker = false;
 		loadProgression(0);
 		host = Host();
 	}
@@ -206,6 +209,9 @@ struct Comper : Module {
 		p.lead = params[LEAD_PARAM].getValue();
 		p.out = clamp(params[OUT_PARAM].getValue() + cv01(inputs[OUT_INPUT], 1.f), 0.f, 1.f);
 		p.roots = clamp((int)params[ROOTS_PARAM].getValue(), 0, 2);
+		// a pianist stops playing roots when a bassist arrives
+		bool walkerNext = (leftExpander.module && leftExpander.module->model == modelWalker) || (rightExpander.module && rightExpander.module->model == modelWalker);
+		if (walkerNext && !keepRootsWithWalker) p.roots = 0;
 		p.groove = clamp((int)params[GROOVE_PARAM].getValue(), 0, 4);
 		p.density = clamp(params[DENSITY_PARAM].getValue() + cv01(inputs[DENSITY_INPUT], 1.f), 0.f, 1.f);
 		p.swing = params[SWING_PARAM].getValue();
@@ -222,6 +228,7 @@ struct Comper : Module {
 		in.outChannels = channels; in.bassEveryBar = bassEveryBar; in.resetReplays = resetReplays;
 
 		host.process(in, out, args.sampleTime);
+		if (walkerNext) sendLink();
 
 		int n = out.channels;
 		outputs[VOCT_OUTPUT].setChannels(n); outputs[GATE_OUTPUT].setChannels(n); outputs[VEL_OUTPUT].setChannels(n);
@@ -250,12 +257,37 @@ struct Comper : Module {
 		}
 	}
 
+	// tell a Walker on either side where we are (Rack's expander messages, one sample late)
+	void sendLink() {
+		linkStamp++;
+		for (int side = 0; side < 2; side++) {
+			Expander& e = side ? rightExpander : leftExpander;
+			if (!e.module || e.module->model != modelWalker) continue;
+			Expander& theirs = side ? e.module->leftExpander : e.module->rightExpander;
+			CompLink* m = (CompLink*)theirs.producerMessage;
+			if (!m) continue;
+			m->magic = 0x434F4D50;
+			m->resetCount = host.resetCount;
+			m->stamp = linkStamp;
+			m->running = host.running && !host.waitingFirstPulse;
+			m->phi = host.phi; m->spb = host.spb;
+			m->steps = in.steps; m->beatsPerStep = in.beatsPerStep;
+			int key = host.keyOffset(in);
+			for (int k = 0; k < 16; k++) { m->root[k] = pmod(in.stepRoot[k] + key, 12); m->qual[k] = in.stepQual[k]; }
+			m->external = host.source != SRC_CHART;
+			m->curRoot = host.srcChord.root; m->curQual = host.srcChord.q;
+			m->groove = in.p.groove; m->swing = in.p.swing;
+			theirs.requestMessageFlip();
+		}
+	}
+
 	json_t* dataToJson() override {
 		json_t* root = json_object();
 		json_object_set_new(root, "ppb", json_integer(ppbIndex));
 		json_object_set_new(root, "channels", json_integer(channels));
 		json_object_set_new(root, "bassEveryBar", json_boolean(bassEveryBar));
 		json_object_set_new(root, "resetReplays", json_boolean(resetReplays));
+		json_object_set_new(root, "keepRootsWithWalker", json_boolean(keepRootsWithWalker));
 		return root;
 	}
 	void dataFromJson(json_t* root) override {
@@ -263,6 +295,7 @@ struct Comper : Module {
 		if (json_t* j = json_object_get(root, "channels")) channels = clamp((int)json_integer_value(j), 1, 16);
 		if (json_t* j = json_object_get(root, "bassEveryBar")) bassEveryBar = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "resetReplays")) resetReplays = json_boolean_value(j);
+		if (json_t* j = json_object_get(root, "keepRootsWithWalker")) keepRootsWithWalker = json_boolean_value(j);
 	}
 };
 
@@ -442,6 +475,7 @@ struct ComperWidget : ModuleWidget {
 			[=](size_t i) { m->channels = i == 0 ? 8 : i == 2 ? 16 : 12; }));
 		menu->addChild(createBoolPtrMenuItem("Bass retriggers every bar", "", &m->bassEveryBar));
 		menu->addChild(createBoolPtrMenuItem("Reset replays the same take", "", &m->resetReplays));
+		menu->addChild(createBoolPtrMenuItem("Keep roots with Walker attached", "", &m->keepRootsWithWalker));
 	}
 };
 

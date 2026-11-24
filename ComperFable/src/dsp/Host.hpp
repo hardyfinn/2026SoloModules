@@ -142,7 +142,9 @@ struct Host {
 		queue.clear(); held.clear();
 		pedalTarget = 0.0;
 	}
+	uint32_t resetCount = 0;   // for a Walker next to Comper: goes up at every reset
 	void doReset(const HostIn& in, double startBeat = 0.0) {
+		resetCount++;
 		phi = startBeat;
 		nextBar = 0; nextSlot = 0; barBegun = false; anyDecided = false;
 		lastHitT = -99.0;

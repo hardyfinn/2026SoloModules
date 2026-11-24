@@ -169,3 +169,147 @@ All presets use seed 11.
 - The voicing choices, rhythm figures and timing come from a reference engine designed and measured offline (Python). The module reproduces it note for note: the build tests 99 takes against it. What it plays was checked by measurement (voice movement, density, overlap with the soloist), not by ear.
 - All randomness comes from the seed. Moving a knob changes what happens from then on, never what has already been decided.
 - CPU is negligible (well under one percent of one core).
+
+---
+
+# Walker
+
+**An upright bass player for Comper.** Comper Fable 2.1, by Haer.
+
+![Walker panel](walker-panel.png)
+
+Walker is the bass player in Comper's band. Put it next to Comper and it reads Comper's chart, tempo and bar position with no cables, makes up its own bass line, and plays it on a modelled upright bass. It sends out audio, and the notes as V/OCT, GATE and VEL so you can double the line on any other voice.
+
+It can also follow chord cables from any other sequencer, or be played as an upright bass voice from a sequencer or keyboard.
+
+## Quick start
+
+1. Put Walker directly to the left or right of Comper, touching it. The **LINK** light comes on.
+2. Patch Walker **OUT** to a mixer or your audio interface, next to your piano.
+3. That is all. Walker plays as soon as Comper runs. With **FEEL** at FOLLOW it takes its feel from Comper's GROOVE: swing walks, bossa plays bossa, and so on.
+4. Try the presets in pairs: Walker's *01 Medium Swing* with Comper's *01 Medium Swing*, and so on. They are made for each other.
+
+When Walker sits next to Comper, Comper stops playing roots in the left hand (a pianist stops playing roots when a bassist arrives). To keep them, right-click Comper and tick *Keep roots with Walker attached*.
+
+## Words used in this chapter
+
+- **Walking**: one note on every beat, each a step or two from the last, arriving on the root of each chord as it comes. The sound of a swinging jazz bass.
+- **Two-feel**: two notes to the bar, usually root and fifth. Calmer than walking; often the first chorus of a tune.
+- **Approach note**: the note just before a new chord, a half step, a scale step or a fifth away from its root, so the line leans into the chord before it arrives.
+- **Skip**: an extra note on the swung upbeat between two beats.
+- **Dead note**: a note the left hand damps as the right hand plucks it, so it is all thump and no pitch. A percussive skip.
+
+## Three ways to drive it
+
+**Next to Comper (LINK).** The chart, tempo, position and swing come from Comper, and Walker looks one chord ahead in the chart, so every approach note leans the right way. CLOCK, RESET and the chord jacks are ignored. Comper's RESET resets Walker too: the same seed, chart and settings give the same line again. If Comper is following chords from cables rather than its chart, Walker behaves as in cable mode, below.
+
+**From cables (CABLE).** Patch a clock into **CLOCK** (pulses per beat from the right-click menu) and the chords into **ROOT** and **QUAL**, or a poly chord into **CHORD**. Walker can't see ahead in a cable, so it learns the tune: the first time through it plays a plain line on every beat, decided as the chord arrives (the display says LEARNING). Once it has heard the whole tune it plays its full line from then on, leaning into each chord because it now knows what comes next (CABLE). It needs to know how long the tune is: either send two RESET pulses (the tune is the time between them, rounded to whole bars) or set *Tune length* in the right-click menu. *Forget the learned tune* starts again.
+
+**As a voice (PLAY).** Patch **GATE IN**, and Walker becomes an upright bass you play: each rising gate plucks the note at **V/OCT IN**, at the velocity at **VEL IN** (0 to 10 V; 0.75 when unpatched). It chooses a string and fret like a player, and a new note on the same string stops the old one. The player is silent in this mode.
+
+## The feels
+
+| FEEL | |
+|---|---|
+| FOLLOW | Takes the feel from Comper's GROOVE (SWING walks). In cable mode it walks. |
+| WALK | Four to the bar, with skips, dead notes and triplet runs by ACTIVITY. |
+| TWO | Two-feel: half notes, root and fifth, with pickups. |
+| BALLAD | Two-feel with long notes, whole notes and vibrato. |
+| BOSSA | Root, pickup, fifth, pickup: the bossa nova bass. |
+| SOUL | Sixteenth-note bar figures, repeated and varied. |
+| HOUSE | Offbeat house figures. |
+
+A new feel starts at the next bar line, from the note the bass is on.
+
+## PLAYER
+
+- **ACTIVITY**: how busy the line is. Low: plain quarter notes. Middle: a skip or a dead note now and then. High: skips, runs and pickups everywhere. In SOUL and HOUSE it thins or fills the figure.
+- **REGISTER**: the middle of the line, Bb1 to Bb2 (the default is E2). The line drifts up and down around it, from the open low E string (E1) up to G3 at most.
+- **ROAM**: how far it drifts, and how much chance there is in each choice.
+- **OUT**: how often the approach is chromatic, and how many outside notes there are on the way.
+- **REPEAT**: in SOUL and HOUSE, how often a bar figure is kept for the next bar.
+- **SEED**: a different line from the same settings. A new seed takes effect at the next bar line. **NEW** picks one at random.
+
+## HANDS
+
+- **LOOSE** (large knob): everything human at once. 0 is a sequencer: on the grid, every note the same. 1 is a good player. 2.5 is very loose.
+- **AHEAD**: how far the bass leans in front of the beat. Jazz bass players sit a little ahead of the drummer's ride cymbal, which is a large part of what makes a band swing. At 0 the bass sits on the beat; at 1 it pushes.
+- **TIMING**, **WEIGHT**, **SLOP**, **PITCH** (trims, times LOOSE): timing drift and scatter; accents (2 and 4 heavier, phrases that swell and fall); note lengths, and now and then a note that does not speak; intonation (high notes a little sharp, a scoop from below after a leap, vibrato on long notes).
+
+The hands also choose a string and a fret for every note, as a player would. When a new note is on the same string as the one sounding, the plucking finger lands on the string just before the pluck and stops the old note dead, with a tiny tick. That is part of the sound of a real walking line.
+
+## SOUND
+
+The sound is a physical model of an upright bass, fitted to recordings of a real one.
+
+- **ATTACK** (large knob): the pluck. The burst of energy as the finger pushes the string and lets it go, the finger noise, and the knock of the wooden body. 1 is as measured on a real bass. Lower is softer and rounder; higher is a harder, more slapped attack.
+- **PLUCK**: where the finger plucks, from near the end of the string (thinner, more nasal) to near the middle (rounder, hollow).
+- **BRIGHT**: gut strings and soft fingers to steel strings and a bright attack.
+- **SUSTAIN**: how long notes ring.
+- **GROWL**: the string slapping against the fingerboard on hard notes; the growl of a jazz bass.
+- **BODY**: how much the wooden box resonates and rings after each note.
+- **PICKUP** (MIC / PICKUP): 0 is a microphone in front of the bass; 1 is a pickup under the bridge (drier, more middle, the sound of many 1970s records).
+- **THUMP**: the finger noise.
+- **AGE**: old strings: duller, shorter notes, more buzz.
+- **LEVEL**: output level. A loud note peaks near 5 V at LEVEL 1.
+
+The PLUCK light flashes on every note.
+
+## Inputs and outputs
+
+| Jack | |
+|---|---|
+| CLOCK, RESET | Cable mode: the clock (pulses per beat from the menu) and reset. Two resets also mark the tune's length. |
+| ROOT, QUAL | The chord in cable mode: ROOT as V/OCT (the pitch class counts), QUAL at 1 V per step in Comper's order (0 maj7, 1 6, 2 m7, 3 m6, 4 mMaj7, 5 7, 6 7alt, 7 m7b5, 8 dim7, 9 7sus). ROOT alone gives 7sus. |
+| CHORD | A poly chord (V/OCT): Walker works the chord out from its notes, as Comper does. A patched ROOT overrides its root. |
+| LAY OUT | A gate: the bass stops playing while it is high, and comes back on the next note after it falls. Its line carries on silently, so it comes back in the right place. |
+| V/OCT IN, GATE IN, VEL IN | Played as a voice. |
+| ACTIVITY, REGISTER, LOOSE, ATTACK | CV added to the knobs: 0.1 per volt (ACTIVITY), 1.2 semitones per volt (REGISTER), 0.25 per volt (LOOSE, ATTACK). |
+| **OUT** | The upright bass, audio. |
+| **V/OCT** | The notes, 0 V = middle C (so bass notes are negative). With *V/OCT carries slides* ticked (the default) it also carries each note's intonation, scoop and vibrato. |
+| **GATE** | 10 V while a note sounds. It drops for 1 ms between notes that touch. |
+| **VEL** | Velocity, 0 to 10 V. Dead notes send their notes too. |
+
+Right-click menu: *Clock pulses per beat* and *Tune length* (cable mode), *Forget the learned tune*, *V/OCT carries slides*.
+
+## The 12 presets
+
+Each is made for the Comper preset with the same number and name. All use seed 11 on Comper; Walker's seed is its own.
+
+| Preset | |
+|---|---|
+| 01 Medium Swing | Walking at 132, every control at its default. |
+| 02 Fast Bebop Shells | Walking at 208, plainer, further ahead, shorter notes. |
+| 03 Ballad | Ballad feel, long notes and vibrato, a little loose. |
+| 04 Bossa | Bossa figures, kept steady, a little darker. |
+| 05 Modal Quartal | Walking that roams the neck over a modal vamp. |
+| 06 Open Spread | Two-feel, lower, longer notes. |
+| 07 Blues Shells | A busier, looser, more chromatic blues walk with more growl. |
+| 08 Soul Sixteenths | Soul figures, brighter, half pickup. |
+| 09 House Stabs | House figures, almost machine, pickup-heavy and short. |
+| 10 Out And Sparse | Sparse and chromatic walking on older strings. |
+| 11 Solo Piano Roots | A quiet ballad bass with old strings, for a duo. |
+| 12 Duo Listening | Walking for the duo preset, a little more pickup. |
+
+## Patch recipes
+
+**1. Piano trio.** Comper, Walker next to it, Comper into Joanna. Walker OUT and Joanna into a mixer. A drum module clocked from the same clock as Comper (Comper's CLOCK input). Pair the presets by number.
+
+**2. Duo ballad.** Comper preset 03 or 11 with Walker preset 03 or 11, no drums. Turn AHEAD down a little and SUSTAIN up for long notes that bloom.
+
+**3. Bass as a sequenced voice.** Any sequencer's pitch into V/OCT IN and gate into GATE IN (and velocity into VEL IN). Walker is now an upright bass. Set ATTACK and PICKUP to taste; LOOSE has no effect in this mode.
+
+**4. Upright plus synth bass.** Walker next to Comper, its V/OCT and GATE into a synth bass voice as well as its own OUT. Mix the synth low under the upright for a fat modern sound, or mute OUT and use the line only. Untick *V/OCT carries slides* if the synth should stay perfectly in tune.
+
+**5. From another chord sequencer.** The sequencer's clock into CLOCK, its chord root into ROOT and quality into QUAL (or its poly chord into CHORD). Set *Tune length* to the tune's length in bars, or send a reset at the top of every chorus. Walker plays plainly the first time through and properly from the second.
+
+**6. Lay out for the solo.** A gate from a sequencer or an envelope into LAY OUT: the bass drops out for a drum break or the first chorus of a ballad and comes back exactly where it would have been.
+
+**7. Breathing intensity.** One slow random CV into Walker's ACTIVITY and Comper's DENSITY, so the bass and piano get busier together.
+
+## Notes and limits
+
+- 4/4 only. Pizzicato only (no bow).
+- In cable mode the first pass through a tune is plain (one note per beat, no lookahead), and a chord change in the tune is learned on the next pass.
+- What Walker plays comes from a reference engine designed offline (Python). The module reproduces it note for note (97 lines are tested). The sound was fitted to recordings of a real upright and approved by ear; the module matches the reference within 0.02 dB in 62 test cases. As with Comper, the line was checked by measurement, not by ear.
+- CPU: about 4% of one core for a fast walking line at 48 kHz (up to six notes ringing at once).

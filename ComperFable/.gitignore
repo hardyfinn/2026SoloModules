@@ -7,3 +7,5 @@ test/render
 test/out/
 tools/proto/ref_midi/
 __pycache__/
+test/render_walker
+test/render_upright
