@@ -16,7 +16,6 @@ static float sndX(int i) { return SND_X0 + i * SND_DX; }
 
 static const int W_PPB_CHOICES[4] = {1, 2, 4, 24};
 static const int TUNE_CHOICES[7] = {0, 4, 8, 12, 16, 24, 32};
-static const char* const FEEL_LABELS[7] = {"FOLLOW", "WALK", "TWO", "BALLAD", "BOSSA", "SOUL", "HOUSE"};
 
 struct Walker : Module {
 	enum ParamIds {

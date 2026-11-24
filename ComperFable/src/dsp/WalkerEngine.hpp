@@ -52,7 +52,7 @@ struct BP {
 };
 
 enum Kind { K_WALK, K_SKIP, K_RUN, K_TWO, K_PICKUP, K_BOSSA, K_CELL };
-struct Event { double beat; double len; int pitch; double w; int kind; bool dead = false; bool vib = false; };
+struct Event { double beat; double len; int pitch; double w; int kind; bool dead; bool vib; };   // aggregate (C++11): missing fields are false
 struct Note {
 	double t = 0, vel = 0, dur = 0, scoop = 0, cents = 0, vib = 0, beat = 0;
 	int pitch = 0, string = 0, fret = 0, kind = 0;
