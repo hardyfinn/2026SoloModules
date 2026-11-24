@@ -1,0 +1,23 @@
+{
+  "slug": "PlateDriverFable",
+  "name": "Plate Driver Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "PlateDriver",
+      "name": "Plate Driver",
+      "description": "A metal plate held in a feedback loop like an EBow on a gong: it sings one tone, splits into multiphonics and roars, with saturation at every stage, a rattling driver head, a pumping amplifier and an AGE knob",
+      "tags": ["Synth voice", "Physical modeling", "Drone", "Distortion"]
+    }
+  ]
+}

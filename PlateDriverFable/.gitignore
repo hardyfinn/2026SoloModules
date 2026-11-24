@@ -1,0 +1,16 @@
+build/
+dist/
+plugin.dylib
+plugin.so
+plugin.dll
+test/out/
+test/ref/
+test/ref2/
+test/cpp/
+test/render
+test/render_t
+test/pdref
+test/diag
+test/fz
+test/t5
+test/t6
