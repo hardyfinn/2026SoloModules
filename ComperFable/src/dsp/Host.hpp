@@ -142,9 +142,10 @@ struct Host {
 		queue.clear(); held.clear();
 		pedalTarget = 0.0;
 	}
-	uint32_t resetCount = 0;   // for a Walker next to Comper: goes up at every reset
+	uint32_t resetCount = 0;   // for the band (the link): goes up at every reset
+	int planBar = -1;          // for the band: the last bar begun, whose figure is eng.cellmap / slotBeats / pushOk
 	void doReset(const HostIn& in, double startBeat = 0.0) {
-		resetCount++;
+		resetCount++; planBar = -1;
 		phi = startBeat;
 		nextBar = 0; nextSlot = 0; barBegun = false; anyDecided = false;
 		lastHitT = -99.0;
@@ -399,7 +400,7 @@ struct Host {
 					if (in.seed != engSeed) { eng.reset(in.seed); engSeed = in.seed; }
 					params(in, true);
 					eng.beginBar(nextBar, in.clockConnected ? 60.0 / spb : in.tempo);
-					barBegun = true;
+					barBegun = true; planBar = nextBar;
 					sb = slotBeat(nextBar, nextSlot);
 				} else params(in, false);
 				Ctx ctx; fillCtx(in, ctx);

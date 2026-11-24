@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "dsp/WalkerHost.hpp"
+#include "LinkPort.hpp"
 #include "Progressions.hpp"
 #include <atomic>
 
@@ -41,9 +42,8 @@ struct Walker : Module {
 	bool voctSlides = true;
 	dsp::BooleanTrigger newTrig;
 	dsp::ClockDivider lightDiv;
-	// link buffers (Comper writes into these through Rack's expander messages)
-	CompLink linkBuf[4];
-	uint32_t lastStamp = 0; int staleSamples = 1 << 20;
+	// the band's link (Comper, Rider in the row, any order)
+	LinkPort port;
 	bool linked = false;
 	std::atomic<bool> forgetTune{false};
 
@@ -98,11 +98,10 @@ struct Walker : Module {
 		configOutput(GATE_OUTPUT, "Gate");
 		configOutput(VEL_OUTPUT, "Velocity (0 to 10 V)");
 		configLight(PLUCK_LIGHT, "Note played");
-		configLight(LINK_LIGHT, "Comper attached");
+		configLight(LINK_LIGHT, "Comper in the row");
 		lightDiv.setDivision(64);
 
-		leftExpander.producerMessage = &linkBuf[0]; leftExpander.consumerMessage = &linkBuf[1];
-		rightExpander.producerMessage = &linkBuf[2]; rightExpander.consumerMessage = &linkBuf[3];
+		port.attach(this);
 		host.setSampleRate(APP->engine->getSampleRate());
 	}
 
@@ -112,30 +111,17 @@ struct Walker : Module {
 		double sr = host.sr; host = WalkerHost(); host.setSampleRate(sr);
 	}
 
-	// the link from a Comper on either side
-	const CompLink* readLink() {
-		for (Expander* e : {&leftExpander, &rightExpander}) {
-			if (!e->module || e->module->model != modelComper) continue;
-			const CompLink* m = (const CompLink*)e->consumerMessage;
-			if (m && m->magic == 0x434F4D50) return m;
-		}
-		return nullptr;
-	}
-
 	void process(const ProcessArgs& args) override {
 		if (newTrig.process(params[NEW_PARAM].getValue() > 0.f))
 			params[SEED_PARAM].setValue((float)(random::u32() % 1000));
 		if (forgetTune.exchange(false)) { host.tuneLen = 0; host.learnedMode = false; host.resetLenFromReset = 0; for (auto& h : host.recHeard) h = false; }
 
-		const CompLink* L = readLink();
-		// a link whose stamp stops moving (Comper bypassed) counts as no link
-		if (L) {
-			if (L->stamp != lastStamp) { lastStamp = L->stamp; staleSamples = 0; }
-			else if (staleSamples < (1 << 20)) staleSamples++;
-		}
-		linked = L && staleSamples < 3;     // a message older than 2 samples means no link
+		port.read(this);
+		CompLink heard = port.merged();
+		linked = heard.hasComp;
 		in.linkOk = linked;
-		if (linked) in.link = *L;
+		if (linked) in.link = heard;
+		float bandX = heard.hasDrum ? clamp(heard.bandX, -1.f, 1.f) : 0.f;
 
 		in.clockConnected = inputs[CLOCK_INPUT].isConnected(); in.clock = inputs[CLOCK_INPUT].getVoltage();
 		in.ppb = W_PPB_CHOICES[clamp(ppbIndex, 0, 3)];
@@ -152,7 +138,7 @@ struct Walker : Module {
 
 		in.feelPos = clamp((int)std::round(params[FEEL_PARAM].getValue()), 0, 6);
 		BP& p = in.bp;
-		p.activity = clamp(params[ACTIVITY_PARAM].getValue() + (inputs[ACTIVITY_INPUT].isConnected() ? 0.1f * inputs[ACTIVITY_INPUT].getVoltage() : 0.f), 0.f, 1.f);
+		p.activity = clamp(params[ACTIVITY_PARAM].getValue() + (inputs[ACTIVITY_INPUT].isConnected() ? 0.1f * inputs[ACTIVITY_INPUT].getVoltage() : 0.f) + 0.35f * bandX, 0.f, 1.f);
 		p.reg = clamp(params[REGISTER_PARAM].getValue() + (inputs[REGISTER_INPUT].isConnected() ? 1.2f * inputs[REGISTER_INPUT].getVoltage() : 0.f), 34.f, 46.f);
 		p.roam = params[ROAM_PARAM].getValue();
 		p.out = params[OUT_PARAM].getValue();
@@ -180,11 +166,16 @@ struct Walker : Module {
 		in.voctSlides = voctSlides;
 
 		host.process(in, out, args.sampleTime);
+		{	// tell the band where the bass runs
+			CompLink m; m.hasBass = true; m.bassN = host.offBeats(m.bassBeat, 16);
+			port.send(this, m);
+		}
 
-		outputs[AUDIO_OUTPUT].setVoltage(out.audio);
+		float bandGain = std::pow(10.f, 3.f * bandX / 20.f);
+		outputs[AUDIO_OUTPUT].setVoltage(out.audio * bandGain);
 		outputs[VOCT_OUTPUT].setVoltage(out.voct);
 		outputs[GATE_OUTPUT].setVoltage(out.gate);
-		outputs[VEL_OUTPUT].setVoltage(out.vel);
+		outputs[VEL_OUTPUT].setVoltage(std::min(10.f, out.vel * bandGain));
 
 		if (lightDiv.process()) {
 			float dt = args.sampleTime * lightDiv.getDivision();

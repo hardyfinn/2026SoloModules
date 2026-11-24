@@ -99,6 +99,17 @@ struct WalkerHost {
 		if (source == WS_LINK) { static const int M[5] = {WALK, BOSSA, BALLAD, SOUL, HOUSE}; return M[std::max(0, std::min(4, in.link.groove))]; }
 		return WALK;
 	}
+	// for the band (the link): planned notes not yet played that fall off the beat, as beats on the clock of phi
+	int offBeats(double* out, int maxN) const {
+		int n = 0;
+		for (size_t i = 0; i < qn.size() && i < qm.size() && n < maxN; i++) {
+			if (qm[i].fired) continue;
+			double b = origin + qn[i].beat;
+			double fr = b - std::floor(b);
+			if (fr > 0.05 && b >= phi) out[n++] = b;
+		}
+		return n;
+	}
 	// ---------------------------------------------------------------- reset
 	void releaseAll() {
 		for (auto& f : fired) f.off = std::min(f.off, bass.sampleNow);

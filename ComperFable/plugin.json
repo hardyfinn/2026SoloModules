@@ -1,7 +1,7 @@
 {
   "slug": "ComperFable",
   "name": "Comper Fable",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "license": "GPL-3.0-or-later",
   "brand": "Haer",
   "author": "Haer",
@@ -31,6 +31,17 @@
       "tags": [
         "Sequencer",
         "Synth voice",
+        "Physical modeling",
+        "Random"
+      ]
+    },
+    {
+      "slug": "Rider",
+      "name": "Rider",
+      "description": "Drummer for Comper and Walker: an improvising jazz drummer that keeps time on the ride, comps on snare and bass drum, catches the pianist's pushes, sets up the ends of phrases and plays a modelled jazz kit with sticks or brushes. Follows the band with no cables. Stereo audio and triggers out",
+      "tags": [
+        "Drum",
+        "Sequencer",
         "Physical modeling",
         "Random"
       ]

@@ -6,4 +6,5 @@ void init(Plugin* p) {
 	pluginInstance = p;
 	p->addModel(modelComper);
 	p->addModel(modelWalker);
+	p->addModel(modelRider);
 }

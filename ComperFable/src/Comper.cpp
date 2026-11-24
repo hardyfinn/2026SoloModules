@@ -1,7 +1,7 @@
 #include "plugin.hpp"
 #include "dsp/Host.hpp"
 #include "Progressions.hpp"
-#include "dsp/Link.hpp"
+#include "LinkPort.hpp"
 
 using namespace comper;
 
@@ -46,13 +46,15 @@ struct Comper : Module {
 	bool bassEveryBar = false;
 	bool resetReplays = true;
 	bool keepRootsWithWalker = false;
-	uint32_t linkStamp = 0;
+	LinkPort port;
+	CompLink heard;
 	dsp::BooleanTrigger newTrig;
 	dsp::ClockDivider lightDiv;
 	int pendingSeed = -1;
 
 	Comper() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+		port.attach(this);
 		configParam(STEPS_PARAM, 1.f, 16.f, 4.f, "Chart steps")->snapEnabled = true;
 		configSwitch(BEATS_PARAM, 0.f, 3.f, 2.f, "Beats per step", {"1", "2", "4", "8"});
 		configParam(KEY_PARAM, -6.f, 5.f, 0.f, "Key (transposes the chart and CV chords)", " semitones")->snapEnabled = true;
@@ -209,11 +211,12 @@ struct Comper : Module {
 		p.lead = params[LEAD_PARAM].getValue();
 		p.out = clamp(params[OUT_PARAM].getValue() + cv01(inputs[OUT_INPUT], 1.f), 0.f, 1.f);
 		p.roots = clamp((int)params[ROOTS_PARAM].getValue(), 0, 2);
-		// a pianist stops playing roots when a bassist arrives
-		bool walkerNext = (leftExpander.module && leftExpander.module->model == modelWalker) || (rightExpander.module && rightExpander.module->model == modelWalker);
-		if (walkerNext && !keepRootsWithWalker) p.roots = 0;
+		// the band: a pianist stops playing roots when a bassist arrives; a drummer's BAND moves the density
+		port.read(this); heard = port.merged();
+		if (heard.hasBass && !keepRootsWithWalker) p.roots = 0;
+		float bandX = heard.hasDrum ? clamp(heard.bandX, -1.f, 1.f) : 0.f;
 		p.groove = clamp((int)params[GROOVE_PARAM].getValue(), 0, 4);
-		p.density = clamp(params[DENSITY_PARAM].getValue() + cv01(inputs[DENSITY_INPUT], 1.f), 0.f, 1.f);
+		p.density = clamp(params[DENSITY_PARAM].getValue() + cv01(inputs[DENSITY_INPUT], 1.f) + 0.35f * bandX, 0.f, 1.f);
 		p.swing = params[SWING_PARAM].getValue();
 		p.repeat = params[REPEAT_PARAM].getValue();
 		p.push = params[PUSH_PARAM].getValue();
@@ -228,14 +231,14 @@ struct Comper : Module {
 		in.outChannels = channels; in.bassEveryBar = bassEveryBar; in.resetReplays = resetReplays;
 
 		host.process(in, out, args.sampleTime);
-		if (walkerNext) sendLink();
+		sendLink();
 
 		int n = out.channels;
 		outputs[VOCT_OUTPUT].setChannels(n); outputs[GATE_OUTPUT].setChannels(n); outputs[VEL_OUTPUT].setChannels(n);
 		for (int c = 0; c < n; c++) {
 			outputs[VOCT_OUTPUT].setVoltage(out.voct[c], c);
 			outputs[GATE_OUTPUT].setVoltage(out.gate[c], c);
-			outputs[VEL_OUTPUT].setVoltage(out.vel[c], c);
+			outputs[VEL_OUTPUT].setVoltage(std::min(10.f, out.vel[c] * (1.f + 0.25f * bandX)), c);
 		}
 		outputs[PEDAL_OUTPUT].setVoltage(out.pedal);
 		outputs[SCALE_OUTPUT].setChannels(std::max(1, out.scaleN));
@@ -257,28 +260,22 @@ struct Comper : Module {
 		}
 	}
 
-	// tell a Walker on either side where we are (Rack's expander messages, one sample late)
+	// tell the band where we are and what we are about to play (Rack's expander messages, one sample a hop)
 	void sendLink() {
-		linkStamp++;
-		for (int side = 0; side < 2; side++) {
-			Expander& e = side ? rightExpander : leftExpander;
-			if (!e.module || e.module->model != modelWalker) continue;
-			Expander& theirs = side ? e.module->leftExpander : e.module->rightExpander;
-			CompLink* m = (CompLink*)theirs.producerMessage;
-			if (!m) continue;
-			m->magic = 0x434F4D50;
-			m->resetCount = host.resetCount;
-			m->stamp = linkStamp;
-			m->running = host.running && !host.waitingFirstPulse;
-			m->phi = host.phi; m->spb = host.spb;
-			m->steps = in.steps; m->beatsPerStep = in.beatsPerStep;
-			int key = host.keyOffset(in);
-			for (int k = 0; k < 16; k++) { m->root[k] = pmod(in.stepRoot[k] + key, 12); m->qual[k] = in.stepQual[k]; }
-			m->external = host.source != SRC_CHART;
-			m->curRoot = host.srcChord.root; m->curQual = host.srcChord.q;
-			m->groove = in.p.groove; m->swing = in.p.swing;
-			theirs.requestMessageFlip();
-		}
+		CompLink m;
+		m.hasComp = true;
+		m.resetCount = host.resetCount;
+		m.running = host.running && !host.waitingFirstPulse;
+		m.phi = host.phi; m.spb = host.spb;
+		m.steps = in.steps; m.beatsPerStep = in.beatsPerStep;
+		int key = host.keyOffset(in);
+		for (int k = 0; k < 16; k++) { m.root[k] = pmod(in.stepRoot[k] + key, 12); m.qual[k] = in.stepQual[k]; }
+		m.external = host.source != SRC_CHART;
+		m.curRoot = host.srcChord.root; m.curQual = host.srcChord.q;
+		m.groove = in.p.groove; m.swing = in.p.swing;
+		m.planBar = host.planBar; m.planSlots = host.eng.slots;
+		for (int s = 0; s < 16; s++) { m.planKind[s] = host.eng.cellmap[s]; m.planBeat[s] = host.eng.slotBeats[s]; m.planPush[s] = host.eng.pushOk[s]; }
+		port.send(this, m);
 	}
 
 	json_t* dataToJson() override {
@@ -475,7 +472,7 @@ struct ComperWidget : ModuleWidget {
 			[=](size_t i) { m->channels = i == 0 ? 8 : i == 2 ? 16 : 12; }));
 		menu->addChild(createBoolPtrMenuItem("Bass retriggers every bar", "", &m->bassEveryBar));
 		menu->addChild(createBoolPtrMenuItem("Reset replays the same take", "", &m->resetReplays));
-		menu->addChild(createBoolPtrMenuItem("Keep roots with Walker attached", "", &m->keepRootsWithWalker));
+		menu->addChild(createBoolPtrMenuItem("Keep roots with Walker in the row", "", &m->keepRootsWithWalker));
 	}
 };
 
