@@ -1,0 +1,32 @@
+PITCH (440 Hz sine in, delay scan 0.25 s, 16 grains/s, size 0.25 s)
+  -12 st: expect   220.0 Hz, got   216.0 Hz, max grains 5, shortened 0
+   -7 st: expect   293.7 Hz, got   296.0 Hz, max grains 5, shortened 0
+   +0 st: expect   440.0 Hz, got   440.0 Hz, max grains 5, shortened 0
+   +7 st: expect   659.3 Hz, got   664.0 Hz, max grains 5, shortened 0
+  +12 st: expect   880.0 Hz, got   880.0 Hz, max grains 5, shortened 0
+  +24 st: expect  1760.0 Hz, got  1760.0 Hz, max grains 5, shortened 0
+DELAY (noise bursts in, pitch 0, no spray): lag of best match between input and wet
+  set 0.125 s, measured 0.1250 s
+  set 0.250 s, measured 0.2500 s
+  set 0.500 s, measured 0.5000 s
+  set 1.000 s, measured 1.0000 s
+STRETCH (sweep 200 to 2000 Hz over 4 s, speed 0.5): pitch heard at t should be the sweep at t/2
+  t=2 s: expect    650 Hz, got    650 Hz
+  t=3 s: expect    875 Hz, got    880 Hz
+  t=4 s: expect   1100 Hz, got   1115 Hz
+  t=5 s: expect   1325 Hz, got   1325 Hz
+LEVEL (low-passed noise in at about -20 dB RMS; wet only)
+  input -20.0 dB
+  rate   4/s size 0.25 s (overlap    1) spray 0.0: wet  -24.3 dB, peak   -7.1 dB, max grains 2
+  rate   4/s size 0.25 s (overlap    1) spray 0.5: wet  -24.7 dB, peak   -5.9 dB, max grains 2
+  rate  16/s size 0.25 s (overlap    4) spray 0.0: wet  -26.7 dB, peak  -12.1 dB, max grains 5
+  rate  16/s size 0.25 s (overlap    4) spray 0.5: wet  -24.7 dB, peak  -11.2 dB, max grains 5
+  rate  64/s size 0.25 s (overlap   16) spray 0.0: wet  -26.8 dB, peak  -12.1 dB, max grains 17
+  rate  64/s size 0.25 s (overlap   16) spray 0.5: wet  -24.7 dB, peak  -10.9 dB, max grains 17
+  rate  64/s size 1.00 s (overlap   64) spray 0.0: wet  -26.8 dB, peak  -12.0 dB, max grains 64
+  rate  64/s size 1.00 s (overlap   64) spray 0.5: wet  -24.7 dB, peak  -11.5 dB, max grains 64
+FEEDBACK stability (sine in for 1 s then silence, grain feedback, pitch 0): RMS of last second
+  feedback 0.5: -239.7 dB, peak overall -18.1 dB
+  feedback 0.9:  -63.5 dB, peak overall -17.3 dB
+  feedback 1.0:  -26.9 dB, peak overall -16.8 dB
+  feedback 1.5:   -7.6 dB, peak overall  -6.7 dB
