@@ -43,6 +43,11 @@ struct TextDisplay : Widget {
 		nvgFontSize(args.vg, fontSize);
 		nvgTextLetterSpacing(args.vg, 0.3f);
 		nvgFillColor(args.vg, nvgRGB(242, 192, 96));
+		// shrink to fit the window
+		float bounds[4];
+		float w = nvgTextBounds(args.vg, 0, 0, s.c_str(), NULL, bounds);
+		float room = box.size.x - 4.f;
+		if (w > room && w > 0) nvgFontSize(args.vg, fontSize * room / w);
 		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		nvgText(args.vg, box.size.x / 2, box.size.y / 2 + 0.5f, s.c_str(), NULL);
 	}

@@ -115,11 +115,11 @@ layout = {}
 # ------------------------------------------------------------------------- Essphor (32 HP)
 p = Panel("Essphor", 32, "Essphor", "live rhythmic grains")
 COLS = [11.0 + 20.0 * i for i in range(8)]
-R1, M1, R2, M2, R3 = 27.0, 37.0, 52.2, 61.5, 72.5
+R1, M1, R2, M2, R3 = 28.0, 37.4, 53.4, 62.4, 72.5
 JA, JB, JC = 88.0, 102.5, 117.0
 top = [("PITCH", "PITCH"), ("RATE", "RATE"), ("SIZE", "SIZE"), ("CONTOUR", "CONTOUR"), ("SCAN", "SCAN"), ("SPRAY", "SPRAY"), ("PATTERN", "PATTERN"), ("WET", "WET")]
 bot = [("FEEDBACK", "FEEDBACK"), ("RAND_PITCH", "R PITCH"), ("RAND_RATE", "R RATE"), ("RAND_SIZE", "R SIZE"), ("RAND_AMP", "R AMP"), ("RAND_REV", "R REV"), ("AGE", "AGE")]
-p.heading("GRAINS", 4.0, p.W - 4.0, 15.6)
+p.heading("GRAINS", 4.0, p.W - 4.0, 15.2)
 for (n, lab), x in zip(top, COLS): p.comp(n, "big", x, R1, lab)
 p.heading("RANDOM AND CHARACTER", 4.0, p.W - 4.0, 42.3, ACCENT2)
 for (n, lab), x in zip(bot, COLS): p.comp(n, "knob", x, R2, lab)

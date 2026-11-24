@@ -6,181 +6,181 @@
 "PITCH": [
 "big",
 11.0,
-27.0,
+28.0,
 "PITCH"
 ],
 "RATE": [
 "big",
 31.0,
-27.0,
+28.0,
 "RATE"
 ],
 "SIZE": [
 "big",
 51.0,
-27.0,
+28.0,
 "SIZE"
 ],
 "CONTOUR": [
 "big",
 71.0,
-27.0,
+28.0,
 "CONTOUR"
 ],
 "SCAN": [
 "big",
 91.0,
-27.0,
+28.0,
 "SCAN"
 ],
 "SPRAY": [
 "big",
 111.0,
-27.0,
+28.0,
 "SPRAY"
 ],
 "PATTERN": [
 "big",
 131.0,
-27.0,
+28.0,
 "PATTERN"
 ],
 "WET": [
 "big",
 151.0,
-27.0,
+28.0,
 "WET"
 ],
 "FEEDBACK": [
 "knob",
 11.0,
-52.2,
+53.4,
 "FEEDBACK"
 ],
 "RAND_PITCH": [
 "knob",
 31.0,
-52.2,
+53.4,
 "R PITCH"
 ],
 "RAND_RATE": [
 "knob",
 51.0,
-52.2,
+53.4,
 "R RATE"
 ],
 "RAND_SIZE": [
 "knob",
 71.0,
-52.2,
+53.4,
 "R SIZE"
 ],
 "RAND_AMP": [
 "knob",
 91.0,
-52.2,
+53.4,
 "R AMP"
 ],
 "RAND_REV": [
 "knob",
 111.0,
-52.2,
+53.4,
 "R REV"
 ],
 "AGE": [
 "knob",
 131.0,
-52.2,
+53.4,
 "AGE"
 ],
 "SCALE": [
 "snap",
 151.0,
-52.2,
+53.4,
 "SCALE"
 ],
 "RATE_MODE": [
 "button",
 24.0,
-37.0,
+37.4,
 null
 ],
 "RATE_MODE_DISP": [
 "display",
 33.6,
-37.0,
+37.4,
 null
 ],
 "SCAN_MODE": [
 "button",
 84.0,
-37.0,
+37.4,
 null
 ],
 "SCAN_MODE_DISP": [
 "display",
 93.6,
-37.0,
+37.4,
 null
 ],
 "SPRAY_MODE": [
 "button",
 104.0,
-37.0,
+37.4,
 null
 ],
 "SPRAY_MODE_DISP": [
 "display",
 113.6,
-37.0,
+37.4,
 null
 ],
 "WET_MODE": [
 "button",
 144.0,
-37.0,
+37.4,
 null
 ],
 "WET_MODE_DISP": [
 "display",
 153.6,
-37.0,
+37.4,
 null
 ],
 "FB_MODE": [
 "button",
 4.0,
-61.5,
+62.4,
 null
 ],
 "FB_MODE_DISP": [
 "display",
 13.6,
-61.5,
+62.4,
 null
 ],
 "RP_MODE": [
 "button",
 24.0,
-61.5,
+62.4,
 null
 ],
 "RP_MODE_DISP": [
 "display",
 33.6,
-61.5,
+62.4,
 null
 ],
 "SCALE_DISP": [
 "display",
 149.5,
-61.5,
+62.4,
 null
 ],
 "PATTERN_DISP": [
 "display",
 131.0,
-37.0,
+37.4,
 null
 ],
 "TEMPO": [
