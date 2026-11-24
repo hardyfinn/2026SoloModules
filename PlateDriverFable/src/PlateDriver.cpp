@@ -36,10 +36,10 @@ struct PlateDriver : Module {
 	enum OutputIds { ROAR_OUTPUT, ENV_OUTPUT, L_OUTPUT, R_OUTPUT, NUM_OUTPUTS };
 	enum LightIds { NUM_LIGHTS };
 
-	Engine* e = nullptr;
-	Age age;
-	Decimator dec;
-	Leveller lev;
+	plate::Engine* e = nullptr;
+	plate::Age age;
+	plate::Decimator dec;
+	plate::Leveller lev;
 	uint64_t seed = 1;
 	double rate = 0;
 	bool os = true;
@@ -49,7 +49,7 @@ struct PlateDriver : Module {
 	double roarS = 0, envS = 0;
 	float ringRoar = 0.f, ringEnv = 0.f;   // read by the DRIVE ring light
 	dsp::SchmittTrigger strikeTrig, gateTrig;
-	Knobs k;
+	plate::Knobs k;
 
 	PlateDriver() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -124,7 +124,7 @@ struct PlateDriver : Module {
 		configOutput(L_OUTPUT, "Left");
 		configOutput(R_OUTPUT, "Right");
 
-		e = new Engine();
+		e = new plate::Engine();
 		seed = random::u64();
 	}
 	~PlateDriver() { delete e; }
@@ -133,7 +133,7 @@ struct PlateDriver : Module {
 		rate = sr;
 		os = sr < 88200.0;
 		e->setRate(os ? 2 * sr : sr);
-		e->build(SHEET, 0);
+		e->build(plate::SHEET, 0);
 		e->reset();
 		age.init(seed);
 		lev.setRate(sr); lev.reset(); dec.reset();
@@ -186,10 +186,10 @@ struct PlateDriver : Module {
 		if (inputs[GATE_INPUT].isConnected()) { gateTrig.process(inputs[GATE_INPUT].getVoltage(), 0.1f, 1.f); gateHigh = gateTrig.isHigh(); }
 		gateS += ((gateHigh ? 1.0 : 0.0) - gateS) * (1.0 - std::exp(-args.sampleTime / 0.004));
 
-		const int ctrlLen = BLK / (os ? 2 : 1);
+		const int ctrlLen = plate::BLK / (os ? 2 : 1);
 		if (ctr == 0) {
 			readKnobs();
-			age.update(BLK / e->fe, e->emean);
+			age.update(plate::BLK / e->fe, e->emean);
 			mapKnobs(k, *e, &age);
 		}
 		if (++ctr >= ctrlLen) ctr = 0;

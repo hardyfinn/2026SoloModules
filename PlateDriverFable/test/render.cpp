@@ -179,6 +179,36 @@ int main(int argc, char** argv) {
 	if (argc > 3 && std::string(argv[3]) == "dump") { auto sc = makeScenes(); for (auto& x : sc) if (x.name == std::string(argv[4])) { Run r = renderScene(x); FILE* f = std::fopen((std::string(argv[1]) + "/raw-" + argv[4] + ".f32").c_str(), "wb"); std::fwrite(r.st.data(), 4, r.st.size(), f); std::fclose(f); std::printf("guards %ld secs %.2f kclip %ld soft %ld\n", r.guards, r.secs, KCLIP, SOFT); } return 0; }
 	std::string out = argc > 1 ? argv[1] : "test/out";
 	std::string refDir = argc > 2 ? argv[2] : "test/ref";
+	if (argc > 2 && std::string(argv[2]) == "demos") {
+		// Demo WAVs from the C++ engine: every sketch scene on SHEET, then swell and h-max on the other types.
+		auto sc = makeScenes(); const char* tn[4] = {"sheet", "tamtam", "bossed", "bowl"};
+		std::vector<std::pair<int, const Scene*>> jobs;
+		for (auto& x : sc) jobs.push_back({0, &x});
+		for (int t = 1; t < 4; t++) for (auto& x : sc) if (x.name == std::string("swell") || x.name == std::string("h-max")) jobs.push_back({t, &x});
+		std::atomic<int> next(0); std::mutex mu;
+		auto worker = [&]() {
+			for (;;) {
+				int j = next++; if (j >= (int)jobs.size()) break;
+				int t = jobs[j].first; const Scene& x = *jobs[j].second;
+				Run r = renderScene(x, 96000, t, 0);
+				Decimator dec; Leveller lev; lev.setRate(48000);
+				long n = r.st.size() / 4; std::vector<float> o(2 * n); double pk = 0;
+				for (long i = 0; i < n; i++) {
+					double l2[2] = {r.st[4 * i], r.st[4 * i + 2]}, r2[2] = {r.st[4 * i + 1], r.st[4 * i + 3]}, L, R;
+					dec.process(l2, r2, L, R); double g = lev.gain(L, R) * 0.7 * OUT_VOLTS;
+					L = 11 * std::tanh(L * g / 11); R = 11 * std::tanh(R * g / 11);
+					o[2 * i] = (float)(L / 11); o[2 * i + 1] = (float)(R / 11); pk = std::max({pk, std::fabs(L), std::fabs(R)});
+				}
+				std::string nm = (t ? std::string(tn[t]) + "-" : std::string("")) + x.name;
+				writeWav(std::string(argv[1]) + "/" + nm + ".wav", o, 48000);
+				double prMax = 0; for (double v : r.prT) prMax = std::max(prMax, v);
+				std::lock_guard<std::mutex> l(mu);
+				std::printf("%-16s %5.1f s  peak %.1f V  max PR %.1f  guards %ld\n", nm.c_str(), x.dur, pk, prMax, r.guards);
+			}
+		};
+		std::vector<std::thread> th; for (int i = 0; i < 8; i++) th.emplace_back(worker); for (auto& t : th) t.join();
+		return 0;
+	}
 	if (getenv("ONLY_PRESETS")) { presetTest(out); return nFail ? 1 : 0; }
 	auto scenes = makeScenes();
 	std::map<std::string, Scene*> S; for (auto& s : scenes) S[s.name] = &s;
