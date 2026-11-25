@@ -1,0 +1,23 @@
+{
+  "slug": "LongMetalFable",
+  "name": "Long Metal Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "LongMetal",
+      "name": "Long Metal",
+      "description": "A very long line of metal heard from one point on it. Rails that sing before the train arrives, struck cables that zing and crack, and a line that amplifies itself and screams. The sound is the journey: distance is the instrument.",
+      "tags": ["Synth voice", "Physical modeling", "Drone", "Effect", "Noise"]
+    }
+  ]
+}
