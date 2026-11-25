@@ -93,7 +93,7 @@ struct Groover : Module {
 
 	Groover() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
-		configParam<GrooveQuantity>(GROOVE_PARAM, 0.f, 1.f, 0.15f, "Groove");
+		configParam<GrooveQuantity>(GROOVE_PARAM, 0.f, 1.f, 0.5f / 16.f, "Groove");
 		configParam(AMOUNT_PARAM, 0.f, 1.3f, 1.f, "Amount (Live's Global Amount: scales the timing)", "%", 0.f, 100.f);
 		configParam(TIMING_PARAM, 0.f, 1.f, 1.f, "Timing (how strongly hits move to the groove)", "%", 0.f, 100.f);
 		configParam(VELOCITY_PARAM, -1.f, 1.f, 1.f, "Velocity (how much the groove's loudness reaches ACCENT; negative flips it)", "%", 0.f, 100.f);
@@ -172,7 +172,7 @@ struct Groover : Module {
 	}
 
 	void loadFileDialog() {
-		osdialog_filters* f = osdialog_filters_parse("Grooves (.agr, .mid):agr,mid,midi;All files:*");
+		osdialog_filters* f = osdialog_filters_parse("Grooves (.agr .mid):agr,mid,midi");
 		char* path = osdialog_file(OSDIALOG_OPEN, NULL, NULL, f);
 		osdialog_filters_free(f);
 		if (!path) return;
@@ -412,12 +412,12 @@ struct GrooverDisplay : Widget {
 
 		// sample content for the module browser
 		static std::vector<Groove> preview = builtinGrooves();
-		const Groove* g = &preview[9];
+		const Groove* g = &preview[11];
 		Settings st; st.base = g->base; st.velocity = 1.f;
 		long step = -1;
 		float bpm = 124.f;
 		bool running = false;
-		int gi = 9, total = (int) preview.size();
+		int gi = 11, total = (int) preview.size();
 		bool user = false;
 		if (module && module->bank) {
 			GrooveBank* b = module->bank;

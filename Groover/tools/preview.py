@@ -57,7 +57,7 @@ for s in range(16):
     col = "#FF9F1C" if now else ("#FFBE6E" if abs(off[s]) > 0.01 else "#EFE8D8")
     g.append(f'<circle cx="{xo(s + off[s])}" cy="{mid}" r="{r}" fill="{col}"/>')
 mono = "font-family:'DejaVu Sans Mono',monospace"
-g.append(f'<text x="{dx + pad}" y="{dy + 4.4}" font-size="3.0" fill="#EFE8D8" style="{mono}">10/15 Wonky</text>')
+g.append(f'<text x="{dx + pad}" y="{dy + 4.4}" font-size="3.0" fill="#EFE8D8" style="{mono}">12/16 Wonky</text>')
 g.append(f'<text x="{dx + dw - pad}" y="{dy + 4.4}" font-size="3.0" text-anchor="end" fill="#9FB3B5" style="{mono}">1/16 4b 124 BPM</text>')
 
 svg = svg.replace("</svg>", "\n".join(g) + "\n</svg>")

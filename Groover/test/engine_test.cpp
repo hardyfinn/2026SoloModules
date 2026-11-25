@@ -33,10 +33,22 @@ int main(int argc, char** argv) {
 		CHECK(g.steps(g.base) > 0, "%s has no steps", g.name.c_str());
 	}
 
+	// slots 1-2: 75% swing, off-16ths half a step late (62.5 ms at 120 BPM); accents
+	{
+		Settings st; st.base = 3;
+		std::vector<double> f = runClock(b[0], st, 4.0, 0.0);
+		CHECK(f.size() >= 8 && std::fabs(f[1] - 187.5) < 0.2 && std::fabs(f[2] - 250.0) < 0.2, "swing75 %.2f %.2f", f[1], f[2]);
+		st.velocity = 1.f;
+		for (int k = 0; k < 16; k++) {
+			bool a1 = k % 2 == 0, a2 = k % 4 == 0;
+			CHECK((stepAccent(b[0], st, k) > 0.99f) == a1, "slot1 accent step %d", k + 1);
+			CHECK((stepAccent(b[1], st, k) > 0.99f) == a2, "slot2 accent step %d", k + 1);
+		}
+	}
 	// Swing 16 58%: off-16ths 0.04 beat late = 20 ms at 120 BPM, on-16ths on time
 	{
 		Settings st; st.base = 3;
-		std::vector<double> f = runClock(b[2], st, 8.0, 0.0);
+		std::vector<double> f = runClock(b[4], st, 8.0, 0.0);
 		CHECK(f.size() >= 30, "swing58 fired %zu", f.size());
 		for (size_t k = 1; k < 9 && k < f.size(); k++) {
 			double grid = k * 125.0;
@@ -48,7 +60,7 @@ int main(int argc, char** argv) {
 	// Pushing: off-16ths 0.07 step EARLY = 8.75 ms before the grid (prediction)
 	{
 		Settings st; st.base = 3;
-		std::vector<double> f = runClock(b[8], st, 8.0, 0.0);
+		std::vector<double> f = runClock(b[10], st, 8.0, 0.0);
 		std::printf("pushing first 6 (ms): %.2f %.2f %.2f %.2f %.2f %.2f\n", f[0], f[1], f[2], f[3], f[4], f[5]);
 		CHECK(std::fabs(f[5] - (625.0 - 8.75)) < 0.2, "pushing step 5 at %.2f", f[5]);
 		CHECK(std::fabs(f[4] - 500.0) < 0.2, "pushing step 4 at %.2f", f[4]);
@@ -56,7 +68,7 @@ int main(int argc, char** argv) {
 	// AMOUNT 0 = straight
 	{
 		Settings st; st.base = 3; st.amount = 0.f;
-		std::vector<double> f = runClock(b[4], st, 4.0, 0.0);
+		std::vector<double> f = runClock(b[6], st, 4.0, 0.0);
 		for (size_t k = 0; k < f.size(); k++) CHECK(std::fabs(f[k] - k * 125.0) < 0.1, "amount0 step %zu %.2f", k, f[k]);
 	}
 	// clock stops: nothing runs on past the last real pulse (on-grid steps)
@@ -69,7 +81,7 @@ int main(int argc, char** argv) {
 			double now = i * dt;
 			clk.tick(dt);
 			if (now < 1.0 && std::fmod(now + 1e-9, 0.125) < dt) clk.pulse();
-			if (gc.process(b[0], st, clk.pos()) >= 0) fired++;
+			if (gc.process(b[2], st, clk.pos()) >= 0) fired++;
 		}
 		CHECK(fired == 8, "straight with 8 pulses fired %d", fired);
 	}
@@ -77,11 +89,11 @@ int main(int argc, char** argv) {
 	{
 		Settings st; st.base = 3;
 		long k;
-		double d = laneDelay(b[2], st, 0.25, 0.5, 0.f, 0.0, k);
+		double d = laneDelay(b[4], st, 0.25, 0.5, 0.f, 0.0, k);
 		CHECK(k == 1 && std::fabs(d - 0.020) < 1e-6, "lane delay %.4f k %ld", d, k);
-		d = laneDelay(b[8], st, 0.25, 0.5, 0.f, 0.0, k);
+		d = laneDelay(b[10], st, 0.25, 0.5, 0.f, 0.0, k);
 		CHECK(d == 0.0, "pushing lane without look-ahead should be 0, got %f", d);
-		d = laneDelay(b[8], st, 0.25, 0.5, 0.f, 0.020, k);
+		d = laneDelay(b[10], st, 0.25, 0.5, 0.f, 0.020, k);
 		CHECK(std::fabs(d - (0.020 - 0.00875)) < 1e-6, "pushing lane look-ahead %f", d);
 		Lane ln;
 		ln.push(0.010, true); ln.push(0.015, false);
@@ -90,10 +102,10 @@ int main(int argc, char** argv) {
 	// Accent: velocity 100% follows the groove, -100% flips it
 	{
 		Settings st; st.base = 3; st.velocity = 1.f;
-		float a0 = stepAccent(b[2], st, 0), a1 = stepAccent(b[2], st, 1);
+		float a0 = stepAccent(b[4], st, 0), a1 = stepAccent(b[4], st, 1);
 		CHECK(a0 > 0.99f && std::fabs(a1 - 85.f / 110.f) < 1e-3, "accent %f %f", a0, a1);
 		st.velocity = -1.f;
-		CHECK(stepAccent(b[2], st, 1) < stepAccent(b[2], st, 0) + 1.f, "flip");
+		CHECK(stepAccent(b[4], st, 1) < stepAccent(b[4], st, 0) + 1.f, "flip");
 	}
 	// inflate on a known buffer
 	{
