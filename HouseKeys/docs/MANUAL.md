@@ -19,7 +19,7 @@ One engine plays at a time. Pick a sound and play it from V/OCT and GATE, up to 
 |---|---|
 | SOUND, PREV, NEXT | Picks one of the 100 sounds. The buttons move the knob. The display shows the number and name, and the engine below. `LOADING` appears for a moment while a sampler sound is prepared. |
 | FM, POLY, PD, WAVE, SMPL | Jump to the first sound of that engine (1, 31, 55, 67, 89). The light shows the engine that is playing. |
-| OCTAVE | −2 to +2 octaves, added to the sound's own octave. |
+| OCTAVE | −3 to +3 octaves, added to the sound's own octave. |
 | STAB | Each key plays a chord that moves in parallel, like a sampled chord: OFF, 5TH, OCT, MIN, MAJ, MIN7, MAJ7, DOM7, SUS4, MIN9. Chord notes use voices, so a 4-note chord at polyphony 8 plays two keys at once. Chords are scaled down so they sit at the level of one note. |
 | VELOCITY | How much velocity does, 0 to 200%. 100% is the sound as programmed; 0 plays everything at 64. |
 | MOD | The mod wheel. Adds vibrato, or drives whatever the sound has on its wheel. |
@@ -30,7 +30,7 @@ One engine plays at a time. Pick a sound and play it from V/OCT and GATE, up to 
 | CHORUS | SND (the sound's own setting), OFF, I, II. A model of the Roland stereo chorus. |
 | GRIT | The converter and the machine's age. 0 is cleaned up, 0.5 is the real machine, 1 is a worn one. |
 | TAPE | Mixing down to cassette or narrow multitrack: wow and flutter, saturation that dulls loud treble, head bump, top-end loss and hiss. 0 is a true bypass. |
-| LEVEL | Output level. At the default one note at velocity 100 peaks near 5 V. |
+| LEVEL | Output level. The default is fully clockwise, 0 dB, which is also the maximum: the knob only turns the sound down. At 0 dB one note at velocity 100 peaks near 2.5 V. |
 
 ### Jacks
 

@@ -99,7 +99,7 @@ def knob_label(name, x, y, lo=None, hi=None, r=6.2):
         add(text(hi, x + r - 1.2, y + 7.8, SMALL, FONT_BOLD, SOFT, anchor="start"))
 
 
-knob_label("OCTAVE", COL_PLAY, ROW1, "−2", "+2")
+knob_label("OCTAVE", COL_PLAY, ROW1, "−3", "+3")
 knob_label("STAB", COL_PLAY, ROW2, "OFF", "9")
 knob_label("VELOCITY", COL_PLAY, ROW3, "0", "2×")
 knob_label("MOD", COL_PLAY, ROW4, "0", "1")

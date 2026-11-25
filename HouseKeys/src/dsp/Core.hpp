@@ -24,12 +24,12 @@ const char* engineName(int engine);
 
 struct CoreParams {
 	int sound = 0;          // 0..99
-	int octave = 0;         // -2..2
+	int octave = 0;         // -3..3
 	float tone = 0.f, attack = 0.f, decay = 0.f; // -1..1
 	float velocity = 1.f;   // 0..2
 	float mod = 0.f, twin = 0.f; // 0..1
 	float grit = 0.5f, tape = 0.f; // 0..1
-	float level = 0.5f;     // 0..1, 0.5 = default
+	float level = 1.f;      // 0..1, 1 = 0 dB (default and maximum)
 	int chorus = 0;         // 0 SOUND, 1 OFF, 2 I, 3 II
 	int stab = 0;           // 0..9
 	int polyLimit = 8;      // 4, 6, 8, 16

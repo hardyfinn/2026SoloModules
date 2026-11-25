@@ -361,7 +361,7 @@ void Core::renderBlock() {
 	tape.process(bufL, bufR, BLOCK, clampf(p.tape, 0.f, 1.f));
 	// level and soft limit (0 dBFS = 10 V)
 	float lv = clampf(p.level, 0.f, 1.f);
-	float og = 2.f * (lv / 0.5f) * (lv / 0.5f);
+	float og = lv * lv; // unity (0 dB) at the top, never above
 	float og0 = outGain;
 	for (int i = 0; i < BLOCK; i++) {
 		float gi = 10.f * (og0 + (og - og0) * (i + 1) / (float) BLOCK);

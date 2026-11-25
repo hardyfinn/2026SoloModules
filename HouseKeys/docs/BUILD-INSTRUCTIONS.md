@@ -30,7 +30,7 @@ Outputs: `L`, `R`. If only L is patched it carries the mono sum.
 | PREV / NEXT | buttons | Step the sound. They move the SOUND knob. |
 | FM, POLY, PD, WAVE, SMPL | 5 buttons with lights | Jump to the first sound of that engine. Light shows the current engine. |
 | display | text, 2 lines | Line 1: number and name, e.g. `001 Solid Bass`. Line 2: engine and, while a SAMPLER sound renders, `LOADING`. Use Rack's built-in ShareTechMono. |
-| OCTAVE | snap knob −2..+2 | Added to the sound's own octave. |
+| OCTAVE | snap knob −3..+3 | Added to the sound's own octave. |
 | TONE | bipolar knob | Brightness. Centre is the sound as programmed. Mapping per engine in each engine section. |
 | ATTACK | bipolar knob | Scales attack time, ×1/8 to ×8 (centre ×1). |
 | DECAY | bipolar knob | Scales decay and release times, ×1/8 to ×8. |
@@ -41,7 +41,7 @@ Outputs: `L`, `R`. If only L is patched it carries the mono sum.
 | STAB | snap knob, 10 positions | OFF, 5TH, OCT, MIN, MAJ, MIN7, MAJ7, DOM7, SUS4, MIN9. Section 3.4. |
 | GRIT | knob 0..1, default 0.5 | Converter and age. 0 is idealised and clean, 0.5 is the real machine, 1 is a worn one. Per engine. |
 | TAPE | knob 0..1, default 0 | Cassette stage, section 9.2. |
-| LEVEL | knob | Output level, default so one note at velocity 100 peaks near 5 V. |
+| LEVEL | knob | Output level, 0 dB at the default and maximum (fully clockwise); one note at velocity 100 peaks near 2.5 V. |
 
 Context menu: polyphony limit (4, 6, 8, 16; default 8, the machines were mostly 6 or 8 voice), "Load 4-operator voice bank (.syx)…" then a submenu of its 32 voices (the chosen voice plays through the FM engine until SOUND changes, display shows `USR name`), and "Fixed velocity when VEL is unpatched" (64, 100, 127; default 100, except FM sounds which use 64 est., because the DX100's own keys had no velocity).
 

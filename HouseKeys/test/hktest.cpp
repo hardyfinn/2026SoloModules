@@ -54,7 +54,7 @@ struct Rig {
 	Rig(float sr, int sound) : fs(sr) {
 		core.init(sr, true);
 		p.sound = sound;
-		p.level = 0.35355339f; // output gain x1: 0 dBFS = 10 V
+		p.level = 1.f; // output gain x1 (0 dB): 0 dBFS = 10 V
 	}
 	void render(const std::vector<Ev>& evs, double seconds, std::vector<float>& L, std::vector<float>& R, bool velPatched = true) {
 		int n = (int) (seconds * fs);
@@ -564,7 +564,7 @@ static void testPerformance(float fs) {
 // ------------------------------------------------------------------ demos
 static void renderTo(const std::string& path, int sound, const std::vector<Ev>& evs, double seconds, std::function<void(CoreParams&)> tweak = nullptr) {
 	Rig r(44100.f, sound);
-	r.p.level = 0.4f; // a little under the default so chords stay clear of the limiter
+	r.p.level = 1.f; // the default, 0 dB
 	if (tweak) tweak(r.p);
 	std::vector<float> L, R;
 	r.render(evs, seconds, L, R);
@@ -614,7 +614,7 @@ static void demos(const std::string& dir, bool galleryToo) {
 	std::vector<float> GL, GR;
 	for (int s = 0; s < NUM_SOUNDS; s++) {
 		Rig r(44100.f, s);
-		r.p.level = 0.4f;
+		r.p.level = 1.f;
 		std::vector<Ev> e;
 		if (soundOctave(s) <= -1) e = riff(bpm, 2, bassPat, 36);
 		else e = stabs(bpm, 2, {{0, 3}, {6, 2}, {10, 1}, {12, 4}}, {60, 63, 67, 70});
