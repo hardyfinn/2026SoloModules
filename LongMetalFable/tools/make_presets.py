@@ -34,7 +34,7 @@ P = [
     ("Laser", "strike", dict(HARD, STIFF=0.77, SPACING=2, SUPPORTS=0.0, WARP=0.0, SWELL=0.0, AGE=0.0, LIVE=0.37)),
     ("Never Repeats", "strike", dict(HARD, STIFF=0.77, SPACING=40, SUPPORTS=0.0, WARP=0.0, SWELL=0.0, AGE=0.0, LIVE=0.32)),
     ("Glass Rail", "-", dict(SUPPORTS=0.9, AGE=0.0, TRAIN=0.4)),
-    ("Rust Rail", "-", dict(AGE=1.0, SUPPORTS=0.8, GROUND=0.8)),
+    ("Rust Rail", "-", dict(AGE=0.85, SUPPORTS=0.62, GROUND=0.8, DISTANCE=0.35)),
     ("Giant", "-", dict(PITCH=-2.0)),
     ("Wire", "seqVoct", dict(PITCH=1.0, LENGTH=64, SPACING=2, ENDA=-0.97, ENDB=-0.97, STIFF=0.4, SUPPORTS=0.0, TRAIN=0.0,
                              LIVE=0.4, DISTANCE=0.6, LISTEN=0.1, HARD=0.9, AGE=0.1)),

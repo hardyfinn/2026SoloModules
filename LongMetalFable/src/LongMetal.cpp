@@ -10,7 +10,7 @@
 static float col11(int i) { return 12.6f + 17.8f * i; }
 static float col10(int i) { return 13.9f + 19.5f * i; }
 static float col12(int i) { return 10.4f + 16.58f * i; }
-static const float Y1 = 38.0f, Y2 = 61.0f, Y3 = 88.0f, Y4 = 104.5f, Y5 = 118.5f;
+static const float Y1 = 39.5f, Y2 = 62.0f, Y3 = 88.0f, Y4 = 104.5f, Y5 = 118.5f;
 static const float DISP_X = 41.6f, DISP_Y = 13.0f, DISP_W = 156.6f, DISP_H = 11.0f;
 static const float ROW2_X[9] = {17.0f, 43.0f, 63.0f, 80.0f, 95.0f, 117.0f, 134.0f, 151.0f, 168.0f};
 static const float ROW3_X[9] = {12.6f, 30.4f, 48.2f, 66.0f, 83.8f, 101.6f, 133.0f, 154.0f, 175.0f};

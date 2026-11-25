@@ -44,27 +44,6 @@ struct Params {
 
 struct Axle { double off, lp, hp, amp, ampT, flat, wph, lastpos; };
 
-// fast sine/cosine for the LOOSE junctions (|x| up to about 4 rad); the pair is renormalised by the caller
-static inline void fastSinCos(real x, real& s, real& c) {
-	// reduce to [-pi, pi]
-	const real TWO_PI = 6.28318530718, INV = 0.159154943092;
-	x -= TWO_PI * std::floor(x * INV + 0.5);
-	// sin: 7th-order odd polynomial on [-pi/2, pi/2] after folding
-	real y = x;
-	real sgn = 1.;
-	if (y > 1.57079632679) y = 3.14159265359 - y;
-	else if (y < -1.57079632679) y = -3.14159265359 - y;
-	real y2 = y * y;
-	s = y * (1. + y2 * (-0.166666667 + y2 * (0.00833333333 + y2 * (-0.000198412698 + y2 * 2.75573192e-6))));
-	// cos = sin(x + pi/2)
-	real z = x + 1.57079632679;
-	if (z > 3.14159265359) z -= TWO_PI;
-	if (z > 1.57079632679) z = 3.14159265359 - z;
-	else if (z < -1.57079632679) z = -3.14159265359 - z;
-	real z2 = z * z;
-	c = sgn * z * (1. + z2 * (-0.166666667 + z2 * (0.00833333333 + z2 * (-0.000198412698 + z2 * 2.75573192e-6))));
-}
-
 struct Engine {
 	Params p;
 	double fe = SRNOM;   // real engine rate: only real-time quantities (train, strike length) use it
@@ -252,11 +231,15 @@ struct Engine {
 		// 5. supports
 		if (p.loose != 0) {
 			const real lo = (real)p.loose;
+			// th = base + delta, delta in [0, 0.8): rotate the cached (cos, sin) of the base by delta (series to the
+			// 9th power, error below 1e-7), then renormalise so the junction stays an exact rotation. No branches.
 			for (int i = 0; i < N - 1; i++) {
 				real A = std::fabs(xr[i]) + std::fabs(xl[i + 1]);
-				real th = thBase[i] + lo * A / (1. + A);
-				real s, c; fastSinCos(th, s, c);
-				real r = 1. / std::sqrt(s * s + c * c); s *= r; c *= r;
+				real dl = lo * A / (1.0 + A), d2 = dl * dl;
+				real sd = dl * (1.0 - d2 / 6.0 * (1.0 - d2 / 20.0 * (1.0 - d2 / 42.0 * (1.0 - d2 / 72.0))));
+				real cd = 1.0 - d2 / 2.0 * (1.0 - d2 / 12.0 * (1.0 - d2 / 30.0 * (1.0 - d2 / 56.0)));
+				real c = jc[i] * cd - js[i] * sd, s = js[i] * cd + jc[i] * sd;
+				real r = 1.0 / std::sqrt(c * c + s * s); s *= r; c *= r;
 				rIn[i + 1] = c * xr[i] + s * xl[i + 1];
 				lIn[i] = -s * xr[i] + c * xl[i + 1];
 			}

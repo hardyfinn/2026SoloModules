@@ -24,7 +24,7 @@ ACCENT = "#C9A36B"   # rail rust-brass
 COL11 = [12.6 + 17.8 * i for i in range(11)]   # row 1
 COL10 = [13.9 + 19.5 * i for i in range(10)]   # row 4
 COL12 = [10.4 + 16.58 * i for i in range(12)]  # row 5
-Y1, Y2, Y3, Y4, Y5 = 38.0, 61.0, 88.0, 104.5, 118.5
+Y1, Y2, Y3, Y4, Y5 = 39.5, 62.0, 88.0, 104.5, 118.5
 DISP_X, DISP_Y, DISP_W, DISP_H = 41.6, 13.0, 156.6, 11.0
 ROW2_X = [17.0, 43.0, 63.0, 80.0, 95.0, 117.0, 134.0, 151.0, 168.0]   # LIVE (big), DISTANCE (big), LISTEN, PASS TIME, PASS button, WARP, SWELL, LOOSE, GRIP
 ROW3_X = [12.6, 30.4, 48.2, 66.0, 83.8, 101.6, 133.0, 154.0, 175.0]   # TRAIN, SPEED, FLATS, STRIKE button, HARD, IN LEVEL, EVEN, WIDTH, LEVEL
@@ -88,7 +88,7 @@ def lab(n, x, y):
 
 
 # row 1: LINE + CHARACTER
-H1 = 28.6
+H1 = 28.0
 heading("LINE", 4.5, mid(COL11[9], COL11[10]) - 1.5, H1)
 heading("CHAR", mid(COL11[9], COL11[10]) + 1.5, W - 4.5, H1)
 for x, n in zip(COL11, ["PITCH", "LENGTH", "SPACING", "GAUGE", "STIFF", "SUPPORTS", "END A", "END B", "GROUND", "BRIGHT", "AGE"]):
@@ -99,7 +99,7 @@ ends(COL11[5], Y1 + 7.6, "OPEN", "TIES", r=3.2)
 ends(COL11[10], Y1 + 7.6, "NEW", "OLD")
 
 # row 2: LIVE, PLACE, PUSHED
-H2 = 50.4
+H2 = 51.0
 heading("PLACE", mid(ROW2_X[0], ROW2_X[1]) + 1.0, mid(ROW2_X[4], ROW2_X[5]) - 1.5, H2)
 heading("PUSHED", mid(ROW2_X[4], ROW2_X[5]) + 1.5, W - 4.5, H2)
 add(text("LIVE", ROW2_X[0], Y2 + BIG_R + 4.2, CONTROL))

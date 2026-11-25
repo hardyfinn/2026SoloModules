@@ -69,7 +69,7 @@ struct Biquad {
 };
 
 static const double OUT_SCALE = 100.0;  // LEVEL 0.7 * this * leveller: Init peaks near 5 V (test 18 checks it)
-static const double ENV_SCALE = 14.0;   // a live line at its ceiling reads about 8 V
+static const double ENV_SCALE = 56.0;   // a live line at its ceiling reads about 8 V
 
 struct Voice {
 	Engine* e = nullptr;
