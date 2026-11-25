@@ -172,7 +172,7 @@ struct Groover : Module {
 	}
 
 	void loadFileDialog() {
-		osdialog_filters* f = osdialog_filters_parse("Grooves (.agr, .mid):agr,mid,midi;All files:*");
+		osdialog_filters* f = osdialog_filters_parse("Grooves (.agr .mid):agr,mid,midi");
 		char* path = osdialog_file(OSDIALOG_OPEN, NULL, NULL, f);
 		osdialog_filters_free(f);
 		if (!path) return;
