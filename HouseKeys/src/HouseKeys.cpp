@@ -64,7 +64,7 @@ struct HouseKeys : Module {
 		configButton(NEXT_PARAM, "Next sound");
 		const char* en[NUM_ENGINES] = {"FM (sounds 1 to 30)", "POLY (31 to 54)", "PD (55 to 66)", "WAVE (67 to 88)", "SAMPLER (89 to 100)"};
 		for (int i = 0; i < NUM_ENGINES; i++) configButton(ENGINE_PARAM + i, en[i]);
-		configParam(OCTAVE_PARAM, -2.f, 2.f, 0.f, "Octave");
+		configParam(OCTAVE_PARAM, -3.f, 3.f, 0.f, "Octave");
 		getParamQuantity(OCTAVE_PARAM)->snapEnabled = true;
 		configParam(TONE_PARAM, -1.f, 1.f, 0.f, "Tone", "%", 0.f, 100.f);
 		configParam(ATTACK_PARAM, -1.f, 1.f, 0.f, "Attack time", "x", 8.f);
@@ -76,7 +76,7 @@ struct HouseKeys : Module {
 		configSwitch(STAB_PARAM, 0.f, 9.f, 0.f, "Stab chord", {STAB_NAMES, STAB_NAMES + 10});
 		configParam(GRIT_PARAM, 0.f, 1.f, 0.5f, "Grit (converter and age; 50% is the real machine)", "%", 0.f, 100.f);
 		configParam(TAPE_PARAM, 0.f, 1.f, 0.f, "Tape", "%", 0.f, 100.f);
-		configParam(LEVEL_PARAM, 0.f, 1.f, 0.5f, "Level", " dB", -10.f, 40.f, 18.0618f)->randomizeEnabled = false;
+		configParam(LEVEL_PARAM, 0.f, 1.f, 1.f, "Level", " dB", -10.f, 40.f)->randomizeEnabled = false;
 		configInput(VOCT_INPUT, "V/OCT (polyphonic)");
 		configInput(GATE_INPUT, "Gate (polyphonic)");
 		configInput(VEL_INPUT, "Velocity 0 to 10 V (polyphonic)");

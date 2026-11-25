@@ -33,7 +33,7 @@ Where the build differs from, or fills a gap in, `BUILD-INSTRUCTIONS.md`. Each e
 - **Output coupling:** a 5 Hz one-pole high-pass after the engines. Every modelled machine is AC coupled at its output, and without it pulse-wave sounds failed the DC test (−35 to −48 dBFS).
 - **Chorus output** is `(dry + line)·0.7` on each side. For a stereo engine each side runs through its own line with the shared LFO.
 - **Tape** has a fixed 1 ms transport delay so wow can swing both ways; it is only in the path while TAPE is above 0, with a 10 ms crossfade in and out.
-- **LEVEL** gain is `2·(LEVEL/0.5)²`: ×2 (+6 dB) at the default, so one note at velocity 100 peaks near 5 V.
+- **LEVEL** gain is `LEVEL²` (2.2.0): ×1 (0 dB) at the default, which is the top of the knob, so it can cut but never boost; one note at velocity 100 peaks near 2.5 V. (Before 2.2.0 it was `2·(LEVEL/0.5)²`, +6 dB at the default and up to +12 dB. Hardy asked for 0 dB as default and maximum, and OCTAVE widened from ±2 to ±3.)
 - A user voice from a loaded bank uses the average of the 30 FM trims.
 - The user voice is stored in the patch (the 128 bytes, its name and chip), so it comes back when the patch loads.
 
