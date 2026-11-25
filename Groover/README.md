@@ -1,7 +1,7 @@
 # Groover
 
 Ableton grooves for VCV Rack drums. Groover loads Live groove files (`.agr`,
-plain or gzipped) or MIDI files (`.mid`), or uses one of its 14 built-in
+plain or gzipped) or MIDI files (`.mid`), or uses one of its 16 built-in
 grooves, and moves your drum hits onto the groove, the way Live's Groove Pool
 does for clips.
 

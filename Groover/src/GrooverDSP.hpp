@@ -83,6 +83,17 @@ inline void addSwingBar(Groove& g, double bar, double sw, float vOn, float vOff)
 inline std::vector<Groove> builtinGrooves() {
 	std::vector<Groove> v;
 	auto push = [&](Groove g) { g.build(); v.push_back(g); };
+	// Slots 1 and 2 (Haer's defaults): 75% swing, so each off-16th sits halfway
+	// to the next 16th (a dotted-16th lilt). Accents on 16ths 1,3,5,7… or on 1,5,9,13.
+	for (int a = 0; a < 2; a++) {
+		Groove g; g.name = a == 0 ? "Swing 75% accents 1-3-5-7" : "Swing 75% accents 1-5-9-13";
+		for (int k = 0; k < 16; k++) {
+			bool acc = a == 0 ? (k % 2 == 0) : (k % 4 == 0);
+			double t = (k / 2) * 0.5 + ((k & 1) ? 0.5 * 0.75 : 0.0);
+			g.notes.push_back({t, acc ? 127.f : 70.f});
+		}
+		push(g);
+	}
 	{
 		Groove g; g.name = "Straight";
 		for (int k = 0; k < 16; k++) g.notes.push_back({k * 0.25, 100.f});

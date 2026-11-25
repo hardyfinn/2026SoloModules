@@ -16,7 +16,7 @@
     {
       "slug": "Groover",
       "name": "Groover",
-      "description": "Ableton grooves for VCV: load Live .agr groove files or MIDI files (or use 14 built-ins) and push or pull your drum clock and triggers onto the groove, with Live-style Amount, Timing, Velocity, Random and Quantize, an accent CV and 8 trigger lanes",
+      "description": "Ableton grooves for VCV: load Live .agr groove files or MIDI files (or use 16 built-ins) and push or pull your drum clock and triggers onto the groove, with Live-style Amount, Timing, Velocity, Random and Quantize, an accent CV and 8 trigger lanes",
       "tags": ["Clock modifier", "Delay", "Sequencer", "Utility"]
     }
   ]
