@@ -1,0 +1,11 @@
+#pragma once
+#include <rack.hpp>
+
+using namespace rack;
+
+extern Plugin* pluginInstance;
+
+extern Model* modelComper;
+extern Model* modelWalker;
+extern Model* modelRider;
+extern Model* modelSoloist;

@@ -1,0 +1,16 @@
+build/
+dist/
+plugin.dylib
+plugin.so
+plugin.dll
+test/render
+test/out/
+tools/proto/ref_midi/
+__pycache__/
+test/render_walker
+test/render_upright
+test/render_rider
+test/render_rider_kit
+test/render_human
+test/render_horn
+test/render_soloist

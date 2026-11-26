@@ -1,0 +1,61 @@
+{
+  "slug": "ComperFable",
+  "name": "Comper Fable",
+  "version": "2.5.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Comper",
+      "name": "Comper",
+      "description": "Jazz piano comping player: rootless, shell, quartal and spread voicings with real voice leading, swung two-bar rhythm figures that push into the next chord, a LOOSE knob for human hands, and a LISTEN input that leaves room for a soloist. Notes out; bring your own piano",
+      "tags": [
+        "Sequencer",
+        "Polyphonic",
+        "Random",
+        "Clock modulator"
+      ]
+    },
+    {
+      "slug": "Walker",
+      "name": "Walker",
+      "description": "Bass player for Comper: walking, two-feel, ballad, bossa, soul and house lines that lean into each chord, played on a modelled upright bass with a real pluck, a ringing body and human hands. Follows Comper with no cables. Audio and notes out",
+      "tags": [
+        "Sequencer",
+        "Synth voice",
+        "Physical modeling",
+        "Random"
+      ]
+    },
+    {
+      "slug": "Rider",
+      "name": "Rider",
+      "description": "Drummer for Comper and Walker: an improvising jazz drummer that keeps time on the ride, comps on snare and bass drum, catches the pianist's pushes, sets up the ends of phrases and plays a modelled jazz kit with sticks or brushes. Follows the band with no cables. Stereo audio and triggers out",
+      "tags": [
+        "Drum",
+        "Sequencer",
+        "Physical modeling",
+        "Random"
+      ]
+    },
+    {
+      "slug": "Soloist",
+      "name": "Soloist",
+      "description": "Horn player for Comper, Walker and Rider: writes its own head from the chart, solos in phrases that build and breathe, trades twos, fours and eights with the drums and piano, goes properly free at full OUTSIDE, and plays a modelled tenor sax, trumpet or trombone. Two Soloists harmonise or take turns. Follows the band with no cables. Stereo audio and notes out",
+      "tags": [
+        "Sequencer",
+        "Synth voice",
+        "Physical modeling",
+        "Random"
+      ]
+    }
+  ]
+}
