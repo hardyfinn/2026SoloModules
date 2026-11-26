@@ -26,8 +26,11 @@ test/render_rider_kit: test/render_rider_kit.cpp test/rider_kit_cases.h $(RIDER_
 	$(CXX) -O3 -funsafe-math-optimizations -std=c++17 test/render_rider_kit.cpp -o test/render_rider_kit
 test/render_human: test/render_human.cpp src/dsp/Engine.hpp src/dsp/Host.hpp src/Progressions.hpp
 	$(CXX) -O2 -std=c++17 test/render_human.cpp -o test/render_human
+SOLO_DSP = src/dsp/SoloEngine.hpp src/dsp/SoloHost.hpp src/dsp/Horn.hpp src/dsp/Link.hpp src/dsp/Engine.hpp src/Progressions.hpp
+test/render_soloist: test/render_soloist.cpp $(SOLO_DSP)
+	$(CXX) -O2 -std=c++17 test/render_soloist.cpp -o test/render_soloist
 .PHONY: test
-test: test/render test/render_human test/render_walker test/render_upright test/render_rider test/render_rider_kit
+test: test/render test/render_human test/render_walker test/render_upright test/render_rider test/render_rider_kit test/render_soloist
 	mkdir -p test/out test/out/upright
 	./test/render test/out
 	./test/render_human
@@ -37,3 +40,4 @@ test: test/render test/render_human test/render_walker test/render_upright test/
 	mkdir -p test/out/rider
 	./test/render_rider test/out
 	./test/render_rider_kit test/out/rider
+	./test/render_soloist

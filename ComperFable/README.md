@@ -1,6 +1,6 @@
 # Comper Fable
 
-Three modules: **Comper**, a jazz piano comping player, **Walker**, its upright bass player, and **Rider**, its drummer.
+Four modules: **Comper**, a jazz piano comping player, **Walker**, its upright bass player, **Rider**, its drummer, and **Soloist**, the horn player who makes it a quartet.
 
 A jazz piano comping player for VCV Rack 2. It plays chords the way a pianist accompanies: rootless,
 shell, quartal and spread voicings that move by the smallest steps from chord to chord, swung two-bar
@@ -16,6 +16,34 @@ repository, is the intended partner) or any polyphonic voice.
 - Manual: [docs/Comper-Manual.pdf](docs/Comper-Manual.pdf). Design: [docs/BUILD-INSTRUCTIONS.md](docs/BUILD-INSTRUCTIONS.md)
 
 Designed by Fable (the reference engine `tools/proto/comper_ref.py` defines what it plays), built by Opus.
+
+## What's new in 2.5.0: Soloist
+
+**Soloist** (30 HP) is the fourth player: a horn soloist that sits in the row with Comper, Walker and Rider (any order, no cables)
+and plays a whole tune with them.
+
+- **Its own melody:** it writes a head from the loaded chart (long guide tones, a two-bar rhythm motif, a closing rhythm, the last note
+  on the tonic), solos in phrases that breathe, and plays the head out. Same seed, same take.
+- **FORM:** *Tune* plays head, CHORUSES solo choruses, trading, head out, then the band ends together on the last chord. *Solo*
+  blows forever with a rising and falling arc. *Cue* plays while the PLAY gate is high.
+- **TRADE** twos, fours or eights **WITH** the drums, the piano, or both in turn. On the drums' turn Comper and Walker lay out and Rider
+  takes a short solo that opens by quoting the horn's last phrase. On the piano's turn Comper plays busier, higher and louder. A
+  trigger at the TRADE input starts trading at the next bar line.
+- **LINE:** DENSITY, SPACE (rests between phrases), MOTIF (develop an idea: repeat, invert, sequence), **OUTSIDE** (altered tensions,
+  side-slips and tritone subs; past half, open intervals and a loose grid; at the top it goes properly free), ENERGY (how far the solo
+  builds over its arc), LOOSE, LENGTH. The genre of the progression (jazz, blues, gospel, soul, funk, house, disco, reggae) colours
+  the scales, rhythms and articulation.
+- **HORN:** modelled tenor sax, trumpet and trombone (reed or lips driving a real bore, with tonguing, slurs, scoops, falls, growl,
+  breath and vibrato), or Off for notes only. REGISTER, OCTAVE (V/OCT out only), ROOM, LEVEL.
+- **Two Soloists:** the one further left leads. SECTION *Horns*: the second harmonises the head a third or sixth below. *Turns*: they
+  take solo choruses in turn and trade with each other and the drums.
+- **The band listens:** Comper hears the horn with no SOLO cable (LISTEN at least 60%), comps further out when the horn goes out,
+  and lays out on the drums' turn and after the end. Walker lays out on the drums' turn and keeps it simpler under a hot solo.
+  Rider follows the horn's energy, catches the ends of its phrases and sets up each hand-over. Without a Soloist in the row nothing
+  changes: the golden tests of all three still pass note for note.
+- Outs: L, R, V/OCT (with scoops and vibrato), GATE, VEL, BREATH, PHRASE and FORM triggers. Without Comper: CLOCK, RESET and a poly CHORD input.
+- Demos: `tools/render_quartet.cpp` renders ten full tunes with Joanna on piano. Checks: `make test` runs `test/render_soloist`
+  (all 44 progressions x 3 horns: chord tones on strong beats, range, trading on bar lines, two Soloists, free playing).
 
 ## What's new in 2.4.0 and 2.4.1 (Walker; 2.4.1 adds Comper 2.3.1)
 

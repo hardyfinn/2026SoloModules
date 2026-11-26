@@ -1,7 +1,7 @@
 {
   "slug": "ComperFable",
   "name": "Comper Fable",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "license": "MIT",
   "brand": "Haer",
   "author": "Haer",
@@ -42,6 +42,17 @@
       "tags": [
         "Drum",
         "Sequencer",
+        "Physical modeling",
+        "Random"
+      ]
+    },
+    {
+      "slug": "Soloist",
+      "name": "Soloist",
+      "description": "Horn player for Comper, Walker and Rider: writes its own head from the chart, solos in phrases that build and breathe, trades twos, fours and eights with the drums and piano, goes properly free at full OUTSIDE, and plays a modelled tenor sax, trumpet or trombone. Two Soloists harmonise or take turns. Follows the band with no cables. Stereo audio and notes out",
+      "tags": [
+        "Sequencer",
+        "Synth voice",
         "Physical modeling",
         "Random"
       ]

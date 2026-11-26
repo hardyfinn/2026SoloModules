@@ -7,4 +7,5 @@ void init(Plugin* p) {
 	p->addModel(modelComper);
 	p->addModel(modelWalker);
 	p->addModel(modelRider);
+	p->addModel(modelSoloist);
 }

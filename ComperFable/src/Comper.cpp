@@ -2,6 +2,7 @@
 #include "dsp/Host.hpp"
 #include "Progressions.hpp"
 #include "LinkPort.hpp"
+#include "dsp/SoloEngine.hpp"   // solo::genreOf
 #include <set>
 
 using namespace comper;
@@ -53,6 +54,7 @@ struct Comper : Module {
 	int lastEditStep = -1;
 	// 2.3.1: the screen's top bar browses the progressions; -1 = a chart of your own
 	int progIndex = 0;
+	bool pianoTurn = false;
 
 	Comper() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -265,6 +267,23 @@ struct Comper : Module {
 		p.slop = params[SLOP_PARAM].getValue();
 		p.pedal = params[PEDAL_PARAM].getValue();
 		p.listen = clamp(params[LISTEN_PARAM].getValue() + cv01(inputs[LISTEN_INPUT], 1.f), 0.f, 1.f);
+		// a Soloist in the row (2.5.0): heard with no cables, its turns and its ending followed. Nothing changes without one.
+		in.layout = false;
+		if (heard.hasSolo()) {
+			int k = (heard.sol[0].on && (heard.sol[0].sounding || !heard.sol[1].sounding)) ? 0 : 1;
+			if (!in.soloConnected) {
+				in.soloConnected = true; in.solo = soloSounding(heard) ? 10.f : 0.f;
+				if (!in.soloPitchConnected) { in.soloPitchConnected = true; in.soloPitch = (heard.sol[k].pitch - 60) / 12.f; }
+				p.listen = std::max(p.listen, 0.6);
+			}
+			p.out = clamp((float)p.out + 0.5f * soloOutside(heard), 0.f, 1.f);
+			int turn = turnAt(heard, host.phi + 0.15);
+			in.layout = turn == TURN_DRUMS || turn == TURN_END;
+			if (turn == TURN_PIANO) {   // the piano's turn to solo: busier, higher, the top voice sings
+				p.density = clamp((float)p.density + 0.4f, 0.f, 1.f); p.reg = std::min(79.0, p.reg + 5.0); p.lead = 1.0; p.listen = 0.0;
+				pianoTurn = true;
+			} else pianoTurn = false;
+		} else pianoTurn = false;
 		p.human = true;
 		p.length = clamp(params[LENGTH_PARAM].getValue(), 0.f, 1.f);
 		in.octave = clamp((int)std::round(params[OCTAVE_PARAM].getValue()), -3, 3);
@@ -279,7 +298,7 @@ struct Comper : Module {
 		for (int c = 0; c < n; c++) {
 			outputs[VOCT_OUTPUT].setVoltage(out.voct[c], c);
 			outputs[GATE_OUTPUT].setVoltage(out.gate[c], c);
-			outputs[VEL_OUTPUT].setVoltage(std::min(10.f, out.vel[c] * (1.f + 0.25f * bandX)), c);
+			outputs[VEL_OUTPUT].setVoltage(std::min(10.f, out.vel[c] * (1.f + 0.25f * bandX) * (pianoTurn ? 1.25f : 1.f)), c);
 		}
 		outputs[PEDAL_OUTPUT].setVoltage(out.pedal);
 		outputs[SCALE_OUTPUT].setChannels(std::max(1, out.scaleN));
@@ -343,6 +362,7 @@ struct Comper : Module {
 		m.external = host.source != SRC_CHART;
 		m.curRoot = host.srcChord.root; m.curQual = host.srcChord.q;
 		m.groove = in.p.groove; m.swing = in.p.swing;
+		m.genre = (progIndex >= 0 && progIndex < NUM_PROGRESSIONS) ? solo::genreOf(PROGRESSIONS[progIndex].name) : solo::GEN_JAZZ;
 		m.planBar = host.planBar; m.planSlots = host.eng.slots;
 		for (int s = 0; s < 16; s++) { m.planKind[s] = host.eng.cellmap[s]; m.planBeat[s] = host.eng.slotBeats[s]; m.planPush[s] = host.eng.pushOk[s]; }
 		port.send(this, m);

@@ -126,11 +126,57 @@ struct RiderHost {
 		bi.forceFill = pendingFill; pendingFill = 0;
 		chorusNow = wantChorus(in);
 		double bpm = 60.0 / spb;
+		// a Soloist in the row (2.5.0): its energy, its trades and the end of the tune. Nothing changes without one.
+		const double a = nextBar * 4.0;
+		int turn = TURN_FREE; bool quote = false, endBar = false, after = false;
+		if (L.sol[0].on) {
+			turn = turnAt(L, a + 0.01);
+			int prevTurn = turnAt(L, a - 3.99), nextTurn = turnAt(L, a + 4.01);
+			float se = soloEnergy(L);
+			if (turn != TURN_DRUMS && turn != TURN_PIANO) p.energy = std::max(0.0, std::min(1.0, p.energy + 0.6 * (se - 0.5)));
+			if (turn == TURN_DRUMS) {   // the drums' turn: a solo, opened by quoting the soloist's last rhythm
+				bi.hasPiano = false; bi.nbass = 0; p.energy = std::max(p.energy, 0.65);
+				quote = prevTurn != TURN_DRUMS;
+				if (!quote) bi.forceFill = nextTurn != TURN_DRUMS ? 2 : (nextBar % 2 ? 2 : 1);
+			} else if (nextTurn != turn && nextTurn != TURN_END && turn != TURN_FREE) bi.forceFill = std::max(bi.forceFill, 1);   // set up the hand-over
+			if (L.endBeat >= 0) {
+				if (a >= L.endBeat - 1e-6 && a < L.endBeat + 4.0 - 1e-6) endBar = true;
+				else if (a >= L.endBeat + 4.0 - 1e-6) after = true;
+				else if (a + 4.0 >= L.endBeat - 1e-6) bi.forceFill = 2;   // set up the last chord
+			}
+		}
 		const std::vector<Stroke>& ev = eng.planBar(nextBar, bpm, chorusNow, p, bi);
-		for (const Stroke& s : ev) {
-			QS q; q.onset = nextBar * 4.0 + s.beat; q.offs = s.offs; q.voice = s.voice; q.vel = s.vel; q.dur = s.dur;
-			q.bar = nextBar; q.beat = s.beat; q.idx = strokeIdx++;
-			queue.push_back(q);
+		auto push = [&](double beat, int voice, int vel, double offs) {
+			QS q; q.onset = a + beat; q.offs = offs; q.voice = voice; q.vel = std::max(1, std::min(127, vel)); q.dur = 0;
+			q.bar = nextBar; q.beat = beat; q.idx = strokeIdx++; queue.push_back(q);
+		};
+		if (endBar) {   // the last chord: one crash and kick, then let it ring
+			push(0.0, CRASH, (int)(88 + 30 * p.energy), 0.002); push(0.0, KICK, (int)(80 + 30 * p.energy), 0.0);
+		} else if (!after) {
+			for (const Stroke& s : ev) {
+				if (quote && s.voice != RIDE && s.voice != HATF && s.voice != BR_HATF && s.voice != BR_SWEEP) continue;   // keep time, play the quote
+				QS q; q.onset = a + s.beat; q.offs = s.offs; q.voice = s.voice; q.vel = s.vel; q.dur = s.dur;
+				q.bar = nextBar; q.beat = s.beat; q.idx = strokeIdx++;
+				queue.push_back(q);
+			}
+			if (quote) {   // the soloist's last phrase, on snare and toms
+				int k = (L.sol[1].on && L.sol[1].phraseEnd > L.sol[0].phraseEnd) ? 1 : 0;
+				const CompLink::Solo& S = L.sol[k];
+				for (int i = 0; i < std::min(16, S.rhythmN); i++) {
+					double b = S.rhythm[i]; if (b < 0 || b >= 4.0) continue;
+					int v = i == S.rhythmN - 1 ? TOM_LO : (i % 3 == 2 ? TOM_HI : SNARE);
+					push(b, v, (int)(78 + 34 * p.energy + (i == 0 ? 8 : 0)), 0.0);
+					if (i == 0) push(b, KICK, (int)(70 + 30 * p.energy), 0.0);
+				}
+			}
+			// catch the end of the soloist's phrase
+			if (turn == TURN_FREE || turn == TURN_SOLO0 || turn == TURN_SOLO1) for (int k = 0; k < 2; k++) {
+				const CompLink::Solo& S = L.sol[k];
+				if (!S.on || S.phraseEnd < a || S.phraseEnd >= a + 4.0) continue;
+				double b = S.phraseEnd - a;
+				push(b, SNARE, (int)(62 + 40 * p.energy), 0.0);
+				if (b < 0.02 || std::fabs(b - 2.0) < 0.02) push(b, KICK, (int)(64 + 36 * p.energy), 0.0);
+			}
 		}
 		// what to show
 		const Stats& st = eng.stats;

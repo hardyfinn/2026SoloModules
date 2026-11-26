@@ -141,16 +141,23 @@ struct Walker : Module {
 		in.chordChannels = inputs[CHORD_INPUT].getChannels();
 		for (int c = 0; c < in.chordChannels; c++) in.chordV[c] = inputs[CHORD_INPUT].getVoltage(c);
 		in.layout = inputs[LAYOUT_INPUT].getVoltage();
+		// a Soloist in the row (2.5.0): the bass lays out while the drums take their turn and after the tune ends
+		float soloE = 0.f, soloOut = 0.f;
+		if (heard.hasSolo()) {
+			int turn = turnAt(heard, host.phi + 0.15);
+			if (turn == TURN_DRUMS || turn == TURN_END) in.layout = 10.f;
+			soloE = soloEnergy(heard); soloOut = soloOutside(heard);
+		}
 		in.gateInConnected = inputs[GATE_IN_INPUT].isConnected(); in.gateIn = inputs[GATE_IN_INPUT].getVoltage();
 		in.voctIn = inputs[VOCT_IN_INPUT].getVoltage();
 		in.velInConnected = inputs[VEL_IN_INPUT].isConnected(); in.velIn = inputs[VEL_IN_INPUT].getVoltage();
 
 		in.feelPos = clamp((int)std::round(params[FEEL_PARAM].getValue()), 0, 6);
 		BP& p = in.bp;
-		p.activity = clamp(params[ACTIVITY_PARAM].getValue() + (inputs[ACTIVITY_INPUT].isConnected() ? 0.1f * inputs[ACTIVITY_INPUT].getVoltage() : 0.f) + 0.35f * bandX, 0.f, 1.f);
+		p.activity = clamp(params[ACTIVITY_PARAM].getValue() + (inputs[ACTIVITY_INPUT].isConnected() ? 0.1f * inputs[ACTIVITY_INPUT].getVoltage() : 0.f) + 0.35f * bandX - 0.5f * std::max(0.f, soloE - 0.7f), 0.f, 1.f);   // under a hot solo the bass keeps it simple
 		p.reg = clamp(params[REGISTER_PARAM].getValue() + (inputs[REGISTER_INPUT].isConnected() ? 1.2f * inputs[REGISTER_INPUT].getVoltage() : 0.f), 34.f, 46.f);
 		p.roam = params[ROAM_PARAM].getValue();
-		p.out = params[OUT_PARAM].getValue();
+		p.out = clamp(params[OUT_PARAM].getValue() + 0.4f * soloOut, 0.f, 1.f);
 		p.repeat = params[REPEAT_PARAM].getValue();
 		p.loose = clamp(params[LOOSE_PARAM].getValue() + (inputs[LOOSE_INPUT].isConnected() ? 0.25f * inputs[LOOSE_INPUT].getVoltage() : 0.f), 0.f, 2.5f);
 		p.ahead = params[AHEAD_PARAM].getValue();

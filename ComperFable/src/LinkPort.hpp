@@ -1,5 +1,5 @@
 // The band's link on the Rack side: four expander buffers, reading both neighbours, passing the message along.
-// Comper, Walker and Rider all use it, so the three can sit in a row in any order.
+// Comper, Walker, Rider and Soloist all use it, so they can sit in a row in any order.
 #pragma once
 #include "plugin.hpp"
 #include "dsp/Link.hpp"
@@ -12,7 +12,7 @@ struct LinkPort {
 	CompLink got[2];
 	uint32_t stamp = 0;
 
-	static bool isBand(Model* m) { return m == modelComper || m == modelWalker || m == modelRider; }
+	static bool isBand(Model* m) { return m == modelComper || m == modelWalker || m == modelRider || m == modelSoloist; }
 
 	void attach(Module* m) {
 		m->leftExpander.producerMessage = &buf[0]; m->leftExpander.consumerMessage = &buf[1];

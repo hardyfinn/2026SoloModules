@@ -37,6 +37,7 @@ struct HostIn {
 	Params p; int seed = 1;
 	int outChannels = 12; bool bassEveryBar = false; bool resetReplays = true;
 	int octave = 0;            // 2.3.0: shifts the chord outputs (not the bass outputs), -3..+3
+	bool layout = false;       // 2.5.0: the piano lays out (a Soloist trading with the drums, or the tune has ended)
 };
 
 struct HostOut {
@@ -136,6 +137,7 @@ struct Host {
 	}
 
 	// ---------------------------------------------------------------- transport
+	bool layingOut = false;
 	void allOff() {
 		for (int c = 0; c < MAX_CH; c++) {
 			if (ch[c].gate || ch[c].riseAt >= 0) { ch[c].gate = false; ch[c].lowSince = t; }
@@ -400,6 +402,11 @@ struct Host {
 		if (rstEdge) doReset(in, startBeatOnReset);
 		if (!runNow && running) { allOff(); }
 		running = runNow;
+		if (in.layout != layingOut) {   // stop clean; come back on the next planned hit, never in the middle of a held chord
+			if (in.layout) allOff();
+			else for (int c = 0; c < MAX_CH; c++) if (ch[c].gate) { ch[c].gate = false; ch[c].lowSince = t; ch[c].owner = 0; }
+			layingOut = in.layout;
+		}
 
 		// clock
 		bool clk = in.clock > (clkHigh ? 0.1f : 1.0f);
@@ -527,7 +534,7 @@ struct Host {
 		int nch = std::max(1, std::min(MAX_CH, in.outChannels));
 		out.channels = nch;
 		for (int c = 0; c < MAX_CH; c++) {
-			out.voct[c] = ch[c].voct + (float)in.octave; out.vel[c] = ch[c].velV; out.gate[c] = (ch[c].gate && running) ? 10.f : 0.f;
+			out.voct[c] = ch[c].voct + (float)in.octave; out.vel[c] = ch[c].velV; out.gate[c] = (ch[c].gate && running && !layingOut) ? 10.f : 0.f;
 		}
 		out.pedal = (float)(pedalOut * 10.0);
 		if (haveSrc) {

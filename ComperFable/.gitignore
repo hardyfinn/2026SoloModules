@@ -13,3 +13,4 @@ test/render_rider
 test/render_rider_kit
 test/render_human
 test/render_horn
+test/render_soloist
