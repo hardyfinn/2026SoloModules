@@ -20,8 +20,8 @@ INK = "#F0E7D8"
 SOFT = "#B7AC9C"
 ACCENT = "#D9A441"   # tape-box amber
 
-CONTROL = 3.0
-JACK = 2.7
+CONTROL = 3.2   # house standard: control labels 3.2 mm
+JACK = 2.9      # jack labels 2.9 mm
 SMALL = 2.1
 HEAD = 2.4
 
@@ -40,12 +40,14 @@ comp("TRIM", "knob", 20.5, R1, "TRIM")
 comp("LOW", "knob", 12.0, R2, "LOW"); comp("LOW_FREQ", "knob", 29.0, R2, "LO FREQ")
 comp("HIGH", "knob", 12.0, R3, "HIGH"); comp("HIGH_FREQ", "knob", 29.0, R3, "HI FREQ")
 comp("DESK_ON", "bezel", 20.5, R4, "ON")
-# MULTITRACK  (40 .. 112)
-comp("MULTI_DISP", "display", 81.0, R4)
-comp("MULTI_MACHINE", "snap", 50.0, R1, "MACHINE"); comp("TAPE", "snap", 67.0, R1, "TAPE"); comp("BOUNCE", "snap", 84.0, R1, "BOUNCE")
-comp("REC", "big", 50.0, R2, "REC"); comp("BIAS", "knob", 67.0, R2, "BIAS"); comp("CAL", "knob", 84.0, R2, "NR CAL")
-comp("NR_TYPE", "snap", 50.0, R3, "NR TYPE"); comp("NR_ENC", "bezel", 67.0, R3, "NR ENC"); comp("NR_DEC", "bezel", 84.0, R3, "NR DEC")
-comp("MULTI_ON", "bezel", 50.0, R4, "ON")
+# MULTITRACK  (40 .. 112): three rows a little further apart than the rest of the panel
+# (deck, record, noise reduction), display and ON along the bottom, VU beside the deck row.
+MA, MB, MC = 33.0, 53.5, 74.0
+comp("MULTI_MACHINE", "snap", 50.0, MA, "MACHINE"); comp("TAPE", "snap", 67.0, MA, "TAPE"); comp("BOUNCE", "snap", 84.0, MA, "BOUNCE")
+comp("REC", "big", 50.0, MB, "REC"); comp("BIAS", "knob", 67.0, MB, "BIAS"); comp("CAL", "knob", 84.0, MB, "NR CAL")
+comp("NR_TYPE", "snap", 50.0, MC, "NR TYPE"); comp("NR_ENC", "bezel", 67.0, MC, "NR ENC"); comp("NR_DEC", "bezel", 84.0, MC, "NR DEC")
+comp("MULTI_DISP", "display", 60.5, R4)
+comp("MULTI_ON", "bezel", 84.0, R4, "ON")
 VU_M = 102.5
 for i, n in enumerate(["PK", "+3", "0", "-5", "-10"]):
     comp("MVU%d" % i, "light", VU_M, 31.0 + i * 4.6, None)
@@ -58,16 +60,20 @@ comp("THRESH", "knob", 158.0, R1, "THRESH"); comp("RATIO", "knob", 158.0, R2, "R
 comp("GR", "light", 158.0, R3 - 1.0, None)
 comp("BUS_ON", "bezel", 158.0, R4, "ON")
 # MASTER  (170 .. 212)
-comp("MASTER_DISP", "display", 190.0, R3)
 comp("MASTER_MACHINE", "snap", 179.0, R1, "MACHINE"); comp("MASTER_TAPE", "snap", 195.5, R1, "TAPE")
-comp("MASTER_REC", "knob", 179.0, R2, "REC"); comp("MASTER_NR", "bezel", 195.5, R2, "NR B")
+comp("MASTER_REC", "knob", 179.0, 58.0, "REC"); comp("MASTER_NR", "bezel", 195.5, 58.0, "NR B")
 comp("MASTER_ON", "bezel", 179.0, R4, "ON")
-VU_S = 206.0
+VU_S, VU_S_Y = 205.0, 68.0   # master meter sits where the old name display was
 for i, n in enumerate(["PK", "+3", "0", "-5", "-10"]):
-    comp("SVU%d" % i, "light", VU_S, 31.0 + i * 4.6, None)
+    comp("SVU%d" % i, "light", VU_S, VU_S_Y + i * 4.6, None)
 # GLOBAL  (214 .. 252)
 comp("STRENGTH", "big", 233.0, R1, "STRENGTH"); comp("AGE", "big", 233.0, R2, "AGE")
 comp("MIX", "knob", 224.0, R3, "MIX"); comp("OUTPUT", "knob", 242.0, R3, "OUTPUT")
+comp("BYPASS", "bezel", 233.0, R4, "BYPASS")
+# PRESET selector in the header: < [name screen] >
+PRE_Y = 7.6
+comp("PRESET_PREV", "button", 93.0, PRE_Y); comp("PRESET_NEXT", "button", 167.0, PRE_Y)
+comp("PRESET_DISP", "display", 130.0, PRE_Y)
 # jacks: inputs
 for name, x, lab in [("IN_L", 10.0, "IN L"), ("IN_R", 21.0, "IN R"), ("TRACKS", 32.0, "TRACKS"), ("REC_CV", 50.0, "REC"),
                      ("WOW_CV", 122.0, "WOW"), ("AZIMUTH_CV", 138.5, "AZIM"), ("MASTER_IN_L", 172.0, "MST L"), ("MASTER_IN_R", 184.0, "MST R"),
@@ -75,9 +81,10 @@ for name, x, lab in [("IN_L", 10.0, "IN L"), ("IN_R", 21.0, "IN R"), ("TRACKS", 
     comp(name, "jack", x, J1, lab)
 for name, x, lab in [("TRACKS_OUT", 67.0, "TRACKS"), ("MIX_L", 84.0, "MIX L"), ("MIX_R", 101.0, "MIX R"), ("OUT_L", 224.0, "OUT L"), ("OUT_R", 242.0, "OUT R")]:
     comp(name, "out", x, J2, lab)
-DISP_W = {"MULTI_DISP": 38.0, "MASTER_DISP": 34.0}
+DISP_W = {"MULTI_DISP": 35.0, "PRESET_DISP": 66.0}
+BTN_W, BTN_H = 6.0, 6.0
 DISP_H = 6.0
-RADIUS = {"knob": 4.9, "big": 6.2, "snap": 4.9, "bezel": 3.7, "jack": 4.0, "out": 4.0, "light": 1.1}
+RADIUS = {"button": 3.0, "knob": 4.9, "big": 6.2, "snap": 4.9, "bezel": 3.7, "jack": 4.0, "out": 4.0, "light": 1.1}
 
 fonts = {}
 boxes = []
@@ -127,14 +134,35 @@ heading("CHARACTER", 214.5, W - 3.5)
 for x in (39.2, 112.8, 147.2, 168.8, 213.2):
     add(f'<line x1="{x}" y1="{HEAD_Y + 3}" x2="{x}" y2="{R4 + 6}" stroke="{LINE}" stroke-width="0.3"/>')
 
+# position labels round snap knobs: name -> (labels, radius)
+AROUND = {"TAPE": (["I", "II", "IV"], 7.4), "BOUNCE": (["1", "2", "3", "4"], 7.4), "NR_TYPE": (["OFF", "B", "C", "2:1"], 8.0),
+          "MASTER_TAPE": (["I", "II", "IV"], 7.4), "MASTER_MACHINE": (["DECK", "BOOM", "1/4", "DAT"], 8.4)}
+# Control names sit 1.7 mm above the knob (or above its top position labels), so each name is clearly
+# closer to its own control than to the one above it. A row shares one baseline (the highest needed).
+TOP = {"knob": 5.1, "snap": 5.1, "big": 6.4, "bezel": 3.9}
+def name_base(name):
+    kind, x, y, _ = C[name]
+    top = y - TOP[kind]
+    if name in AROUND:
+        labs, r = AROUND[name]
+        n = len(labs)
+        for i in range(n):
+            a = math.radians(-150.0 + 300.0 * i / (n - 1))
+            if math.cos(a) > 0.3: top = min(top, y - r * math.cos(a) + SMALL * 0.36 - SMALL * 0.75)
+    return top - 1.7
+rows = {}
 for name, (kind, x, y, label) in C.items():
     if label and kind in ("knob", "big", "snap", "bezel"):
-        dy = {"big": 9.0, "bezel": 6.4}.get(kind, 7.6)
-        if name in ("TAPE", "MASTER_TAPE"): dy = 11.0
-        add(text(label, x, y - dy, CONTROL))
+        sec = sum(1 for d in (39.2, 112.8, 147.2, 168.8, 213.2) if x > d)
+        rows.setdefault((sec, y), []).append(name)
+for key, names in rows.items():
+    base = min(name_base(n) for n in names)
+    for n in names:
+        _, x, y, label = C[n]
+        add(text(label, x, base, CONTROL))
 
 # displays: dark windows
-for n in ("MULTI_DISP", "MASTER_DISP"):
+for n in ("MULTI_DISP", "PRESET_DISP"):
     _, x, y, _ = C[n]; w = DISP_W[n]
     add(f'<rect x="{x - w / 2:.2f}" y="{y - DISP_H / 2:.2f}" width="{w}" height="{DISP_H}" rx="0.8" fill="{BG_DARK}" stroke="{LINE}" stroke-width="0.3"/>')
 
@@ -147,10 +175,9 @@ def around(name, labels, r=7.4, size=SMALL, a0=-150.0, a1=150.0):
         tx, ty = x + r * math.sin(a), y - r * math.cos(a) + size * 0.36
         add(text(lab, tx, ty, size, FONT_BOLD, SOFT, anchor="middle", spacing=0.02))
 
-around("TAPE", ["I", "II", "IV"])
-around("BOUNCE", ["1", "2", "3", "4"])
-around("NR_TYPE", ["OFF", "B", "C", "2:1"], r=8.0)
-around("MASTER_TAPE", ["I", "II", "IV"])
+for n, (labs, r) in AROUND.items():
+    around(n, labs, r=r, size=1.9 if n == "MASTER_MACHINE" else SMALL)
+add(text("PRESET", C["PRESET_PREV"][1] - BTN_W / 2 - 1.6, PRE_Y + 0.8, SMALL, FONT_BOLD, SOFT, anchor="end"))
 # range labels under some knobs
 def ends(name, lo, hi, dx=4.4, dy=6.6):
     _, x, y, _ = C[name]
@@ -162,10 +189,10 @@ ends("BIAS", "UNDER", "OVER", 2.6, 7.4)
 ends("MIX", "DRY", "WET")
 
 # VU captions
-for xm, cap in ((VU_M, "VU"), (VU_S, "VU")):
-    add(text(cap, xm, 27.2, SMALL, FONT_BOLD, SOFT))
+for xm, y0 in ((VU_M, 31.0), (VU_S, VU_S_Y)):
+    add(text("REC VU", xm, y0 - 3.8, SMALL, FONT_BOLD, SOFT))
     for i, n in enumerate(["PK", "+3", "0", "-5", "-10"]):
-        add(text(n, xm - 2.2, 31.0 + i * 4.6 + 0.75, 1.9, FONT_BOLD, SOFT, anchor="end", spacing=0.02))
+        add(text(n, xm - 2.2, y0 + i * 4.6 + 0.75, 1.9, FONT_BOLD, SOFT, anchor="end", spacing=0.02))
 add(text("GR", C["GR"][1], C["GR"][2] - 2.4, SMALL, FONT_BOLD, SOFT))
 
 # jack rows
@@ -190,6 +217,8 @@ add(text("tracks leave the mix", 30.0, J2 + 2.4, 1.9, FONT_MED, SOFT))
 def comp_boxes():
     b = []
     for name, (kind, x, y, label) in C.items():
+        if kind == "button":
+            b.append((name, x - BTN_W / 2, y - BTN_H / 2, x + BTN_W / 2, y + BTN_H / 2)); continue
         if kind == "display":
             w = DISP_W[name]; b.append((name, x - w / 2, y - DISP_H / 2, x + w / 2, y + DISP_H / 2)); continue
         r = RADIUS[kind]
