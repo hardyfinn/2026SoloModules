@@ -26,6 +26,7 @@ struct WIn {
 	BP bp; int seed = 1; upright::Tone tone; double level = 1.0;
 	int tuneBars = 0;              // 0: from RESET
 	bool voctSlides = true;
+	int octave = 0;                // 2.4.0: 0..2 octaves up, for the audio and the V/OCT out
 };
 struct WOut { float audio = 0.f, voct = 0.f, gate = 0.f, vel = 0.f; };
 
@@ -178,12 +179,13 @@ struct WalkerHost {
 			const Note& n = qn[i];
 			int idx = noteIdx++;
 			if (lay) continue;
-			upright::NoteSpec ns; ns.pitch = n.pitch; ns.vel = n.vel; ns.string = n.string; ns.fret = n.fret; ns.dead = n.dead;
+			int op = n.pitch + 12 * std::max(0, std::min(2, in.octave));   // string and fret stay those of the written note
+			upright::NoteSpec ns; ns.pitch = op; ns.vel = n.vel; ns.string = n.string; ns.fret = n.fret; ns.dead = n.dead;
 			ns.scoop = n.scoop; ns.cents = n.cents; ns.vib = n.vib;
 			bass.noteOn(ns, (int64_t)seedNow * 7919 + 31 * idx + 5, qm[i].id, at);
 			bass.release(qm[i].id, n.dur, n.stopped);
 			for (auto& f : fired) if (f.off > at - (long long)(0.001 * sr)) f.off = std::max(f.on, at - (long long)(0.001 * sr));
-			fired.push_back(Fired{at, at + (long long)std::llround(n.dur * sr), n.pitch, n.vel, n.cents, n.scoop, n.vib, qm[i].id});
+			fired.push_back(Fired{at, at + (long long)std::llround(n.dur * sr), op, n.vel, n.cents, n.scoop, n.vib, qm[i].id});
 			if (fired.size() > 16) fired.pop_front();
 			if (logOn) log.push_back(FireLog{qm[i].id, at, n.pitch, n.vel, n.dur, n.stopped, n.dead});
 		}
@@ -332,10 +334,11 @@ struct WalkerHost {
 			int s, f; noteString(pitch, hand, s, f);
 			if (f > 0 && std::abs(f - hand) > 3) hand = f;
 			if (playId >= 0) { bass.releaseNow(playId, s == playString); endFired(playId); }
-			upright::NoteSpec ns; ns.pitch = pitch; ns.vel = in.velInConnected ? std::max(0.05f, std::min(1.f, in.velIn / 10.f)) : 0.75; ns.string = s; ns.fret = f; ns.cents = cents;
+			int op = pitch + 12 * std::max(0, std::min(2, in.octave));
+			upright::NoteSpec ns; ns.pitch = op; ns.vel = in.velInConnected ? std::max(0.05f, std::min(1.f, in.velIn / 10.f)) : 0.75; ns.string = s; ns.fret = f; ns.cents = cents;
 			playId = nextId++; playString = s;
 			bass.noteOn(ns, (int64_t)seedNow * 7919 + 31 * (noteIdx++) + 5, playId, bass.sampleNow);
-			fired.push_back(Fired{bass.sampleNow, (long long)1 << 60, pitch, ns.vel, cents, 0, 0, playId});
+			fired.push_back(Fired{bass.sampleNow, (long long)1 << 60, op, ns.vel, cents, 0, 0, playId});
 			if (fired.size() > 16) fired.pop_front();
 		}
 		if (!g && gateInHigh && playId >= 0) { bass.releaseNow(playId, false); endFired(playId); playId = -1; }

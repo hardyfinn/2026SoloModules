@@ -17,6 +17,16 @@ repository, is the intended partner) or any polyphonic voice.
 
 Designed by Fable (the reference engine `tools/proto/comper_ref.py` defines what it plays), built by Opus.
 
+## What's new in 2.4.0 and 2.4.1 (Walker; 2.4.1 adds Comper 2.3.1)
+
+- **Panel:** Walker is 36 HP (was 28) with full-size labels (3.2 mm controls, 2.9 mm jacks).
+- **OCTAVE:** moves the bass up 0, +1 or +2 octaves, on the audio and the V/OCT output. The line itself does not change.
+- **LENGTH:** every note shorter (0.3x) or longer (up to 3x, legato). The default (1.4x) is longer than 2.3.0's. A lengthened
+  note still ends when the next one speaks, so the bass stays one voice.
+- **VARY:** a mix of short and long notes. Up, more notes are held long (mostly on the beat) and clipped short (mostly off it).
+  0 keeps every note at the same length. Turning LENGTH or VARY never changes which notes are played or when.
+- Old patches load with the new knobs at their defaults.
+
 ## What's new in 2.3.0 and 2.3.1
 
 - **Panel:** 38 HP with full-size labels (3.2 mm controls, 2.9 mm jacks). The 32 step knobs are gone: the chart is a strip of 16 steps

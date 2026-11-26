@@ -7,10 +7,10 @@
 using namespace walker;
 
 // ---- LAYOUT (same numbers in res/make_walker_panel.py) ----
-static const float DISP_X = 4.0f, DISP_Y = 12.5f, DISP_W = 134.24f, DISP_H = 13.0f;
-static const float COL_X0 = 9.0f, COL_DX = 15.53f;
-static const float SND_X0 = 9.0f, SND_DX = 13.80f;
-static const float Y_PLAYER = 40.0f, Y_HANDS = 62.0f, Y_SOUND = 83.0f, Y_IN1 = 101.0f, Y_IN2 = 114.5f;
+static const float DISP_X = 4.0f, DISP_Y = 12.5f, DISP_W = 174.88f, DISP_H = 13.0f;   // 36 HP since 2.4.0
+static const float COL_X0 = 11.0f, COL_DX = 20.11f;
+static const float SND_X0 = 11.0f, SND_DX = 17.875f;
+static const float Y_PLAYER = 42.0f, Y_HANDS = 66.0f, Y_SOUND = 89.0f, Y_IN1 = 106.0f, Y_IN2 = 118.0f;
 static const int OUT_COL0 = 7;
 static float colX(int i) { return COL_X0 + i * COL_DX; }
 static float sndX(int i) { return SND_X0 + i * SND_DX; }
@@ -23,6 +23,7 @@ struct Walker : Module {
 		FEEL_PARAM, ACTIVITY_PARAM, REGISTER_PARAM, ROAM_PARAM, OUT_PARAM, REPEAT_PARAM, SEED_PARAM, NEW_PARAM,
 		LOOSE_PARAM, AHEAD_PARAM, TIMING_PARAM, WEIGHT_PARAM, SLOP_PARAM, PITCH_PARAM,
 		ATTACK_PARAM, PLUCK_PARAM, BRIGHT_PARAM, SUSTAIN_PARAM, GROWL_PARAM, BODY_PARAM, PICKUP_PARAM, THUMP_PARAM, AGE_PARAM, LEVEL_PARAM,
+		OCTAVE_PARAM, LENGTH_PARAM, VARY_PARAM,   // 2.4.0 (added at the end so old patches keep their knobs)
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -78,6 +79,14 @@ struct Walker : Module {
 		configParam(THUMP_PARAM, 0.f, 1.f, 0.5f, "Thump (finger noise)", "%", 0.f, 100.f);
 		configParam(AGE_PARAM, 0.f, 1.f, 0.3f, "Age (old strings: duller, shorter, buzzier)", "%", 0.f, 100.f);
 		configParam(LEVEL_PARAM, 0.f, 2.f, 1.f, "Level", "%", 0.f, 100.f);
+		struct OctQ : ParamQuantity {
+			std::string getDisplayValueString() override { int o = (int)std::round(getValue()); return o == 0 ? "as written" : "+" + std::to_string(o); }
+		};
+		configParam<OctQ>(OCTAVE_PARAM, 0.f, 2.f, 0.f, "Octave (moves the bass up, audio and V/OCT)", " oct")->snapEnabled = true;
+		configParam(LENGTH_PARAM, 0.3f, 3.f, 1.4f, "Length (every note shorter or longer)", "x")->description =
+			"1 is how the reference player holds notes. Long notes never overlap: the next note ends them.";
+		configParam(VARY_PARAM, 0.f, 1.f, 0.5f, "Vary (a mix of short and long notes)", "%", 0.f, 100.f)->description =
+			"0 every note the same length. Up: more notes held long (mostly on the beat) and clipped short (mostly off it).";
 		for (int id : {(int)SEED_PARAM, (int)NEW_PARAM, (int)LEVEL_PARAM}) getParamQuantity(id)->randomizeEnabled = false;
 
 		configInput(CLOCK_INPUT, "Clock (pulses per beat in the right-click menu; used without Comper)");
@@ -150,6 +159,9 @@ struct Walker : Module {
 		p.slop = params[SLOP_PARAM].getValue();
 		p.pitch = params[PITCH_PARAM].getValue();
 		p.swing = 0.0;
+		p.length = params[LENGTH_PARAM].getValue();
+		p.vary = params[VARY_PARAM].getValue();
+		in.octave = clamp((int)std::round(params[OCTAVE_PARAM].getValue()), 0, 2);
 		in.seed = (int)params[SEED_PARAM].getValue();
 		upright::Tone& t = in.tone;
 		t.attack = clamp(params[ATTACK_PARAM].getValue() + (inputs[ATTACK_INPUT].isConnected() ? 0.25f * inputs[ATTACK_INPUT].getVoltage() : 0.f), 0.f, 2.5f);
@@ -265,16 +277,19 @@ struct WalkerWidget : ModuleWidget {
 			Walker::OUT_PARAM, Walker::REPEAT_PARAM, Walker::SEED_PARAM};
 		for (int i = 0; i < 7; i++) addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(i), Y_PLAYER)), module, player[i]));
 		addParam(createParamCentered<VCVButton>(mm2px(Vec(colX(7), Y_PLAYER)), module, Walker::NEW_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(8), Y_PLAYER)), module, Walker::OCTAVE_PARAM));
 		// HANDS
 		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(colX(0), Y_HANDS)), module, Walker::LOOSE_PARAM));
 		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(1), Y_HANDS)), module, Walker::AHEAD_PARAM));
 		const int trims[4] = {Walker::TIMING_PARAM, Walker::WEIGHT_PARAM, Walker::SLOP_PARAM, Walker::PITCH_PARAM};
 		for (int i = 0; i < 4; i++) addParam(createParamCentered<Trimpot>(mm2px(Vec(colX(2 + i), Y_HANDS)), module, trims[i]));
-		addChild(createLightCentered<MediumLight<WAmberLight>>(mm2px(Vec(colX(7), Y_HANDS)), module, Walker::PLUCK_LIGHT));
-		addChild(createLightCentered<MediumLight<WAmberLight>>(mm2px(Vec(colX(8), Y_HANDS)), module, Walker::LINK_LIGHT));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(6), Y_HANDS)), module, Walker::LENGTH_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(7), Y_HANDS)), module, Walker::VARY_PARAM));
+		addChild(createLightCentered<MediumLight<WAmberLight>>(mm2px(Vec(colX(8), Y_HANDS - 2.2f)), module, Walker::PLUCK_LIGHT));
+		addChild(createLightCentered<MediumLight<WAmberLight>>(mm2px(Vec(colX(8), Y_HANDS + 5.4f)), module, Walker::LINK_LIGHT));
 		// SOUND
 		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(sndX(0), Y_SOUND)), module, Walker::ATTACK_PARAM));
-		for (int i = 1; i < 10; i++) addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(sndX(i), Y_SOUND)), module, Walker::ATTACK_PARAM + i));
+		for (int i = 1; i < 10; i++) addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(sndX(i), Y_SOUND)), module, Walker::ATTACK_PARAM + i));   // ATTACK..LEVEL
 		// jacks
 		const int in1[6] = {Walker::CLOCK_INPUT, Walker::RESET_INPUT, Walker::ROOT_INPUT, Walker::QUAL_INPUT, Walker::CHORD_INPUT, Walker::LAYOUT_INPUT};
 		for (int i = 0; i < 6; i++) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(colX(i), Y_IN1)), module, in1[i]));

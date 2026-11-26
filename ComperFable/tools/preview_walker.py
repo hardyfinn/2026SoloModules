@@ -9,7 +9,7 @@ svg = open(os.path.join(HERE, "..", "res", "Walker.svg")).read()
 L = {}
 src = open(os.path.join(HERE, "..", "res", "make_walker_panel.py")).read()
 exec(src.split("# ---- LAYOUT")[1].split("CONTROL =")[0].split("\n", 1)[1], L)
-W, H = 142.24, 128.5
+W, H = 182.88, 128.5
 PX = 25.4 / 75.0
 g = []
 col = lambda i: L["COL_X0"] + i * L["COL_DX"]
@@ -35,11 +35,12 @@ txt("WALK (FOLLOW)", dx + 19, dy + dh * 0.45, 4.0)
 txt("Dm7", dx + 19, dy + dh * 0.84, 4.0, "#8A7A55")
 txt("LINK", dx + dw - 2, dy + dh * 0.45, 3.4, "#8A7A55", "end"); txt("SEED 1", dx + dw - 2, dy + dh * 0.84, 3.4, "#8A7A55", "end")
 for i, v in enumerate([0, .5, .5, .5, .2, .7, .001]): knob("RoundBlackKnob", col(i), L["Y_PLAYER"], v)
-comp("VCVButton_0", col(7), L["Y_PLAYER"])
+comp("VCVButton_0", col(7), L["Y_PLAYER"]); knob("RoundBlackKnob", col(8), L["Y_PLAYER"], 0)
 knob("RoundLargeBlackKnob", col(0), L["Y_HANDS"], .4); knob("RoundBlackKnob", col(1), L["Y_HANDS"], .5)
 for i in range(4): knob("Trimpot", col(2 + i), L["Y_HANDS"], .5)
-g.append(f'<circle cx="{col(7)}" cy="{L["Y_HANDS"]}" r="1.5" fill="#F2C25C"/>')
-g.append(f'<circle cx="{col(8)}" cy="{L["Y_HANDS"]}" r="1.5" fill="#F2C25C"/>')
+knob("RoundBlackKnob", col(6), L["Y_HANDS"], (1.4 - 0.3) / 2.7); knob("RoundBlackKnob", col(7), L["Y_HANDS"], .5)
+g.append(f'<circle cx="{col(8)}" cy="{L["Y_HANDS"] - 2.2}" r="1.5" fill="#F2C25C"/>')
+g.append(f'<circle cx="{col(8)}" cy="{L["Y_HANDS"] + 5.4}" r="1.5" fill="#F2C25C"/>')
 knob("RoundLargeBlackKnob", scol(0), L["Y_SOUND"], .4)
 for i, v in enumerate([.41, .5, .5, .35, .6, .25, .5, .3, .5]): knob("RoundBlackKnob", scol(i + 1), L["Y_SOUND"], v)
 for i in range(6): comp("PJ301M", col(i), L["Y_IN1"])
