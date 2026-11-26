@@ -1,0 +1,23 @@
+{
+  "slug": "Deidre",
+  "name": "Deidre",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Deidre",
+      "name": "Deidre's Latest Workout",
+      "description": "Eight clocked modulation outputs with nothing hidden in menus: rate, 14 shapes, Euclid, loop nap/wake, flex timing, 18 cross operations and a quantiser on knobs that follow the selected output, plus a big clickable screen, per-knob CV and 64 banks",
+      "tags": ["Clock generator", "Clock modulator", "Low-frequency oscillator", "Random", "Sequencer", "Logic", "Quantizer", "Visual"]
+    }
+  ]
+}
