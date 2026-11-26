@@ -1,0 +1,11 @@
+build/
+dist/
+plugin.dylib
+plugin.so
+plugin.dll
+test/out/
+test/ref/
+test/demos/
+test/render
+test/lwref
+__pycache__/

@@ -1,0 +1,23 @@
+{
+  "slug": "LiveWireFable",
+  "name": "Live Wire Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "LiveWire",
+      "name": "Live Wire",
+      "description": "One live electrical circuit: a source, a spark gap and a tuned coil. Buzzing arcs that sputter and tear, a Jacob's ladder, a singing arc that tracks V/oct, sparks as drums, corona crackle and transformer hum. Every range pushed past real.",
+      "tags": ["Synth voice", "Physical modeling", "Noise", "Drum", "Drone", "Effect"]
+    }
+  ]
+}
