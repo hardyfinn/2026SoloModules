@@ -11,7 +11,7 @@ for line in open(os.path.join(HERE, "..", "src", "Layout.hpp")):
     m = re.findall(r"(\w+) = ([0-9.]+)f", line)
     for k, v in m: L[k] = float(v)
 svg = open(os.path.join(RES, "DubSiren.svg")).read()
-W, H = 121.92, 128.5
+W, H = 132.08, 128.5
 PX = 25.4 / 75.0
 g = []
 def img(path, x, y, angle=0.0):
@@ -26,7 +26,7 @@ knob("knob-red", "SPEED", 0.5); knob("knob-red", "PITCH", 1/3)
 knob("knob-yellow", "FEEDBACK", 0.45); knob("knob-yellow", "MODE", 1.0); knob("knob-yellow", "BEAT", 0.0)
 knob("knob-green", "VOLUME", 0.8)
 for k, v in (("DEPTH", 0.67), ("RELEASE", 0.56), ("TIME", 0.65)): knob("knob-trim", k, v)
-img(os.path.join(LIB, "CKSS_1.svg"), L["S_TRIG_X"], L["S_TRIG_Y"]); img(os.path.join(LIB, "CKSS_1.svg"), L["S_ERA_X"], L["S_ERA_Y"])
+img(os.path.join(LIB, "CKSS_1.svg"), L["S_TRIG_X"], L["S_TRIG_Y"]); img(os.path.join(LIB, "CKSS_1.svg"), L["S_ERA_X"], L["S_ERA_Y"]); img(os.path.join(LIB, "CKSS_0.svg"), L["S_EXTRAS_X"], L["S_EXTRAS_Y"])
 for k in ("SIREN", "TONE"): img(os.path.join(LIB, "VCVBezel.svg"), L[f"B_{k}_X"], L[f"B_{k}_Y"])
 g.append(f'<circle cx="{L["L_ACTIVE_X"]}" cy="{L["L_ACTIVE_Y"]}" r="2.2" fill="#E8302A" stroke="#5a1010" stroke-width="0.3"/>')
 for k in ("VOCT", "SPEED", "FDBK", "CLOCK", "TRIG", "SIREN", "TONE", "IN"): img(os.path.join(LIB, "PJ301M.svg"), L[f"I_{k}_X"], L[f"I_{k}_Y"])

@@ -4,7 +4,9 @@ A VCV Rack model of the classic UK sound-system transistor siren: the NJD SE-1
 circuit, as rebuilt in boxes like the Rigsmith NS1. It follows Zack Nelson's
 redrawn NJD schematic part by part, then adds an echo and a few extras.
 
-24 HP. Plugin version 2.0.0, MIT licence.
+26 HP. Plugin version 2.1.0, MIT licence.
+
+**EXTRAS switch** (below the line): OFF = works exactly like the hardware box. Only the box's own controls do anything (SPEED, PITCH, FEEDBACK, MODE, BEAT, SIREN VOL, TRIG, SIREN, TONE); DEPTH is 1, RELEASE and the echo time are fixed, the echo is the chip echo, and the jacks except OUT are ignored. ON = everything below the line comes alive.
 
 ## Controls (same as the hardware box)
 
@@ -21,7 +23,7 @@ redrawn NJD schematic part by part, then adds an echo and a few extras.
 | SIREN VOL | R30 | output level (not touched by randomize) |
 | ACTIVE LED | T5 + LED1 | follows the shaped sweep, as on the box |
 
-## Extras
+## Extras (EXTRAS switch ON)
 
 - DEPTH: how far the modulation pulls away from the supply (1 = as built).
 - RELEASE: how long C10 holds the supply up after TRIG goes off (20 ms to 3 s).

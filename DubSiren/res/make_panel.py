@@ -16,7 +16,7 @@ BG = "#C4C6C3"; INK = "#1B1B1B"; SOFT = "#3A3C3B"; STRIP = "#232425"; CREAM = "#
 RED = "#C8282A"; YELLOW = "#EFD84A"; GREEN = "#3E8A44"
 CONTROL, JACK, SMALL = 3.2, 2.9, 2.7
 H = 128.5
-W = 121.92   # 24 HP
+W = 132.08   # 26 HP
 fonts = {}
 
 def text(s, x, y, size, f=FONT_BOLD, fill=INK, anchor="middle", spacing=0.04):
@@ -52,7 +52,7 @@ def knob_svg(name, d, cap):
     p.append('</svg>\n')
     open(os.path.join(HERE, name + ".svg"), "w").write("\n".join(p))
 
-KNOBS = {"knob-red": (15.0, RED), "knob-yellow": (12.0, YELLOW), "knob-green": (12.0, GREEN), "knob-trim": (7.0, YELLOW)}
+KNOBS = {"knob-red": (19.0, RED), "knob-yellow": (16.0, YELLOW), "knob-green": (16.0, GREEN), "knob-trim": (8.5, YELLOW)}
 for k, (d, c) in KNOBS.items():
     knob_svg(k, d, c)
 
@@ -67,8 +67,8 @@ for i in range(0, 60):
     y = 2.0 + i * 2.1
     op = 0.05 + 0.04 * ((i * 7) % 5) / 4
     p.append(f'<rect x="0" y="{y:.2f}" width="{W}" height="0.18" fill="#FFFFFF" fill-opacity="{op:.3f}"/>')
-p.append(text("DUB SIREN", 5.0, 11.2, 6.4, FONT_BLACK, INK, anchor="start", spacing=0.03))
-p.append(text("sound system siren", W - 5.0, 10.8, 2.7, FONT_BOLD, SOFT, anchor="end"))
+p.append(text("DUB SIREN", 13.5, 11.2, 6.4, FONT_BLACK, INK, anchor="start", spacing=0.03))
+p.append(text("sound system siren", W - 13.5, 10.8, 2.7, FONT_BOLD, SOFT, anchor="end"))
 
 layout = []
 def put(kind, lab, x, y):
@@ -76,7 +76,7 @@ def put(kind, lab, x, y):
 
 def knob(lab, key, x, y, kind, scale=None):
     d = KNOBS[kind][0]
-    gap = {15.0: 2.6, 12.0: 2.6, 7.0: 2.2}[d]
+    gap = 2.6 if d > 10 else 2.2
     p.append(text(lab, x, y - d / 2 - gap, CONTROL))
     if scale:
         n = len(scale); R = d / 2 + 2.9
@@ -104,37 +104,40 @@ def led(lab, key, x, y):
     p.append(text(lab, x, y - 3.6, JACK, FONT_BOLD, SOFT))
     put("L", key, x, y)
 
-# row 1
-knob("SPEED", "SPEED", 30.0, 29.0, "knob-red")
-knob("PITCH", "PITCH", 92.0, 29.0, "knob-red", ["1", "2", "3", "4"])
-led("ACTIVE", "ACTIVE", 61.0, 29.0)
-# row 2
-knob("FEEDBACK", "FEEDBACK", 30.0, 55.0, "knob-yellow")
-knob("MODE", "MODE", 92.0, 55.0, "knob-yellow", ["1", "2", "3", "4"])
-# row 3
-switch("TRIG", "TRIG", 12.0, 80.0, "ON", "OFF")
-button("SIREN", "SIREN", 33.0, 80.0)
-button("TONE", "TONE", 52.0, 80.0)
-knob("BEAT", "BEAT", 92.0, 80.0, "knob-yellow", ["1", "2", "3", "OFF"])
-# row 4
-knob("DEPTH", "DEPTH", 11.0, 102.0, "knob-trim")
-knob("RELEASE", "RELEASE", 29.0, 102.0, "knob-trim")
-knob("TIME", "TIME", 47.0, 102.0, "knob-trim")
-switch("ERA", "ERA", 63.0, 102.0, "80s", "90s")
-knob("SIREN VOL", "VOLUME", 97.0, 102.0, "knob-green")
+# ---- hardware: the box's own controls (top two-thirds)
+XS = [22.0, 66.0, 110.0]
+knob("SPEED", "SPEED", XS[0], 30.0, "knob-red")
+knob("FEEDBACK", "FEEDBACK", XS[1], 30.0, "knob-yellow")
+knob("PITCH", "PITCH", XS[2], 30.0, "knob-red", ["1", "2", "3", "4"])
+knob("MODE", "MODE", XS[0], 59.0, "knob-yellow", ["1", "2", "3", "4"])
+knob("BEAT", "BEAT", XS[1], 59.0, "knob-yellow", ["1", "2", "3", "OFF"])
+knob("SIREN VOL", "VOLUME", XS[2], 59.0, "knob-green")
+switch("TRIG", "TRIG", 16.0, 83.0, "ON", "OFF")
+button("SIREN", "SIREN", 40.0, 83.0)
+button("TONE", "TONE", 60.0, 83.0)
+led("ACTIVE", "ACTIVE", 80.0, 83.0)
+p.append(f'<rect x="4" y="90.3" width="{W - 8}" height="0.4" fill="{SOFT}"/>')
+
+# ---- extras (below the line)
+switch("EXTRAS", "EXTRAS", 11.0, 101.0, "ON", "OFF")
+knob("DEPTH", "DEPTH", 33.0, 101.5, "knob-trim")
+knob("RELEASE", "RELEASE", 50.0, 101.5, "knob-trim")
+knob("TIME", "TIME", 67.0, 101.5, "knob-trim")
+switch("ERA", "ERA", 79.0, 101.0, "80s", "90s")
+for lab, key, x in (("IN", "IN", 101.0), ("CLOCK", "CLOCK", 117.0)):
+    p.append(text(lab, x, 101.5 - 5.0, JACK, FONT_BOLD, INK))
+    put("I", key, x, 101.5)
 
 # jack strip
-JY = 118.2
-p.append(f'<rect x="2.5" y="{JY - 8.7}" width="{W - 5}" height="13.6" rx="1.4" fill="{STRIP}"/>')
-jacks = ["V/OCT", "SPEED", "FDBK", "CLOCK", "TRIG", "SIREN", "TONE", "IN"]
-keys = ["VOCT", "SPEED", "FDBK", "CLOCK", "TRIG", "SIREN", "TONE", "IN"]
-step = (W - 2 * 8.0) / 8
-for i, (lab, key) in enumerate(zip(jacks, keys)):
+JY = 119.0
+p.append(f'<rect x="2.5" y="{JY - 8.5}" width="{W - 5}" height="13.5" rx="1.4" fill="{STRIP}"/>')
+step = (W - 16.0) / 7
+for i, (lab, key) in enumerate(zip(["V/OCT", "SPEED", "FDBK", "TRIG", "SIREN", "TONE"], ["VOCT", "SPEED", "FDBK", "TRIG", "SIREN", "TONE"])):
     x = round(8.0 + i * step, 3)
     p.append(text(lab, x, JY - 5.0, JACK, FONT_BOLD, CREAM))
     put("I", key, x, JY)
-ox = round(8.0 + 8 * step, 3)
-p.append(f'<rect x="{ox - 5.6}" y="{JY - 8.0}" width="11.2" height="12.2" rx="1.2" fill="{RED}"/>')
+ox = round(W - 8.0, 3)
+p.append(f'<rect x="{ox - 5.6}" y="{JY - 7.7}" width="11.2" height="11.9" rx="1.2" fill="{RED}"/>')
 p.append(text("OUT", ox, JY - 5.0, JACK, FONT_BOLD, CREAM))
 put("O", "OUT", ox, JY)
 
