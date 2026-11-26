@@ -425,10 +425,7 @@ struct MoltenWidget : ModuleWidget {
 		// row 3
 		const int r3[15] = {M::SAG_PARAM, M::CAST_PARAM, M::BODY_PARAM, M::SIZE_PARAM, M::THICK_PARAM, M::CURVE_PARAM, M::DECAY_PARAM,
 			M::PICKUP_PARAM, M::AMP_PARAM, M::OUT_PARAM, M::MALLET_PARAM, M::INLEVEL_PARAM, M::BRIGHT_PARAM, M::AGE_PARAM, M::LEVEL_PARAM};
-		for (int i = 0; i < 15; i++) {
-			if (r3[i] == M::BODY_PARAM) addParam(createParamCentered<RoundSmallBlackSnapKnob>(mm2px(Vec(colS(i), Y3)), module, r3[i]));
-			else addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(colS(i), Y3)), module, r3[i]));
-		}
+		for (int i = 0; i < 15; i++) addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(colS(i), Y3)), module, r3[i]));   // BODY snaps (snapEnabled)
 		// jacks
 		const int j4[12] = {M::VOCT_INPUT, M::GATE_INPUT, M::STRIKE_INPUT, M::VEL_INPUT, M::QUENCH_INPUT, M::IN_INPUT, M::HEAT_INPUT, M::FLAME_INPUT, M::WIDTH_INPUT, M::TENSION_INPUT, M::LOOSE_INPUT, M::DRIVE_INPUT};
 		for (int i = 0; i < 12; i++) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(colJ(i), Y4)), module, j4[i]));

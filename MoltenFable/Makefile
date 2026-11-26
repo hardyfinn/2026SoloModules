@@ -6,7 +6,7 @@ SOURCES += $(wildcard src/*.cpp)
 DISTRIBUTABLES += res presets
 DISTRIBUTABLES += $(wildcard LICENSE*)
 
-ifeq ($(filter test demos,$(MAKECMDGOALS)),)
+ifeq ($(filter test demos test/%,$(MAKECMDGOALS)),)
 include $(RACK_DIR)/plugin.mk
 endif
 
