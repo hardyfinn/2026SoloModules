@@ -24,6 +24,7 @@ without stepping on each other.
 | [VinylizerFable](VinylizerFable/) | Vinylizer Fable | The sound of a 90s record from the physics of cutting, pressing and playback, in ten switchable processes (no crackle) |
 | [Chirp](Chirp/) | Chirp | Pitch-swept chirp voice: kicks, zaps, bats, frogs, crickets, birds, looped cicadas; pitch contour and envelope outs |
 | [Groover](Groover/) | Groover | Ableton grooves (.agr / .mid) on VCV drums: grooved clock, 8 trigger lanes, accent CV |
+| [LiveWireFable](LiveWireFable/) | Live Wire | One live electrical circuit: buzzing and climbing arcs, a singing arc on V/OCT, erratic spark drums, corona and transformer hum |
 | [ClapfallFable](ClapfallFable/) | Clapfall | Multi-particle percussion: modelled claps, snaps, sticks and drum-machine pulses, from an 808 clap to applause |
 | [Menagerie](Menagerie/) | Menagerie | Macro oscillator with 16 engines of our own (none from Plaits or Braids) behind SHAPE, TEXTURE and LIFE |
 | [Rimbaud](Rimbaud/) | Rimbaud | Physical model of a snare drum: coupled heads, colliding snare wires, rimshot, cross-stick, buzz strokes, top/bottom mics |
