@@ -17,7 +17,7 @@ repository, is the intended partner) or any polyphonic voice.
 
 Designed by Fable (the reference engine `tools/proto/comper_ref.py` defines what it plays), built by Opus.
 
-## What's new in 2.4.0 (Walker)
+## What's new in 2.4.0 and 2.4.1 (Walker; 2.4.1 adds Comper 2.3.1)
 
 - **Panel:** Walker is 36 HP (was 28) with full-size labels (3.2 mm controls, 2.9 mm jacks).
 - **OCTAVE:** moves the bass up 0, +1 or +2 octaves, on the audio and the V/OCT output. The line itself does not change.
