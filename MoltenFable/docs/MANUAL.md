@@ -172,4 +172,4 @@ Each preset sounds with nothing patched, except where a note says otherwise.
 - 44 HP. VCV Rack 2.
 - 192 plate tones, 6 stretch channels, 16 thermal zones, double precision.
 - Runs at 2x oversampling below 88.2 kHz, at the host rate above.
-- CPU: about 40% of one core on the cloud test machine at 48 kHz with Rack's optimisation flags (about 25% for the engine alone). Expect less on Apple silicon.
+- CPU: about 35% of one core on the cloud test machine at 48 kHz. Expect less on Apple silicon.

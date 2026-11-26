@@ -22,7 +22,7 @@ Regenerate the panel with `python3 res/make_panel.py` (needs fonttools and the I
 
 ## Test results
 
-TEST_RESULTS
+All 22 checks pass (`make test`, 16 numbered tests, some at several sample rates). Fuzz: 400 random patches x 20 s at 48 kHz plus 100 each at 44.1 and 96 kHz with random CV steps on every control including HEAT and QUENCH, strikes and noise into IN: no NaN, no resets, output within 11 V; the energy ceiling clamped on 0.0027% of samples in 13 of the 400 patches.
 
 ## Deviations from the spec
 
@@ -48,7 +48,7 @@ The module:
 
 ## CPU
 
-CPU_FIGURE
+About 35% of one core on the cloud test machine at 48 kHz (cold or molten, the full module chain, built with Rack's -funsafe-math-optimizations), against Plate Driver's 30%. The thermal map and per-block coefficients cost about 3%. Not measured on Apple silicon, where it should be lower.
 
 ## Untested in Rack
 
