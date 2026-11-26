@@ -15,6 +15,7 @@ struct Tapeizer : Module {
 		WOW_PARAM, FLUTTER_PARAM, DROPOUT_PARAM, HISS_PARAM, AZIMUTH_PARAM, WEAR_PARAM,
 		THRESH_PARAM, RATIO_PARAM, BUS_ON_PARAM,
 		MASTER_MACHINE_PARAM, MASTER_REC_PARAM, MASTER_TAPE_PARAM, MASTER_NR_PARAM, MASTER_ON_PARAM,
+		BYPASS_PARAM,   // added in 2.2.0, last so older patches and presets keep their ids
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -25,7 +26,7 @@ struct Tapeizer : Module {
 	enum OutputIds { TRACKS_OUTPUT, MIX_L_OUTPUT, MIX_R_OUTPUT, OUT_L_OUTPUT, OUT_R_OUTPUT, NUM_OUTPUTS };
 	enum LightIds {
 		DESK_ON_LIGHT, NR_ENC_LIGHT, NR_DEC_LIGHT, MULTI_ON_LIGHT, BUS_ON_LIGHT, MASTER_NR_LIGHT, MASTER_ON_LIGHT,
-		ENUMS(MVU_LIGHT, 5), ENUMS(SVU_LIGHT, 5), GR_LIGHT,
+		ENUMS(MVU_LIGHT, 5), ENUMS(SVU_LIGHT, 5), GR_LIGHT, BYPASS_LIGHT,
 		NUM_LIGHTS
 	};
 
@@ -34,6 +35,8 @@ struct Tapeizer : Module {
 	float humHz = 50.f;
 	dsp::ClockDivider lightDiv;
 	float mPeakHold = 0.f, sPeakHold = 0.f;
+	float bypassMix = 0.f;   // 0 = through the tape, 1 = bypassed (ramped, no clicks)
+	int presetIdx = -1;      // factory preset last picked with the panel arrows, -1 = none
 
 	Tapeizer() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -82,6 +85,9 @@ struct Tapeizer : Module {
 		configSwitch(MASTER_TAPE_PARAM, 0.f, 2.f, 1.f, "Master tape", {"I (normal)", "II (chrome)", "IV (metal)"});
 		configSwitch(MASTER_NR_PARAM, 0.f, 1.f, 1.f, "Master B-type noise reduction", {"Off", "On"});
 		configSwitch(MASTER_ON_PARAM, 0.f, 1.f, 1.f, "Master deck", {"Bypassed", "On"});
+		configSwitch(BYPASS_PARAM, 0.f, 1.f, 0.f, "Bypass (whole module)", {"Off: through the tape", "Bypassed: clean signal"});
+		paramQuantities[BYPASS_PARAM]->randomizeEnabled = false;
+		paramQuantities[BYPASS_PARAM]->description = "Ctrl+R randomize never touches this, and the panel presets leave it as it is.";
 
 		configInput(IN_L_INPUT, "Left (records to its own track)");
 		configInput(IN_R_INPUT, "Right (follows left when unpatched)");
@@ -177,13 +183,30 @@ struct Tapeizer : Module {
 
 		eng.process(io);
 
+		// BYPASS: 15 ms crossfade to the clean signal that would have gone in. The engine keeps
+		// running underneath so switching back is smooth too.
+		const bool byp = params[BYPASS_PARAM].getValue() > 0.5f;
+		const float bStep = args.sampleTime / 0.015f;
+		bypassMix = byp ? std::min(1.f, bypassMix + bStep) : std::max(0.f, bypassMix - bStep);
+		const float b = bypassMix, w = 1.f - b;
+		// clean mix: IN L/R plus the tracks (unless TRACKS OUT takes them out of the mix), in volts
+		float cleanL = 0.f, cleanR = 0.f;
+		if (b > 0.f) {
+			if (io.inOn) { cleanL = (float)io.inL / VOLT; cleanR = (float)io.inR / VOLT; }
+			if (!io.tracksOutOn)
+				for (int c = 0; c < io.nTracks; c++) { cleanL += inputs[TRACKS_INPUT].getVoltage(c); cleanR += inputs[TRACKS_INPUT].getVoltage(c); }
+		}
+		const float cleanOutL = io.masterInOn ? (float)io.masterL / VOLT : cleanL;
+		const float cleanOutR = io.masterInOn ? (float)io.masterR / VOLT : cleanR;
+
 		outputs[TRACKS_OUTPUT].setChannels(std::max(1, io.nTracks));
-		for (int c = 0; c < io.nTracks; c++) outputs[TRACKS_OUTPUT].setVoltage((float)io.tracksOut[c] / VOLT, c);
+		for (int c = 0; c < io.nTracks; c++)
+			outputs[TRACKS_OUTPUT].setVoltage(w * (float)io.tracksOut[c] / VOLT + b * inputs[TRACKS_INPUT].getVoltage(c), c);
 		if (io.nTracks == 0) outputs[TRACKS_OUTPUT].setVoltage(0.f, 0);
-		outputs[MIX_L_OUTPUT].setVoltage((float)io.mixL / VOLT);
-		outputs[MIX_R_OUTPUT].setVoltage((float)io.mixR / VOLT);
-		outputs[OUT_L_OUTPUT].setVoltage((float)io.outL / VOLT);
-		outputs[OUT_R_OUTPUT].setVoltage((float)io.outR / VOLT);
+		outputs[MIX_L_OUTPUT].setVoltage(w * (float)io.mixL / VOLT + b * cleanL);
+		outputs[MIX_R_OUTPUT].setVoltage(w * (float)io.mixR / VOLT + b * cleanR);
+		outputs[OUT_L_OUTPUT].setVoltage(w * (float)io.outL / VOLT + b * cleanOutL);
+		outputs[OUT_R_OUTPUT].setVoltage(w * (float)io.outR / VOLT + b * cleanOutR);
 
 		if (lightDiv.process()) {
 			const float dt = args.sampleTime * lightDiv.getDivision();
@@ -206,6 +229,7 @@ struct Tapeizer : Module {
 			lights[MVU_LIGHT].setBrightness(mPeakHold);
 			lights[SVU_LIGHT].setBrightness(sPeakHold);
 			lights[GR_LIGHT].setBrightness(clamp((float)eng.busGr / 12.f, 0.f, 1.f));
+			lights[BYPASS_LIGHT].setBrightness(byp ? 1.f : 0.f);
 		}
 	}
 
@@ -213,6 +237,7 @@ struct Tapeizer : Module {
 		json_t* root = json_object();
 		json_object_set_new(root, "seed", json_string(string::f("%016llx", (unsigned long long)seed).c_str()));
 		json_object_set_new(root, "humHz", json_real(humHz));
+		json_object_set_new(root, "presetIdx", json_integer(presetIdx));
 		return root;
 	}
 	void dataFromJson(json_t* root) override {
@@ -220,7 +245,10 @@ struct Tapeizer : Module {
 		if (s && json_is_string(s)) { seed = std::strtoull(json_string_value(s), nullptr, 16) | 1; eng.seed = seed; eng.needInit = true; }
 		json_t* h = json_object_get(root, "humHz");
 		if (h) humHz = json_number_value(h) > 55.0 ? 60.f : 50.f;
+		json_t* pi = json_object_get(root, "presetIdx");
+		presetIdx = pi ? (int)json_integer_value(pi) : -1;
 	}
+	void onReset(const ResetEvent& e) override { Module::onReset(e); presetIdx = -1; }
 };
 
 // ---------------------------------------------------------------- widgets
@@ -231,20 +259,18 @@ struct OnButton : VCVLightBezel<AmberLightBase> {
 	OnButton() { momentary = false; }
 };
 
-struct NameDisplay : Widget {
+struct NameDisplay : Widget {   // multitrack machine readout
 	Tapeizer* module = nullptr;
-	bool master = false;
 	void draw(const DrawArgs& args) override {}
 	void drawLayer(const DrawArgs& args, int layer) override {
 		if (layer != 1) return;
 		std::shared_ptr<window::Font> font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
 		if (!font) return;
 		static const char* MM[6] = {"4TR", "4TR HI", "4TR C", "8TR CASS", "8TR 7.5", "8TR 15"};
-		static const char* SM[4] = {"DECK", "BOOMBOX", "1/4 INCH", "DAT"};
 		static const char* TP[3] = {"I", "II", "IV"};
 		static const char* NR[4] = {"OFF", "B", "C", "2:1"};
 		std::string s;
-		if (!master) {
+		{
 			int m = module ? (int)module->params[Tapeizer::MULTI_MACHINE_PARAM].getValue() : 0;
 			int t = module ? (int)module->params[Tapeizer::TAPE_PARAM].getValue() : 1;
 			int n = module ? (int)module->params[Tapeizer::NR_TYPE_PARAM].getValue() : 3;
@@ -252,13 +278,6 @@ struct NameDisplay : Widget {
 			s = string::f("%s  %s  %s", MM[clamp(m, 0, 5)], TP[clamp(t, 0, 2)], NR[clamp(n, 0, 3)]);
 			if (b > 1) s += string::f("  x%d", b);
 			if (module && module->params[Tapeizer::MULTI_ON_PARAM].getValue() < 0.5f) s = "BYPASSED";
-		} else {
-			int m = module ? (int)module->params[Tapeizer::MASTER_MACHINE_PARAM].getValue() : 0;
-			int t = module ? (int)module->params[Tapeizer::MASTER_TAPE_PARAM].getValue() : 1;
-			bool nr = module ? module->params[Tapeizer::MASTER_NR_PARAM].getValue() > 0.5f : true;
-			m = clamp(m, 0, 3);
-			s = m == 3 ? std::string("DAT  16 BIT") : string::f("%s  %s%s", SM[m], TP[clamp(t, 0, 2)], nr ? "  B" : "");
-			if (module && module->params[Tapeizer::MASTER_ON_PARAM].getValue() < 0.5f) s = "BYPASSED";
 		}
 		nvgFontFaceId(args.vg, font->handle);
 		nvgFontSize(args.vg, 13.f);
@@ -266,6 +285,152 @@ struct NameDisplay : Widget {
 		nvgFillColor(args.vg, nvgRGB(242, 192, 96));
 		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		nvgText(args.vg, box.size.x / 2, box.size.y / 2 + 0.5f, s.c_str(), NULL);
+	}
+};
+
+struct BypassButton : VCVLightBezel<RedLight> {
+	BypassButton() { momentary = false; }
+};
+
+// ---------------------------------------------------------------- factory presets on the panel
+// The same .vcvm files as the right-click Preset menu (presets/Tapeizer/), read once.
+struct FactoryPreset { std::string name, path; std::vector<std::pair<int, float>> values; };
+static std::vector<FactoryPreset>& factoryPresets() {
+	static std::vector<FactoryPreset> list;
+	static bool loaded = false;
+	if (loaded) return list;
+	loaded = true;
+	std::string dir = asset::plugin(pluginInstance, "presets/Tapeizer");
+	std::vector<std::string> files = system::getEntries(dir);
+	std::sort(files.begin(), files.end());
+	for (const std::string& f : files) {
+		if (system::getExtension(f) != ".vcvm") continue;
+		FactoryPreset p;
+		p.path = f;
+		std::string stem = system::getStem(f);   // "01_Four-Track To Cassette"
+		size_t us = stem.find('_');
+		p.name = us == std::string::npos ? stem : stem.substr(us + 1);
+		FILE* fp = std::fopen(f.c_str(), "r");
+		if (!fp) continue;
+		json_error_t err;
+		json_t* root = json_loadf(fp, 0, &err);
+		std::fclose(fp);
+		if (!root) continue;
+		json_t* ps = json_object_get(root, "params");
+		size_t i; json_t* pj;
+		json_array_foreach(ps, i, pj) {
+			json_t* id = json_object_get(pj, "id"); json_t* v = json_object_get(pj, "value");
+			if (id && v) p.values.push_back({(int)json_integer_value(id), (float)json_number_value(v)});
+		}
+		json_decref(root);
+		list.push_back(p);
+	}
+	return list;
+}
+// true once a knob or switch the preset sets has been moved
+static bool presetEdited(Tapeizer* m, const FactoryPreset& p) {
+	for (const auto& v : p.values) {
+		if (v.first < 0 || v.first >= Tapeizer::NUM_PARAMS || v.first == Tapeizer::BYPASS_PARAM) continue;
+		if (std::fabs(m->params[v.first].getValue() - v.second) > 1e-4f) return true;
+	}
+	return false;
+}
+
+struct PresetScreen : Widget {
+	Tapeizer* module = nullptr;
+	void draw(const DrawArgs& args) override {
+		nvgBeginPath(args.vg);
+		nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, mm2px(0.8f));
+		nvgFillColor(args.vg, nvgRGB(0x1B, 0x19, 0x16));
+		nvgFill(args.vg);
+		nvgStrokeColor(args.vg, nvgRGB(0x4C, 0x46, 0x3F));
+		nvgStrokeWidth(args.vg, 1.f);
+		nvgStroke(args.vg);
+	}
+	void drawLayer(const DrawArgs& args, int layer) override {
+		if (layer != 1) return;
+		std::shared_ptr<window::Font> font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
+		if (!font) return;
+		std::string s;
+		if (!module) s = "01  Four-Track To Cassette";
+		else {
+			auto& list = factoryPresets();
+			int i = module->presetIdx;
+			if (i < 0 || i >= (int)list.size()) s = "-- PRESETS --";
+			else s = string::f("%02d  %s%s", i + 1, list[i].name.c_str(), presetEdited(module, list[i]) ? " *" : "");
+		}
+		nvgFontFaceId(args.vg, font->handle);
+		nvgFontSize(args.vg, 13.f);
+		nvgTextLetterSpacing(args.vg, 0.5f);
+		nvgFillColor(args.vg, nvgRGB(242, 192, 96));
+		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+		nvgText(args.vg, box.size.x / 2, box.size.y / 2 + 0.5f, s.c_str(), NULL);
+	}
+	// click the name for the full list
+	void onButton(const ButtonEvent& e) override;
+};
+
+static void loadFactoryPreset(ModuleWidget* mw, Tapeizer* m, int i) {
+	auto& list = factoryPresets();
+	if (i < 0 || i >= (int)list.size()) return;
+	try {
+		mw->loadAction(list[i].path);   // same as the Preset menu: one undo step, BYPASS untouched
+		m->presetIdx = i;
+	}
+	catch (Exception& e) {
+		WARN("Tapeizer: could not load preset %s: %s", list[i].path.c_str(), e.what());
+	}
+}
+
+void PresetScreen::onButton(const ButtonEvent& e) {
+	if (!module || e.action != GLFW_PRESS || e.button != GLFW_MOUSE_BUTTON_LEFT) return;
+	ModuleWidget* mw = getAncestorOfType<ModuleWidget>();
+	if (!mw) return;
+	Tapeizer* m = module;
+	Menu* menu = createMenu();
+	menu->addChild(createMenuLabel("Factory presets"));
+	auto& list = factoryPresets();
+	for (int i = 0; i < (int)list.size(); i++)
+		menu->addChild(createCheckMenuItem(string::f("%02d  %s", i + 1, list[i].name.c_str()), "",
+			[=]() { return m->presetIdx == i; }, [=]() { loadFactoryPreset(mw, m, i); }));
+	e.consume(this);
+}
+
+// left / right arrows step through the factory presets (wrapping round)
+struct PresetArrow : OpaqueWidget {
+	Tapeizer* module = nullptr;
+	ModuleWidget* mw = nullptr;
+	int dir = 1;
+	bool hover = false;
+	void draw(const DrawArgs& args) override {
+		float w = box.size.x, h = box.size.y;
+		nvgBeginPath(args.vg);
+		nvgRoundedRect(args.vg, 0.5f, 0.5f, w - 1.f, h - 1.f, mm2px(0.9f));
+		nvgFillColor(args.vg, hover ? nvgRGB(0x44, 0x3f, 0x3c) : nvgRGB(0x2b, 0x28, 0x26));
+		nvgFill(args.vg);
+		nvgStrokeColor(args.vg, nvgRGB(0, 0, 0));
+		nvgStrokeWidth(args.vg, 1.f);
+		nvgStroke(args.vg);
+		float cx = w / 2, cy = h / 2, a = mm2px(1.2f), b = mm2px(1.6f);
+		nvgBeginPath(args.vg);
+		nvgMoveTo(args.vg, cx + a * dir, cy);
+		nvgLineTo(args.vg, cx - a * dir, cy - b);
+		nvgLineTo(args.vg, cx - a * dir, cy + b);
+		nvgClosePath(args.vg);
+		nvgFillColor(args.vg, nvgRGB(0xF0, 0xE7, 0xD8));
+		nvgFill(args.vg);
+	}
+	void onEnter(const EnterEvent& e) override { hover = true; }
+	void onLeave(const LeaveEvent& e) override { hover = false; }
+	void onButton(const ButtonEvent& e) override {
+		OpaqueWidget::onButton(e);
+		if (!module || !mw || e.action != GLFW_PRESS || e.button != GLFW_MOUSE_BUTTON_LEFT) return;
+		int n = (int)factoryPresets().size();
+		if (n == 0) return;
+		int i = module->presetIdx;
+		i = i < 0 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n;
+		loadFactoryPreset(mw, module, i);
+		e.consume(this);
 	}
 };
 
@@ -327,12 +492,22 @@ struct TapeizerWidget : ModuleWidget {
 			}
 		}
 
-		NameDisplay* d1 = new NameDisplay; d1->module = module; d1->master = false;
+		NameDisplay* d1 = new NameDisplay; d1->module = module;
 		d1->box.pos = mm2px(Vec(MULTI_DISP_X - MULTI_DISP_W / 2, MULTI_DISP_Y - MULTI_DISP_H / 2)); d1->box.size = mm2px(Vec(MULTI_DISP_W, MULTI_DISP_H));
 		addChild(d1);
-		NameDisplay* d2 = new NameDisplay; d2->module = module; d2->master = true;
-		d2->box.pos = mm2px(Vec(MASTER_DISP_X - MASTER_DISP_W / 2, MASTER_DISP_Y - MASTER_DISP_H / 2)); d2->box.size = mm2px(Vec(MASTER_DISP_W, MASTER_DISP_H));
-		addChild(d2);
+
+		addParam(createLightParamCentered<BypassButton>(mm2px(Vec(BYPASS_X, BYPASS_Y)), module, T::BYPASS_PARAM, T::BYPASS_LIGHT));
+
+		// preset selector: < name >
+		PresetScreen* ps = new PresetScreen; ps->module = module;
+		ps->box.pos = mm2px(Vec(PRESET_DISP_X - PRESET_DISP_W / 2, PRESET_DISP_Y - PRESET_DISP_H / 2)); ps->box.size = mm2px(Vec(PRESET_DISP_W, PRESET_DISP_H));
+		addChild(ps);
+		for (int dir : {-1, 1}) {
+			PresetArrow* a = new PresetArrow; a->module = module; a->mw = this; a->dir = dir;
+			float ax = dir < 0 ? PRESET_PREV_X : PRESET_NEXT_X, ay = dir < 0 ? PRESET_PREV_Y : PRESET_NEXT_Y;
+			a->box.size = mm2px(Vec(6.f, 6.f)); a->box.pos = mm2px(Vec(ax - 3.f, ay - 3.f));
+			addChild(a);
+		}
 
 		in(IN_L_X, IN_L_Y, T::IN_L_INPUT); in(IN_R_X, IN_R_Y, T::IN_R_INPUT); in(TRACKS_X, TRACKS_Y, T::TRACKS_INPUT);
 		in(REC_CV_X, REC_CV_Y, T::REC_CV_INPUT); in(WOW_CV_X, WOW_CV_Y, T::WOW_CV_INPUT); in(AZIMUTH_CV_X, AZIMUTH_CV_Y, T::AZIMUTH_CV_INPUT);

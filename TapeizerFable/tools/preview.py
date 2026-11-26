@@ -36,8 +36,12 @@ for name, (kind, x, y, label) in L["comps"].items():
     elif kind == "light":
         col = "#3c3" if name[3:] in ("3", "4") else "#333"
         g.append(f'<circle cx="{x}" cy="{y}" r="1.0" fill="{col}"/>')
+    elif kind == "button":
+        g.append(f'<rect x="{x-3}" y="{y-3}" width="6" height="6" rx="0.9" fill="#2b2826" stroke="#000" stroke-width="0.34"/>')
+        d = 1 if name.endswith("NEXT") else -1
+        g.append(f'<path d="M{x+1.2*d} {y} L{x-1.2*d} {y-1.6} L{x-1.2*d} {y+1.6} Z" fill="#efe8da"/>')
     elif kind == "display":
-        txt = "4TR  II  2:1" if name == "MULTI_DISP" else "DECK  II  B"
+        txt = "4TR  II  2:1" if name == "MULTI_DISP" else "01  Four-Track To Cassette"
         g.append(f'<text x="{x}" y="{y + 1.2}" font-family="monospace" font-size="3.6" fill="#f2c060" text-anchor="middle">{txt}</text>')
 for x in (5.08, W - 2 * 5.08):
     for y in (0.0, H - 5.08):

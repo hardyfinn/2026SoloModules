@@ -101,7 +101,9 @@ ENC and DEC have separate switches because the misuses were part of the craft:
 | TAPE | **I** (normal), **II** (chrome) or **IV** (metal) on cassette machines. On the reel machines the three settings are older, standard and high-output tape. Changes headroom, treble headroom and hiss. |
 | BIAS | -1 to +1. Under-biased (left) is brighter and gritty on quiet sounds and loses level on low notes. Over-biased (right) is smooth and dull. |
 | BOUNCE | 1 to 4. How many generations the tracks go through: the whole deck, noise reduction included, is run that many times in a row. |
-| VU | The loudest track's level on tape, after noise reduction: -10, -5, 0, +3 VU and a red peak light when a sound goes past the tape's maximum level. |
+| REC VU | The record level going onto the tape, not the output: the loudest track after REC and the noise reduction encoder, on the first pass. -10, -5, 0, +3 VU and a red peak light when a sound goes past the tape's maximum level. Use it to set REC. |
+| Display | Machine, tape, noise reduction and bounce count at a glance. |
+| ON | Bypasses the multitrack deck. |
 
 The machines:
 
@@ -149,7 +151,7 @@ A second, complete tape machine for the mixdown.
 | REC | Record level, ±12 dB, with CV. |
 | TAPE | I, II or IV, as on the multitrack deck. Ignored by DAT. |
 | NR B | B-type noise reduction, encode and decode. On by default. Ignored by DAT. |
-| VU | As on the multitrack deck. |
+| REC VU | The level going onto the master tape (after MASTER IN or the mix, the bus compressor and REC), not the final output. Dark on DAT. |
 
 ## Inputs and outputs
 
@@ -166,6 +168,12 @@ A second, complete tape machine for the mixdown.
 MIX blends the dry input (IN L and IN R) with the processed output. The dry signal is delayed to match the module's latency, so the blend does not comb.
 
 Levels: 5 V peak is +3 dB over 0 VU, so a typical ±5 V Rack signal at REC 0 sits just above meter zero.
+
+## BYPASS and PRESET
+
+**BYPASS** (bottom of CHARACTER) swaps the whole module for the clean signal that went in, with a short crossfade so it never clicks: OUT gets MASTER IN when that is patched, otherwise IN L/R plus the tracks; MIX OUT and TRACKS OUT go clean too. The red light means bypassed. Ctrl+R randomize never touches it, and loading a preset leaves it alone.
+
+**PRESET** (top of the panel) steps through the factory presets with the arrows. Click the name for the full list. A **\*** after the name means you have moved a control since loading it. This is the same set as the right-click Preset menu, and each load is one undo step.
 
 ## Right-click menu
 

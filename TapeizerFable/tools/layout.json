@@ -38,69 +38,69 @@
 91.0,
 "ON"
 ],
-"MULTI_DISP": [
-"display",
-81.0,
-91.0,
-null
-],
 "MULTI_MACHINE": [
 "snap",
 50.0,
-37.0,
+33.0,
 "MACHINE"
 ],
 "TAPE": [
 "snap",
 67.0,
-37.0,
+33.0,
 "TAPE"
 ],
 "BOUNCE": [
 "snap",
 84.0,
-37.0,
+33.0,
 "BOUNCE"
 ],
 "REC": [
 "big",
 50.0,
-55.0,
+53.5,
 "REC"
 ],
 "BIAS": [
 "knob",
 67.0,
-55.0,
+53.5,
 "BIAS"
 ],
 "CAL": [
 "knob",
 84.0,
-55.0,
+53.5,
 "NR CAL"
 ],
 "NR_TYPE": [
 "snap",
 50.0,
-73.0,
+74.0,
 "NR TYPE"
 ],
 "NR_ENC": [
 "bezel",
 67.0,
-73.0,
+74.0,
 "NR ENC"
 ],
 "NR_DEC": [
 "bezel",
 84.0,
-73.0,
+74.0,
 "NR DEC"
+],
+"MULTI_DISP": [
+"display",
+60.5,
+91.0,
+null
 ],
 "MULTI_ON": [
 "bezel",
-50.0,
+84.0,
 91.0,
 "ON"
 ],
@@ -194,12 +194,6 @@ null
 91.0,
 "ON"
 ],
-"MASTER_DISP": [
-"display",
-190.0,
-73.0,
-null
-],
 "MASTER_MACHINE": [
 "snap",
 179.0,
@@ -215,13 +209,13 @@ null
 "MASTER_REC": [
 "knob",
 179.0,
-55.0,
+58.0,
 "REC"
 ],
 "MASTER_NR": [
 "bezel",
 195.5,
-55.0,
+58.0,
 "NR B"
 ],
 "MASTER_ON": [
@@ -232,32 +226,32 @@ null
 ],
 "SVU0": [
 "light",
-206.0,
-31.0,
+205.0,
+68.0,
 null
 ],
 "SVU1": [
 "light",
-206.0,
-35.6,
+205.0,
+72.6,
 null
 ],
 "SVU2": [
 "light",
-206.0,
-40.2,
+205.0,
+77.2,
 null
 ],
 "SVU3": [
 "light",
-206.0,
-44.8,
+205.0,
+81.8,
 null
 ],
 "SVU4": [
 "light",
-206.0,
-49.4,
+205.0,
+86.4,
 null
 ],
 "STRENGTH": [
@@ -283,6 +277,30 @@ null
 242.0,
 73.0,
 "OUTPUT"
+],
+"BYPASS": [
+"bezel",
+233.0,
+91.0,
+"BYPASS"
+],
+"PRESET_PREV": [
+"button",
+93.0,
+7.6,
+null
+],
+"PRESET_NEXT": [
+"button",
+167.0,
+7.6,
+null
+],
+"PRESET_DISP": [
+"display",
+130.0,
+7.6,
+null
 ],
 "IN_L": [
 "jack",
@@ -382,8 +400,8 @@ null
 ]
 },
 "disp_w": {
-"MULTI_DISP": 38.0,
-"MASTER_DISP": 34.0
+"MULTI_DISP": 35.0,
+"PRESET_DISP": 66.0
 },
 "disp_h": 6.0
 }
