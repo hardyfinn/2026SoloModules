@@ -17,7 +17,8 @@ using comper::pmod;
 
 static const int CHORD_T[comper::NUM_Q][4] = {
 	{0, 4, 7, 11}, {0, 4, 7, 9}, {0, 3, 7, 10}, {0, 3, 7, 9}, {0, 3, 7, 11}, {0, 4, 7, 10},
-	{0, 4, 8, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}, {0, 5, 7, 10}};
+	{0, 4, 8, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}, {0, 5, 7, 10},
+	{0, 4, 7, 0}, {0, 3, 7, 0}};   // plain triads: the "7th" is the root again
 static const int LO = 28, HI = 55;
 enum Feel { WALK, TWO, BALLAD, BOSSA, SOUL, HOUSE, NUM_FEELS };
 static const char* const FEEL_NAMES[NUM_FEELS] = {"WALK", "TWO", "BALLAD", "BOSSA", "SOUL", "HOUSE"};

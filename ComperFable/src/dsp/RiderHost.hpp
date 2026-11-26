@@ -89,7 +89,7 @@ struct RiderHost {
 
 	int wantFeel(const RIn& in) const {
 		if (in.feelPos > 0) return std::min(4, in.feelPos - 1);
-		if (in.link.hasComp) return std::max(0, std::min(4, in.link.groove));
+		if (in.link.hasComp) { int g = in.link.groove; return g == 5 ? SOUL : std::max(0, std::min(4, g)); }   // Comper's REGGAE: soul kit pattern
 		return SWING;
 	}
 	int wantChorus(const RIn& in) const {

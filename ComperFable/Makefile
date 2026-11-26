@@ -24,10 +24,13 @@ test/render_rider: test/render_rider.cpp test/rider_golden.h test/rider_presets.
 	$(CXX) -O3 -funsafe-math-optimizations -std=c++17 test/render_rider.cpp -o test/render_rider
 test/render_rider_kit: test/render_rider_kit.cpp test/rider_kit_cases.h $(RIDER_DSP)
 	$(CXX) -O3 -funsafe-math-optimizations -std=c++17 test/render_rider_kit.cpp -o test/render_rider_kit
+test/render_human: test/render_human.cpp src/dsp/Engine.hpp src/dsp/Host.hpp src/Progressions.hpp
+	$(CXX) -O2 -std=c++17 test/render_human.cpp -o test/render_human
 .PHONY: test
-test: test/render test/render_walker test/render_upright test/render_rider test/render_rider_kit
+test: test/render test/render_human test/render_walker test/render_upright test/render_rider test/render_rider_kit
 	mkdir -p test/out test/out/upright
 	./test/render test/out
+	./test/render_human
 	./test/render_walker test/out
 	./test/render_upright test/out/upright
 	python3 tools/check_upright.py test/out/upright

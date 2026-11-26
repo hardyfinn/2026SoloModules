@@ -36,6 +36,7 @@ struct HostIn {
 	// player
 	Params p; int seed = 1;
 	int outChannels = 12; bool bassEveryBar = false; bool resetReplays = true;
+	int octave = 0;            // 2.3.0: shifts the chord outputs (not the bass outputs), -3..+3
 };
 
 struct HostOut {
@@ -84,7 +85,8 @@ struct Host {
 	// notes
 	struct Event { double at; int type; int id; int pitch; int vel; double value; };   // type 0 off, 1 on, 2 pedal
 	std::vector<Event> queue;
-	struct Held { double nominal, cap, on, extra; int id; };
+	struct Held { double nominal, cap, on, extra; int id; double early; };
+	Rng hr; double touch = 0.0;   // 2.3.0 human lengths: own random stream, so the notes themselves stay the same
 	std::vector<Held> held;
 	int nextId = 1;
 	struct Chan { bool gate = false; double lowSince = -1.0; int owner = 0; double riseAt = -1.0; int pitch = 60, vel = 64; double onT = 0.0; float voct = 0.f, velV = 0.f; };
@@ -150,7 +152,7 @@ struct Host {
 		nextBar = 0; nextSlot = 0; barBegun = false; anyDecided = false;
 		lastHitT = -99.0;
 		allOff();
-		if (in.resetReplays || engSeed < 0) { eng.reset(in.seed); engSeed = in.seed; }
+		if (in.resetReplays || engSeed < 0) { eng.reset(in.seed); engSeed = in.seed; hr = Rng((int64_t)in.seed * 7 + 5); touch = 0.0; }
 		waitingFirstPulse = in.clockConnected;
 		lastStepAbs = -999999; lastBarAbs = -999999;
 	}
@@ -206,7 +208,32 @@ struct Host {
 			}
 		}
 	}
+	// ---- 2.3.0 human note lengths
+	double lenMul() const { return std::pow(2.0, (eng.p.length - 0.5) * 2.4); }      // 0.44x .. 2.3x
+	double humanAmt() const { return std::min(1.5, eng.p.loose * eng.p.slop); }
+	// how long a short hit lasts, in beats, before the hand's own shaping: on the beat / off the beat
+	double shortBeats(bool up) const {
+		static const double ON[NUM_GROOVES] = {0.55, 0.45, 1.00, 0.55, 0.48, 0.40};
+		static const double UP[NUM_GROOVES] = {0.38, 0.35, 0.70, 0.45, 0.40, 0.34};
+		int g = std::max(0, std::min(NUM_GROOVES - 1, eng.p.groove));
+		return up ? UP[g] : ON[g];
+	}
 	void release(double now, double tNext) {
+		if (eng.p.human) {
+			// legato knob decides how close to the next chord the hand lets go (past it = finger overlap);
+			// inner voices lift a little before the top note and the bass note
+			double lm = lenMul();
+			for (auto& h : held) {
+				double off = tNext + (eng.p.length - 0.75) * 0.5 * spb - h.early;
+				off = std::min(off, h.nominal + h.cap);
+				off = std::max(off, std::min(now, h.nominal + h.cap));
+				off = std::max(off, h.nominal + 0.5 * spb * std::min(1.0, lm)) + h.extra;
+				off = std::max(off, h.on + 0.04);
+				schedule(off, 0, h.id, 0, 0);
+			}
+			held.clear();
+			return;
+		}
 		for (auto& h : held) {
 			double off = std::min(h.nominal + h.cap, std::max(h.nominal + 0.9 * spb, tNext - HOST_LEAD_BEATS * spb));
 			off = std::max(off, std::min(now, h.nominal + h.cap)) + h.extra;
@@ -215,16 +242,44 @@ struct Host {
 		}
 		held.clear();
 	}
-	void releaseNow() {
-		for (auto& h : held) schedule(std::max(t, h.on + 0.02), 0, h.id, 0, 0);
-		held.clear();
-	}
-	void take(const Result& res, double nominal) {
+	// A pianist's lengths: the top note rings longest, inner voices lift first, accents sit longer,
+	// ghosts are clipped, and the touch drifts slowly so a phrase stays legato or detached as a whole.
+	void takeHuman(const Result& res, double nominal, bool up) {
+		double amt = humanAmt(), lm = lenMul();
+		if (res.hit) touch = std::max(-0.4, std::min(0.4, 0.85 * touch + hr.g() * 0.09 * amt));
+		int hi = -999, lo = 999;
+		for (auto& e : res.notes) { hi = std::max(hi, e.pitch); lo = std::min(lo, e.pitch); }
+		int n = (int)res.notes.size();
 		for (auto& e : res.notes) {
 			double on = std::max(t, nominal + e.t);
 			int id = nextId++;
 			schedule(on, 1, id, e.pitch, e.vel);
-			if (e.lng) held.push_back({nominal, eng.capBeats() * spb, on, e.extra, id});
+			double role = (e.pitch == hi) ? 1.12 : (e.pitch == lo && n > 2) ? 1.05 : hr.uni(0.78, 0.95);
+			role = 1.0 + (role - 1.0) * std::min(1.0, amt + 0.35);
+			double acc = 1.0 + std::max(-0.3, std::min(0.3, (e.vel - 72) / 160.0));
+			double jit = std::exp(hr.g() * 0.10 * amt);
+			double k = role * acc * jit * std::exp(touch);
+			if (e.lng) {
+				double early = role < 1.0 ? hr.uni(0.03, 0.12) * spb * std::min(1.0, amt + 0.35) : 0.0;
+				held.push_back({nominal, eng.capBeats() * spb * std::sqrt(lm), on, e.extra, id, early});
+			} else {
+				double dur = shortBeats(up) * lm * k * spb;
+				dur = std::max(0.05, std::min(1.8 * spb, dur));
+				schedule(on + dur + e.extra, 0, id, 0, 0);
+			}
+		}
+	}
+	void releaseNow() {
+		for (auto& h : held) schedule(std::max(t, h.on + 0.02), 0, h.id, 0, 0);
+		held.clear();
+	}
+	void take(const Result& res, double nominal, bool up = false) {
+		if (eng.p.human) takeHuman(res, nominal, up);
+		else for (auto& e : res.notes) {
+			double on = std::max(t, nominal + e.t);
+			int id = nextId++;
+			schedule(on, 1, id, e.pitch, e.vel);
+			if (e.lng) held.push_back({nominal, eng.capBeats() * spb, on, e.extra, id, 0.0});
 			else schedule(on + e.dur + e.extra, 0, id, 0, 0);
 		}
 		for (auto& pv : res.pedal) schedule(std::max(t, nominal + pv.first), 2, 0, 0, 0, pv.second);
@@ -291,7 +346,7 @@ struct Host {
 	bool readExternal(const HostIn& in, Chord& out) {
 		if (source == SRC_CV) {
 			int r = pmod((int)std::round(in.rootV * 12.f) + keyOffset(in), 12);
-			int q = in.qualConnected ? std::max(0, std::min(9, (int)std::floor(in.qualV))) : in.stepQual[0];
+			int q = in.qualConnected ? std::max(0, std::min(NUM_Q - 1, (int)std::floor(in.qualV))) : in.stepQual[0];
 			out = Chord(r, q); return true;
 		}
 		std::vector<int> ns;
@@ -397,7 +452,7 @@ struct Host {
 				double sb = barBegun ? slotBeat(nextBar, nextSlot) : nextBar * 4.0;
 				if (phi < sb - leadBeats()) break;
 				if (!barBegun) {
-					if (in.seed != engSeed) { eng.reset(in.seed); engSeed = in.seed; }
+					if (in.seed != engSeed) { eng.reset(in.seed); engSeed = in.seed; hr = Rng((int64_t)in.seed * 7 + 5); touch = 0.0; }
 					params(in, true);
 					eng.beginBar(nextBar, in.clockConnected ? 60.0 / spb : in.tempo);
 					barBegun = true; planBar = nextBar;
@@ -408,7 +463,7 @@ struct Host {
 				double nowExact = nominal - ctx.leadS;
 				Result res = eng.decide(nextBar, nextSlot, ctx);
 				if (res.hit) { release(nowExact, nominal); lastHitT = t; }
-				take(res, nominal);
+				take(res, nominal, eng.onUp(nextSlot));
 				anyDecided = true; lastBar = nextBar; lastSlot = nextSlot;
 				nextSlot++;
 				if (nextSlot >= eng.slots) { nextSlot = 0; nextBar++; barBegun = false; }
@@ -472,7 +527,7 @@ struct Host {
 		int nch = std::max(1, std::min(MAX_CH, in.outChannels));
 		out.channels = nch;
 		for (int c = 0; c < MAX_CH; c++) {
-			out.voct[c] = ch[c].voct; out.vel[c] = ch[c].velV; out.gate[c] = (ch[c].gate && running) ? 10.f : 0.f;
+			out.voct[c] = ch[c].voct + (float)in.octave; out.vel[c] = ch[c].velV; out.gate[c] = (ch[c].gate && running) ? 10.f : 0.f;
 		}
 		out.pedal = (float)(pedalOut * 10.0);
 		if (haveSrc) {

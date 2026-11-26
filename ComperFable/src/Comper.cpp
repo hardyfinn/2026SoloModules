@@ -2,23 +2,16 @@
 #include "dsp/Host.hpp"
 #include "Progressions.hpp"
 #include "LinkPort.hpp"
+#include <set>
 
 using namespace comper;
 
-// ---- LAYOUT (same numbers in res/make_panel.py) ----
-static const float DISP_X = 4.0f, DISP_Y = 13.0f, DISP_W = 118.0f, DISP_H = 16.0f;
-static const float SMALLK_X[3] = {134.0f, 153.0f, 172.0f};
-static const float SMALLK_Y = 23.0f;
-static const float STEP_X0 = 17.5f, STEP_DX = 10.25f;
-static const float Y_STEPLIGHT = 34.8f, Y_ROOT = 40.6f, Y_QUAL = 48.4f, Y_STEPNAME = 54.6f;
-static const float COL_X0 = 9.0f, COL_DX = 11.06f;
-static const float Y_ROWA = 73.0f, Y_ROWB = 89.0f, Y_IN1 = 104.6f, Y_IN2 = 117.6f;
-static const int OUT_COL0 = 11;
-static float colX(int i) { return COL_X0 + i * COL_DX; }
-static float stepX(int i) { return STEP_X0 + i * STEP_DX; }
+#include "ComperLayout.hpp"
+using namespace comperlayout;
 
 static const int BEATS_CHOICES[4] = {1, 2, 4, 8};
 static const int PPB_CHOICES[4] = {1, 2, 4, 24};
+static const std::vector<std::string> QUAL_LABELS = {"maj7", "6", "m7", "m6", "mMaj7", "7", "7alt", "m7b5", "dim7", "7sus", "triad", "minor triad"};
 
 struct Comper : Module {
 	enum ParamIds {
@@ -28,6 +21,8 @@ struct Comper : Module {
 		LOOSE_PARAM, TIMING_PARAM, ROLL_PARAM, WEIGHT_PARAM, SLOP_PARAM, PEDAL_PARAM,
 		LISTEN_PARAM, TEMPO_PARAM, RUN_PARAM,
 		ENUMS(ROOT_PARAM, 16), ENUMS(QUAL_PARAM, 16),
+		// 2.3.0 (appended so old patches and presets keep their ids)
+		OCTAVE_PARAM, LENGTH_PARAM, EDIT_ROOT_PARAM, EDIT_QUAL_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -51,6 +46,15 @@ struct Comper : Module {
 	dsp::BooleanTrigger newTrig;
 	dsp::ClockDivider lightDiv;
 	int pendingSeed = -1;
+	// 2.3.0: the chart is edited on the screen (tap a step, then turn EDIT ROOT / QUAL)
+	int editStep = 0;
+	float lastEditRoot = -1.f, lastEditQual = -1.f;
+	int lastEditStep = -1;
+	// 2.3.0: preset browser on the screen
+	std::string presetName;
+	int presetIndex = -1;
+	std::vector<float> presetSnap;
+	bool snapPending = true;
 
 	Comper() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -66,9 +70,9 @@ struct Comper : Module {
 		configParam<RegQ>(REGISTER_PARAM, 60.f, 79.f, 69.f, "Register (where the top note sits)")->description = "REGISTER CV: 1 V per octave around the knob.";
 		configParam(VOICES_PARAM, 2.f, 5.f, 5.f, "Most notes in a chord")->snapEnabled = true;
 		configParam(LEAD_PARAM, 0.f, 1.f, 1.f, "Voice leading", "%", 0.f, 100.f)->description = "How hard each voice tries to move as little as possible to the next chord.";
-		configParam(OUT_PARAM, 0.f, 1.f, 0.f, "Out (altered dominants, tritone substitutes, side-slips)", "%", 0.f, 100.f);
+		configParam(OUT_PARAM, 0.f, 1.f, 0.f, "Autre (altered dominants, tritone substitutes, side-slips)", "%", 0.f, 100.f);
 		configSwitch(ROOTS_PARAM, 0.f, 2.f, 0.f, "Roots in the left hand", {"Off (the bass has them)", "Some", "All (solo piano)"});
-		configSwitch(GROOVE_PARAM, 0.f, 4.f, 0.f, "Groove", {"Swing", "Bossa", "Ballad", "Soul (sixteenths)", "House (sixteenths)"});
+		configSwitch(GROOVE_PARAM, 0.f, 5.f, 0.f, "Groove", {"Swing", "Bossa", "Ballad", "Soul (sixteenths)", "House (sixteenths)", "Reggae (offbeat skank)"});
 		configParam(DENSITY_PARAM, 0.f, 1.f, 0.5f, "Density", "%", 0.f, 100.f);
 		struct SwingQ : ParamQuantity {
 			std::string getDisplayValueString() override {
@@ -76,7 +80,7 @@ struct Comper : Module {
 				double bpm = m ? 60.0 / m->host.spb : 120.0;
 				double v = getValue();
 				int g = m ? (int)m->params[GROOVE_PARAM].getValue() : 0;
-				if (g >= 3) return string::f("%+.0f%% (sixteenth push %.2f)", v * 100.0, std::max(0.5, std::min(0.67, (g == 3 ? 0.54 : 0.5) + 0.12 * v)));
+				if (g == 3 || g == 4) return string::f("%+.0f%% (sixteenth push %.2f)", v * 100.0, std::max(0.5, std::min(0.67, (g == 3 ? 0.54 : 0.5) + 0.12 * v)));
 				double base = (g == 0 || g == 2) ? autoSwing(bpm) : 1.0;
 				double r = std::max(1.0, std::min(3.0, base * std::pow(2.0, v * 0.6)));
 				return string::f("%s%+.0f%% (long:short %.2f)", std::fabs(v) < 0.01 ? "auto " : "", v * 100.0, r);
@@ -102,9 +106,20 @@ struct Comper : Module {
 				std::string getDisplayValueString() override { return NOTE_NAMES[pmod((int)std::round(getValue()), 12)]; }
 			};
 			configParam<RootQ>(ROOT_PARAM + i, 0.f, 11.f, 0.f, string::f("Step %d root", i + 1))->snapEnabled = true;
-			configSwitch(QUAL_PARAM + i, 0.f, 9.f, 0.f, string::f("Step %d quality", i + 1), {"maj7", "6", "m7", "m6", "mMaj7", "7", "7alt", "m7b5", "dim7", "7sus"});
+			configSwitch(QUAL_PARAM + i, 0.f, (float)(NUM_Q - 1), 0.f, string::f("Step %d quality", i + 1), QUAL_LABELS);
 		}
-		for (int id : {(int)STEPS_PARAM, (int)BEATS_PARAM, (int)KEY_PARAM, (int)SEED_PARAM, (int)NEW_PARAM, (int)TEMPO_PARAM, (int)RUN_PARAM})
+		configParam(OCTAVE_PARAM, -3.f, 3.f, 0.f, "Octave (moves the chord outputs; the bass outputs stay)", " oct")->snapEnabled = true;
+		configParam(LENGTH_PARAM, 0.f, 1.f, 0.6f, "Length (short to legato)", "%", 0.f, 100.f)->description =
+			"How long the hands hold each chord. SLOP and LOOSE set how much the lengths vary: top notes ring longest, inner voices lift first, accents sit longer.";
+		{
+			struct EditRootQ : ParamQuantity {
+				std::string getDisplayValueString() override { return NOTE_NAMES[pmod((int)std::round(getValue()), 12)]; }
+			};
+			configParam<EditRootQ>(EDIT_ROOT_PARAM, 0.f, 11.f, 2.f, "Root of the tapped step")->snapEnabled = true;
+			configSwitch(EDIT_QUAL_PARAM, 0.f, (float)(NUM_Q - 1), (float)M7, "Quality of the tapped step", QUAL_LABELS);
+		}
+		for (int id : {(int)STEPS_PARAM, (int)BEATS_PARAM, (int)KEY_PARAM, (int)SEED_PARAM, (int)NEW_PARAM, (int)TEMPO_PARAM, (int)RUN_PARAM,
+		               (int)OCTAVE_PARAM, (int)EDIT_ROOT_PARAM, (int)EDIT_QUAL_PARAM})
 			getParamQuantity(id)->randomizeEnabled = false;
 		for (int i = 0; i < 16; i++) { getParamQuantity(ROOT_PARAM + i)->randomizeEnabled = false; getParamQuantity(QUAL_PARAM + i)->randomizeEnabled = false; }
 
@@ -113,13 +128,13 @@ struct Comper : Module {
 		configInput(RUN_INPUT, "Run gate (high = run; overrides the button)");
 		configInput(KEY_INPUT, "Key (V/oct, rounded to a semitone)");
 		configInput(ROOT_INPUT, "Chord root (V/oct). Patching it switches from the chart to CV chords");
-		configInput(QUAL_INPUT, "Chord quality (1 V per step: maj7 6 m7 m6 mMaj7 7 7alt m7b5 dim7 7sus)");
+		configInput(QUAL_INPUT, "Chord quality (1 V per step: maj7 6 m7 m6 mMaj7 7 7alt m7b5 dim7 7sus triad minor-triad)");
 		configInput(CHORD_VOCT_INPUT, "Chord notes (poly V/oct). Patching it switches to chords worked out from the notes");
 		configInput(CHORD_GATE_INPUT, "Chord gates (poly; all notes count when unpatched)");
 		configInput(SOLO_INPUT, "Soloist gate or audio");
 		configInput(SOLO_VOCT_INPUT, "Soloist pitch (V/oct): the chords stay under it");
 		configInput(DENSITY_INPUT, "DENSITY CV (0 to 10 V adds 0 to 100%)");
-		configInput(OUT_INPUT, "OUT CV (0 to 10 V adds 0 to 100%)");
+		configInput(OUT_INPUT, "AUTRE CV (0 to 10 V adds 0 to 100%)");
 		configInput(LOOSE_INPUT, "LOOSE CV (0 to 10 V adds 0 to 250%)");
 		configInput(LISTEN_INPUT, "LISTEN CV (0 to 10 V adds 0 to 100%)");
 		configInput(REGISTER_INPUT, "REGISTER CV (1 V per octave)");
@@ -166,6 +181,7 @@ struct Comper : Module {
 
 	void onReset() override {
 		ppbIndex = 0; channels = 12; bassEveryBar = false; resetReplays = true; keepRootsWithWalker = false;
+		editStep = 0; lastEditStep = -1; presetName.clear(); presetIndex = -1; snapPending = true;
 		loadProgression(0);
 		host = Host();
 	}
@@ -176,6 +192,7 @@ struct Comper : Module {
 		if (newTrig.process(params[NEW_PARAM].getValue() > 0.f))
 			params[SEED_PARAM].setValue((float)(random::u32() % 1000));
 
+		syncEdit();
 		// chart
 		in.steps = clamp((int)params[STEPS_PARAM].getValue(), 1, 16);
 		in.beatsPerStep = BEATS_CHOICES[clamp((int)params[BEATS_PARAM].getValue(), 0, 3)];
@@ -183,7 +200,7 @@ struct Comper : Module {
 		in.keyConnected = inputs[KEY_INPUT].isConnected(); in.keyV = inputs[KEY_INPUT].getVoltage();
 		for (int i = 0; i < 16; i++) {
 			in.stepRoot[i] = clamp((int)params[ROOT_PARAM + i].getValue(), 0, 11);
-			in.stepQual[i] = clamp((int)params[QUAL_PARAM + i].getValue(), 0, 9);
+			in.stepQual[i] = clamp((int)params[QUAL_PARAM + i].getValue(), 0, NUM_Q - 1);
 		}
 		in.rootConnected = inputs[ROOT_INPUT].isConnected(); in.rootV = inputs[ROOT_INPUT].getVoltage();
 		in.qualConnected = inputs[QUAL_INPUT].isConnected(); in.qualV = inputs[QUAL_INPUT].getVoltage();
@@ -215,7 +232,7 @@ struct Comper : Module {
 		port.read(this); heard = port.merged();
 		if (heard.hasBass && !keepRootsWithWalker) p.roots = 0;
 		float bandX = heard.hasDrum ? clamp(heard.bandX, -1.f, 1.f) : 0.f;
-		p.groove = clamp((int)params[GROOVE_PARAM].getValue(), 0, 4);
+		p.groove = clamp((int)params[GROOVE_PARAM].getValue(), 0, NUM_GROOVES - 1);
 		p.density = clamp(params[DENSITY_PARAM].getValue() + cv01(inputs[DENSITY_INPUT], 1.f) + 0.35f * bandX, 0.f, 1.f);
 		p.swing = params[SWING_PARAM].getValue();
 		p.repeat = params[REPEAT_PARAM].getValue();
@@ -227,6 +244,9 @@ struct Comper : Module {
 		p.slop = params[SLOP_PARAM].getValue();
 		p.pedal = params[PEDAL_PARAM].getValue();
 		p.listen = clamp(params[LISTEN_PARAM].getValue() + cv01(inputs[LISTEN_INPUT], 1.f), 0.f, 1.f);
+		p.human = true;
+		p.length = clamp(params[LENGTH_PARAM].getValue(), 0.f, 1.f);
+		in.octave = clamp((int)std::round(params[OCTAVE_PARAM].getValue()), -3, 3);
 		in.seed = (int)params[SEED_PARAM].getValue();
 		in.outChannels = channels; in.bassEveryBar = bassEveryBar; in.resetReplays = resetReplays;
 
@@ -260,6 +280,40 @@ struct Comper : Module {
 		}
 	}
 
+	// EDIT ROOT / QUAL follow the tapped step; turning them writes into it
+	void syncEdit() {
+		int k = clamp(editStep, 0, 15);
+		float er = params[EDIT_ROOT_PARAM].getValue(), eq = params[EDIT_QUAL_PARAM].getValue();
+		float sr = params[ROOT_PARAM + k].getValue(), sq = params[QUAL_PARAM + k].getValue();
+		if (k != lastEditStep) {
+			params[EDIT_ROOT_PARAM].setValue(sr); params[EDIT_QUAL_PARAM].setValue(sq);
+			lastEditRoot = sr; lastEditQual = sq; lastEditStep = k;
+			return;
+		}
+		if (er != lastEditRoot) { params[ROOT_PARAM + k].setValue(er); lastEditRoot = er; }
+		else if (sr != er) { params[EDIT_ROOT_PARAM].setValue(sr); lastEditRoot = sr; }
+		if (eq != lastEditQual) { params[QUAL_PARAM + k].setValue(eq); lastEditQual = eq; }
+		else if (sq != eq) { params[EDIT_QUAL_PARAM].setValue(sq); lastEditQual = sq; }
+	}
+
+	// ---- preset browser
+	// params that count as "changed since the preset loaded" (not the transport or the edit knobs)
+	bool countsForDirty(int id) const {
+		return id != RUN_PARAM && id != NEW_PARAM && id != EDIT_ROOT_PARAM && id != EDIT_QUAL_PARAM;
+	}
+	void takeSnapshot() {
+		presetSnap.resize(NUM_PARAMS);
+		for (int i = 0; i < NUM_PARAMS; i++) presetSnap[i] = params[i].getValue();
+		snapPending = false;
+	}
+	bool presetDirty() {
+		if (snapPending) takeSnapshot();
+		if ((int)presetSnap.size() != NUM_PARAMS) return false;
+		for (int i = 0; i < NUM_PARAMS; i++)
+			if (countsForDirty(i) && std::fabs(params[i].getValue() - presetSnap[i]) > 1e-4f) return true;
+		return false;
+	}
+
 	// tell the band where we are and what we are about to play (Rack's expander messages, one sample a hop)
 	void sendLink() {
 		CompLink m;
@@ -285,6 +339,8 @@ struct Comper : Module {
 		json_object_set_new(root, "bassEveryBar", json_boolean(bassEveryBar));
 		json_object_set_new(root, "resetReplays", json_boolean(resetReplays));
 		json_object_set_new(root, "keepRootsWithWalker", json_boolean(keepRootsWithWalker));
+		json_object_set_new(root, "editStep", json_integer(editStep));
+		if (!presetName.empty()) json_object_set_new(root, "presetName", json_string(presetName.c_str()));
 		return root;
 	}
 	void dataFromJson(json_t* root) override {
@@ -293,6 +349,11 @@ struct Comper : Module {
 		if (json_t* j = json_object_get(root, "bassEveryBar")) bassEveryBar = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "resetReplays")) resetReplays = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "keepRootsWithWalker")) keepRootsWithWalker = json_boolean_value(j);
+		if (json_t* j = json_object_get(root, "editStep")) { editStep = clamp((int)json_integer_value(j), 0, 15); lastEditStep = -1; }
+		// a patch carries the preset name; a preset loaded from Rack's own menu doesn't, so the screen shows "--"
+		if (json_t* j = json_object_get(root, "presetName")) presetName = json_string_value(j);
+		else presetName.clear();
+		snapPending = true;
 	}
 };
 
@@ -300,15 +361,137 @@ struct Comper : Module {
 static NVGcolor AMBER() { return nvgRGB(0xF2, 0xC2, 0x5C); }
 static NVGcolor DIMCOL() { return nvgRGB(0x8A, 0x7A, 0x55); }
 
-struct ChordDisplay : TransparentWidget {
+// ---------------------------------------------------------------- the screen (2.3.0)
+// Top: preset bar (tap the arrows to step, the name for a list). Middle: chord, voicing, source.
+// Bottom: the 16-step chart; tap a step to edit it with EDIT ROOT and QUAL.
+static std::vector<std::string> comperPresetFiles(Model* model) {
+	std::vector<std::string> out;
+	if (!model) return out;
+	std::string dirs[2] = {model->getFactoryPresetDirectory(), model->getUserPresetDirectory()};
+	for (const std::string& dir : dirs) {
+		if (dir.empty() || !system::isDirectory(dir)) continue;
+		std::vector<std::string> fs;
+		for (const std::string& f : system::getEntries(dir)) {
+			std::string ext = system::getExtension(f);
+			if (ext == ".vcvm" || ext == "vcvm") fs.push_back(f);
+		}
+		std::sort(fs.begin(), fs.end());
+		out.insert(out.end(), fs.begin(), fs.end());
+	}
+	return out;
+}
+static std::string comperPresetName(const std::string& path) {
+	std::string n = system::getStem(path);
+	size_t u = n.find('_');
+	if (u != std::string::npos && u > 0 && u <= 3) {
+		bool digits = true;
+		for (size_t i = 0; i < u; i++) if (n[i] < '0' || n[i] > '9') digits = false;
+		if (digits) n = n.substr(u + 1);
+	}
+	return n;
+}
+static int comperPresetIndex(Comper* m, const std::vector<std::string>& files) {
+	if (m->presetIndex >= 0 && m->presetIndex < (int)files.size() && comperPresetName(files[m->presetIndex]) == m->presetName)
+		return m->presetIndex;
+	for (int i = 0; i < (int)files.size(); i++) if (comperPresetName(files[i]) == m->presetName) return i;
+	return -1;
+}
+static void comperLoadPreset(ModuleWidget* mw, Comper* m, int idx) {
+	std::vector<std::string> files = comperPresetFiles(m->model);
+	if (files.empty() || !mw) return;
+	idx = pmod(idx, (int)files.size());
+	// presets made before 2.3.0 don't store these; start them from their defaults
+	m->params[Comper::OCTAVE_PARAM].setValue(0.f);
+	m->params[Comper::LENGTH_PARAM].setValue(0.6f);
+	try {
+		mw->loadAction(files[idx]);
+	} catch (Exception& e) {
+		WARN("Comper: could not load preset %s: %s", files[idx].c_str(), e.what());
+		return;
+	}
+	m->presetIndex = idx;
+	m->presetName = comperPresetName(files[idx]);
+	m->lastEditStep = -1;
+	m->takeSnapshot();
+}
+
+struct ComperScreen : OpaqueWidget {
 	Comper* module = nullptr;
+	static float K() { return RACK_GRID_WIDTH / 5.08f; }   // px per mm
+
+	void onButton(const ButtonEvent& e) override {
+		if (e.action != GLFW_PRESS || e.button != GLFW_MOUSE_BUTTON_LEFT || !module) { OpaqueWidget::onButton(e); return; }
+		float x = e.pos.x / K(), y = e.pos.y / K(), w = box.size.x / K();
+		ModuleWidget* mw = getAncestorOfType<ModuleWidget>();
+		if (y < 7.4f) {
+			std::vector<std::string> files = comperPresetFiles(module->model);
+			int cur = comperPresetIndex(module, files);
+			if (x < 9.f) comperLoadPreset(mw, module, cur < 0 ? (int)files.size() - 1 : cur - 1);
+			else if (x > w - 9.f) comperLoadPreset(mw, module, cur < 0 ? 0 : cur + 1);
+			else {
+				Comper* m = module;
+				Menu* menu = createMenu();
+				menu->addChild(createMenuLabel("Presets"));
+				for (int i = 0; i < (int)files.size(); i++)
+					menu->addChild(createCheckMenuItem(string::f("%02d  %s", i + 1, comperPresetName(files[i]).c_str()), "",
+						[=]() { return i == cur; }, [=]() { comperLoadPreset(mw, m, i); }));
+			}
+			e.consume(this);
+			return;
+		}
+		if (y > 16.2f) {
+			float cw = (w - 2.4f) / 16.f;
+			int k = (int)std::floor((x - 1.2f) / cw);
+			if (k >= 0 && k < 16) { module->editStep = k; }
+			e.consume(this);
+			return;
+		}
+		OpaqueWidget::onButton(e);
+	}
+
+	void text(NVGcontext* vg, float x, float y, float sizeMm, NVGcolor c, int align, const std::string& s, float* bounds = nullptr) {
+		nvgFontSize(vg, sizeMm * K()); nvgFillColor(vg, c);
+		nvgTextAlign(vg, align | NVG_ALIGN_BASELINE);
+		nvgText(vg, x * K(), y * K(), s.c_str(), NULL);
+		if (bounds) nvgTextBounds(vg, x * K(), y * K(), s.c_str(), NULL, bounds);
+	}
+
 	void drawLayer(const DrawArgs& args, int layer) override {
 		if (layer != 1) return;
 		std::shared_ptr<Font> font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
 		if (!font) return;
-		nvgFontFaceId(args.vg, font->handle);
-		std::string cur = "Dm7", nxt = "G7", src = "CHART", voic = "F3 A3 C4 E4", seed = "1";
-		bool demo = !module;
+		NVGcontext* vg = args.vg;
+		nvgFontFaceId(vg, font->handle);
+		const float k = K(), w = box.size.x / k;
+		NVGcolor amber = AMBER(), dim = DIMCOL(), faint = nvgRGBA(0x8A, 0x7A, 0x55, 0x60);
+
+		// ---- preset bar
+		nvgBeginPath(vg); nvgRoundedRect(vg, 1.2f * k, 1.2f * k, (w - 2.4f) * k, 5.4f * k, 0.8f * k);
+		nvgFillColor(vg, nvgRGB(0x1C, 0x1A, 0x14)); nvgFill(vg);
+		nvgFillColor(vg, amber);
+		nvgBeginPath(vg); nvgMoveTo(vg, 3.2f * k, 3.9f * k); nvgLineTo(vg, 5.8f * k, 2.0f * k); nvgLineTo(vg, 5.8f * k, 5.8f * k); nvgClosePath(vg); nvgFill(vg);
+		nvgBeginPath(vg); nvgMoveTo(vg, (w - 3.2f) * k, 3.9f * k); nvgLineTo(vg, (w - 5.8f) * k, 2.0f * k); nvgLineTo(vg, (w - 5.8f) * k, 5.8f * k); nvgClosePath(vg); nvgFill(vg);
+		std::string pname = "BOSSA", pright = "4 / 12 · TAP NAME FOR LIST";
+		int pnum = 4; bool dirty = false;
+		if (module) {
+			std::vector<std::string> files = comperPresetFiles(module->model);
+			int cur = comperPresetIndex(module, files);
+			pnum = cur + 1;
+			pname = module->presetName.empty() ? "" : string::uppercase(module->presetName);
+			dirty = !module->presetName.empty() && module->presetDirty();
+			pright = cur >= 0 ? string::f("%d / %d · TAP NAME FOR LIST", cur + 1, (int)files.size()) : string::f("%d PRESETS · TAP NAME FOR LIST", (int)files.size());
+		}
+		text(vg, 8.2f, 5.0f, 2.3f, dim, NVG_ALIGN_LEFT, "PRESET");
+		std::string ps = pname.empty() ? "--" : (pnum > 0 ? string::f("%02d · ", pnum) : std::string()) + pname + (dirty ? " *" : "");
+		text(vg, 21.0f, 5.15f, 3.4f, amber, NVG_ALIGN_LEFT, ps);
+		text(vg, w - 8.0f, 5.0f, 2.3f, dim, NVG_ALIGN_RIGHT, pright);
+
+		// ---- chord, voicing, source
+		std::string cur = "Dm7", nxt = "G7", src = "CHART", voic = "F4 A4 C5 E5", seed = "1";
+		int oct = 1, steps = 8, play = 1, sel = 5;
+		Chord chart[16];
+		static const int DR[8] = {2, 7, 0, 0, 2, 7, 0, 0}, DQ[8] = {M7, DOM, MAJ, MAJ, HDIM, ALT, M6, M6};
+		for (int i = 0; i < 16; i++) chart[i] = Chord(DR[i % 8], DQ[i % 8]);
 		if (module) {
 			Host& h = module->host;
 			src = SOURCE_NAMES[h.source];
@@ -318,56 +501,42 @@ struct ChordDisplay : TransparentWidget {
 				Chord c;
 				if (h.chartNext(module->in, std::max(0.0, h.phi), c)) nxt = chordName(c);
 			}
+			oct = module->in.octave;
 			voic = "";
 			if (h.haveLast) {
-				for (size_t i = 0; i < h.lastVoicing.size(); i++) { if (i) voic += " "; voic += noteName(h.lastVoicing[i]); }
+				for (size_t i = 0; i < h.lastVoicing.size(); i++) { if (i) voic += " "; voic += noteName(h.lastVoicing[i] + 12 * oct); }
 				if (h.lastChord != h.srcChord) voic += "  (" + chordName(h.lastChord) + ")";
 			}
 			seed = std::to_string(module->in.seed);
-			if (!h.running) src += "  STOPPED";
+			if (!h.running) src += " STOPPED";
+			steps = module->in.steps;
+			play = h.source == SRC_CHART ? h.stepAt(module->in, std::max(0.0, h.phi)) : -1;
+			sel = clamp(module->editStep, 0, 15);
+			int key = h.keyOffset(module->in);
+			for (int i = 0; i < 16; i++)
+				chart[i] = Chord(pmod((int)module->params[Comper::ROOT_PARAM + i].getValue() + key, 12),
+				                 clamp((int)module->params[Comper::QUAL_PARAM + i].getValue(), 0, NUM_Q - 1));
 		}
-		(void)demo;
-		float w = box.size.x, hgt = box.size.y;
-		nvgFillColor(args.vg, AMBER());
-		nvgFontSize(args.vg, 25.f);
-		nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
-		nvgText(args.vg, 6.f, hgt * 0.58f, cur.c_str(), NULL);
-		float b[4]; nvgTextBounds(args.vg, 6.f, hgt * 0.58f, cur.c_str(), NULL, b);
-		if (!nxt.empty()) {
-			nvgFontSize(args.vg, 14.f); nvgFillColor(args.vg, DIMCOL());
-			std::string s = "> " + nxt;
-			nvgText(args.vg, b[2] + 8.f, hgt * 0.58f, s.c_str(), NULL);
-		}
-		nvgFontSize(args.vg, 11.f); nvgFillColor(args.vg, DIMCOL());
-		nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BASELINE);
-		nvgText(args.vg, w - 6.f, 14.f, src.c_str(), NULL);
-		std::string sd = "SEED " + seed;
-		nvgText(args.vg, w - 6.f, 28.f, sd.c_str(), NULL);
-		nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
-		nvgFillColor(args.vg, AMBER()); nvgFontSize(args.vg, 12.f);
-		nvgText(args.vg, 6.f, hgt - 6.f, voic.c_str(), NULL);
-	}
-};
+		float b[4];
+		text(vg, 2.5f, 13.6f, 6.6f, amber, NVG_ALIGN_LEFT, cur, b);
+		if (!nxt.empty()) text(vg, b[2] / k + 3.0f, 13.6f, 3.8f, dim, NVG_ALIGN_LEFT, "> " + nxt);
+		text(vg, w / 2 + 6.f, 13.4f, 3.2f, amber, NVG_ALIGN_CENTER, voic);
+		std::string info = src + " · SEED " + seed + (oct ? string::f(" · OCT %+d", oct) : std::string());
+		text(vg, w - 2.5f, 13.4f, 2.6f, dim, NVG_ALIGN_RIGHT, info);
 
-struct StepNames : TransparentWidget {
-	Comper* module = nullptr;
-	void drawLayer(const DrawArgs& args, int layer) override {
-		if (layer != 1) return;
-		std::shared_ptr<Font> font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
-		if (!font) return;
-		nvgFontFaceId(args.vg, font->handle);
-		nvgFontSize(args.vg, 9.5f);
-		nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
-		int steps = module ? clamp((int)module->params[Comper::STEPS_PARAM].getValue(), 1, 16) : 4;
-		int key = module ? module->host.keyOffset(module->in) : 0;
+		// ---- chart strip
+		const float cy = 16.8f, ch = 7.8f, cw = (w - 2.4f) / 16.f;
 		for (int i = 0; i < 16; i++) {
-			Chord c;
-			if (module) c = Chord(pmod((int)module->params[Comper::ROOT_PARAM + i].getValue() + key, 12), (int)module->params[Comper::QUAL_PARAM + i].getValue());
-			else { static const int R[4] = {2, 7, 0, 0}, Q[4] = {M7, DOM, MAJ, MAJ}; c = Chord(R[i % 4], Q[i % 4]); }
-			std::string s = chordName(c);
-			nvgFillColor(args.vg, i < steps ? AMBER() : nvgRGBA(0x8A, 0x7A, 0x55, 0x50));
-			float x = mm2px(stepX(i)) - box.pos.x;
-			nvgText(args.vg, x, box.size.y - 3.f, s.c_str(), NULL);
+			float x = 1.2f + i * cw;
+			bool used = i < steps, isSel = i == sel, isPlay = i == play;
+			nvgBeginPath(vg); nvgRoundedRect(vg, (x + 0.25f) * k, cy * k, (cw - 0.5f) * k, ch * k, 0.6f * k);
+			nvgFillColor(vg, isSel ? nvgRGB(0x3A, 0x2F, 0x14) : nvgRGB(0x17, 0x18, 0x1B)); nvgFill(vg);
+			nvgStrokeWidth(vg, (isSel || isPlay ? 0.45f : 0.25f) * k);
+			nvgStrokeColor(vg, isSel ? amber : isPlay ? nvgRGB(0x5A, 0x4B, 0x28) : nvgRGB(0x26, 0x28, 0x30)); nvgStroke(vg);
+			text(vg, x + 0.9f, cy + 2.1f, 1.6f, dim, NVG_ALIGN_LEFT, std::to_string(i + 1));
+			if (isPlay) { nvgBeginPath(vg); nvgCircle(vg, (x + cw - 1.4f) * k, (cy + 1.4f) * k, 0.6f * k); nvgFillColor(vg, amber); nvgFill(vg); }
+			std::string n = chordName(chart[i]);
+			text(vg, x + cw / 2, cy + 6.2f, n.size() < 6 ? 2.9f : 2.5f, used ? amber : faint, NVG_ALIGN_CENTER, n);
 		}
 	}
 };
@@ -402,53 +571,71 @@ struct ComperWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		ChordDisplay* d = createWidget<ChordDisplay>(mm2px(Vec(DISP_X, DISP_Y)));
+		ComperScreen* d = createWidget<ComperScreen>(mm2px(Vec(DISP_X, DISP_Y)));
 		d->box.size = mm2px(Vec(DISP_W, DISP_H)); d->module = module; addChild(d);
-		StepNames* sn = createWidget<StepNames>(mm2px(Vec(0.f, Y_STEPNAME - 4.f)));
-		sn->box.size = mm2px(Vec(182.88f, 5.f)); sn->module = module; addChild(sn);
 
-		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(SMALLK_X[0], SMALLK_Y)), module, Comper::STEPS_PARAM));
-		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(SMALLK_X[1], SMALLK_Y)), module, Comper::BEATS_PARAM));
-		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(SMALLK_X[2], SMALLK_Y)), module, Comper::KEY_PARAM));
-		for (int i = 0; i < 16; i++) {
-			addChild(createLightCentered<SmallLight<AmberLightBase>>(mm2px(Vec(stepX(i), Y_STEPLIGHT)), module, Comper::STEP_LIGHT + i));
-			addParam(createParamCentered<Trimpot>(mm2px(Vec(stepX(i), Y_ROOT)), module, Comper::ROOT_PARAM + i));
-			addParam(createParamCentered<Trimpot>(mm2px(Vec(stepX(i), Y_QUAL)), module, Comper::QUAL_PARAM + i));
-		}
-		// row A
-		const int rowA[12] = {Comper::STYLE_PARAM, Comper::SPREAD_PARAM, Comper::REGISTER_PARAM, Comper::VOICES_PARAM,
-			Comper::GROOVE_PARAM, Comper::DENSITY_PARAM, Comper::SWING_PARAM, Comper::REPEAT_PARAM,
-			Comper::LOOSE_PARAM, Comper::TIMING_PARAM, Comper::ROLL_PARAM, Comper::WEIGHT_PARAM};
-		for (int i = 0; i < 12; i++) {
-			Vec pos = mm2px(Vec(colX(i), Y_ROWA));
-			if (i == 8) addParam(createParamCentered<RoundLargeBlackKnob>(pos, module, rowA[i]));
-			else if (i >= 9) addParam(createParamCentered<Trimpot>(pos, module, rowA[i]));
-			else addParam(createParamCentered<RoundBlackKnob>(pos, module, rowA[i]));
-		}
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(12), Y_ROWA)), module, Comper::LISTEN_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(13), Y_ROWA)), module, Comper::TEMPO_PARAM));
-		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(colX(14), Y_ROWA)), module, Comper::RUN_PARAM, Comper::RUN_LIGHT));
-		// row B
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(0), Y_ROWB)), module, Comper::LEAD_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(1), Y_ROWB)), module, Comper::OUT_PARAM));
-		addParam(createParamCentered<CKSSThree>(mm2px(Vec(colX(2), Y_ROWB)), module, Comper::ROOTS_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(4), Y_ROWB)), module, Comper::PUSH_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(5), Y_ROWB)), module, Comper::SEED_PARAM));
-		addParam(createParamCentered<VCVButton>(mm2px(Vec(colX(6), Y_ROWB)), module, Comper::NEW_PARAM));
-		addParam(createParamCentered<Trimpot>(mm2px(Vec(colX(8), Y_ROWB)), module, Comper::SLOP_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(colX(9), Y_ROWB)), module, Comper::PEDAL_PARAM));
-		addChild(createLightCentered<MediumLight<AmberLightBase>>(mm2px(Vec(colX(12), Y_ROWB)), module, Comper::HIT_LIGHT));
-		addChild(createLightCentered<MediumLight<AmberLightBase>>(mm2px(Vec(colX(13), Y_ROWB)), module, Comper::SOLO_LIGHT));
+		// chart block
+		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(STEPS_X, STEPS_Y)), module, Comper::STEPS_PARAM));
+		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(BEATS_X, BEATS_Y)), module, Comper::BEATS_PARAM));
+		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(KEY_X, KEY_Y)), module, Comper::KEY_PARAM));
+		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(EDIT_ROOT_X, EDIT_ROOT_Y)), module, Comper::EDIT_ROOT_PARAM));
+		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(EDIT_QUAL_X, EDIT_QUAL_Y)), module, Comper::EDIT_QUAL_PARAM));
+		// voicing
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(STYLE_X, STYLE_Y)), module, Comper::STYLE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(SPREAD_X, SPREAD_Y)), module, Comper::SPREAD_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(VOICES_X, VOICES_Y)), module, Comper::VOICES_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(LEAD_X, LEAD_Y)), module, Comper::LEAD_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(REGISTER_X, REGISTER_Y)), module, Comper::REGISTER_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(OUT_X, OUT_Y)), module, Comper::OUT_PARAM));
+		addParam(createParamCentered<CKSSThree>(mm2px(Vec(ROOTS_X, ROOTS_Y)), module, Comper::ROOTS_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(OCTAVE_X, OCTAVE_Y)), module, Comper::OCTAVE_PARAM));
+		// rhythm
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(GROOVE_X, GROOVE_Y)), module, Comper::GROOVE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(SWING_X, SWING_Y)), module, Comper::SWING_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(DENSITY_X, DENSITY_Y)), module, Comper::DENSITY_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(REPEAT_X, REPEAT_Y)), module, Comper::REPEAT_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(PUSH_X, PUSH_Y)), module, Comper::PUSH_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(LENGTH_X, LENGTH_Y)), module, Comper::LENGTH_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(SEED_X, SEED_Y)), module, Comper::SEED_PARAM));
+		addParam(createParamCentered<VCVButton>(mm2px(Vec(NEW_X, NEW_Y)), module, Comper::NEW_PARAM));
+		// hands
+		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(LOOSE_X, LOOSE_Y)), module, Comper::LOOSE_PARAM));
+		addParam(createParamCentered<Trimpot>(mm2px(Vec(TIMING_X, TIMING_Y)), module, Comper::TIMING_PARAM));
+		addParam(createParamCentered<Trimpot>(mm2px(Vec(ROLL_X, ROLL_Y)), module, Comper::ROLL_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(PEDAL_X, PEDAL_Y)), module, Comper::PEDAL_PARAM));
+		addParam(createParamCentered<Trimpot>(mm2px(Vec(WEIGHT_X, WEIGHT_Y)), module, Comper::WEIGHT_PARAM));
+		addParam(createParamCentered<Trimpot>(mm2px(Vec(SLOP_X, SLOP_Y)), module, Comper::SLOP_PARAM));
+		// band
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(LISTEN_X, LISTEN_Y)), module, Comper::LISTEN_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(TEMPO_X, TEMPO_Y)), module, Comper::TEMPO_PARAM));
+		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(RUN_X, RUN_Y)), module, Comper::RUN_PARAM, Comper::RUN_LIGHT));
+		addChild(createLightCentered<MediumLight<AmberLightBase>>(mm2px(Vec(HIT_X, HIT_Y)), module, Comper::HIT_LIGHT));
+		addChild(createLightCentered<MediumLight<AmberLightBase>>(mm2px(Vec(SOLO_X, SOLO_Y)), module, Comper::SOLO_LIGHT));
 		// jacks
-		const int in1[10] = {Comper::CLOCK_INPUT, Comper::RESET_INPUT, Comper::RUN_INPUT, Comper::KEY_INPUT, Comper::ROOT_INPUT,
-			Comper::QUAL_INPUT, Comper::CHORD_VOCT_INPUT, Comper::CHORD_GATE_INPUT, Comper::SOLO_INPUT, Comper::SOLO_VOCT_INPUT};
-		for (int i = 0; i < 10; i++) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(colX(i), Y_IN1)), module, in1[i]));
-		const int in2[5] = {Comper::DENSITY_INPUT, Comper::OUT_INPUT, Comper::LOOSE_INPUT, Comper::LISTEN_INPUT, Comper::REGISTER_INPUT};
-		for (int i = 0; i < 5; i++) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(colX(i), Y_IN2)), module, in2[i]));
-		const int out1[5] = {Comper::VOCT_OUTPUT, Comper::GATE_OUTPUT, Comper::VEL_OUTPUT, Comper::PEDAL_OUTPUT, Comper::SCALE_OUTPUT};
-		for (int i = 0; i < 5; i++) addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(colX(OUT_COL0 + i), Y_IN1)), module, out1[i]));
-		const int out2[4] = {Comper::BASS_VOCT_OUTPUT, Comper::BASS_GATE_OUTPUT, Comper::CHANGE_OUTPUT, Comper::EOC_OUTPUT};
-		for (int i = 0; i < 4; i++) addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(colX(OUT_COL0 + i), Y_IN2)), module, out2[i]));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_CLOCK_X, IN_CLOCK_Y)), module, Comper::CLOCK_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_RESET_X, IN_RESET_Y)), module, Comper::RESET_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_RUN_X, IN_RUN_Y)), module, Comper::RUN_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_KEY_X, IN_KEY_Y)), module, Comper::KEY_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_ROOT_X, IN_ROOT_Y)), module, Comper::ROOT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_QUAL_X, IN_QUAL_Y)), module, Comper::QUAL_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_CHORD_VOCT_X, IN_CHORD_VOCT_Y)), module, Comper::CHORD_VOCT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_CHORD_GATE_X, IN_CHORD_GATE_Y)), module, Comper::CHORD_GATE_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_SOLO_X, IN_SOLO_Y)), module, Comper::SOLO_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_SOLO_VOCT_X, IN_SOLO_VOCT_Y)), module, Comper::SOLO_VOCT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_DENSITY_X, IN_DENSITY_Y)), module, Comper::DENSITY_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_OUT_X, IN_OUT_Y)), module, Comper::OUT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_LOOSE_X, IN_LOOSE_Y)), module, Comper::LOOSE_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_LISTEN_X, IN_LISTEN_Y)), module, Comper::LISTEN_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IN_REGISTER_X, IN_REGISTER_Y)), module, Comper::REGISTER_INPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_VOCT_X, OUT_VOCT_Y)), module, Comper::VOCT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_GATE_X, OUT_GATE_Y)), module, Comper::GATE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_VEL_X, OUT_VEL_Y)), module, Comper::VEL_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_PEDAL_X, OUT_PEDAL_Y)), module, Comper::PEDAL_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_SCALE_X, OUT_SCALE_Y)), module, Comper::SCALE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_BASS_VOCT_X, OUT_BASS_VOCT_Y)), module, Comper::BASS_VOCT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_BASS_GATE_X, OUT_BASS_GATE_Y)), module, Comper::BASS_GATE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_CHANGE_X, OUT_CHANGE_Y)), module, Comper::CHANGE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_EOC_X, OUT_EOC_Y)), module, Comper::EOC_OUTPUT));
 	}
 
 	void appendContextMenu(Menu* menu) override {
@@ -456,8 +643,24 @@ struct ComperWidget : ModuleWidget {
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createSubmenuItem("Load progression", "", [=](Menu* sub) {
-			for (int i = 0; i < NUM_PROGRESSIONS; i++)
-				sub->addChild(createMenuItem(PROGRESSIONS[i].name, PROGRESSIONS[i].text, [=]() { m->loadProgression(i); }));
+			// grouped by the "Genre: " prefix; the first ones (no prefix) are the jazz standards
+			std::vector<std::string> groups;
+			for (int i = 0; i < NUM_PROGRESSIONS; i++) {
+				std::string n = PROGRESSIONS[i].name; size_t c = n.find(": ");
+				std::string g = c == std::string::npos ? "Jazz" : n.substr(0, c);
+				if (std::find(groups.begin(), groups.end(), g) == groups.end()) groups.push_back(g);
+			}
+			for (const std::string& g : groups) {
+				sub->addChild(createSubmenuItem(g, "", [=](Menu* gm) {
+					for (int i = 0; i < NUM_PROGRESSIONS; i++) {
+						std::string n = PROGRESSIONS[i].name; size_t c = n.find(": ");
+						std::string gg = c == std::string::npos ? "Jazz" : n.substr(0, c);
+						if (gg != g) continue;
+						std::string label = c == std::string::npos ? n : n.substr(c + 2);
+						gm->addChild(createMenuItem(label, PROGRESSIONS[i].text, [=]() { m->loadProgression(i); }));
+					}
+				}));
+			}
 		}));
 		menu->addChild(createMenuLabel("Type a chart (Enter to set; % repeats, up to 16 steps):"));
 		ChartField* f = new ChartField;

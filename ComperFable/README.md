@@ -8,7 +8,7 @@ rhythm figures that push into the next chord, rolled and weighted hands, and a L
 room for a soloist and answers in the gaps. Notes out only: patch it into a piano (Joanna, in this
 repository, is the intended partner) or any polyphonic voice.
 
-- 36 HP. Poly V/OCT, GATE, VEL out (up to 16 channels), PEDAL, SCALE, BASS V/OCT and GATE, CHANGE, EOC
+- 38 HP (2.3.0). Poly V/OCT, GATE, VEL out (up to 16 channels), PEDAL, SCALE, BASS V/OCT and GATE, CHANGE, EOC
 - Chords from a built-in 16-step chart (14 progressions, or type one), from ROOT and QUAL CV, or worked out from a poly chord input
 - Grooves: swing, bossa, ballad, soul and house sixteenths. 4/4 only
 - LOOSE knob from sequencer-tight to drunk, with TIMING, ROLL, WEIGHT and SLOP trims
@@ -16,6 +16,26 @@ repository, is the intended partner) or any polyphonic voice.
 - Manual: [docs/Comper-Manual.pdf](docs/Comper-Manual.pdf). Design: [docs/BUILD-INSTRUCTIONS.md](docs/BUILD-INSTRUCTIONS.md)
 
 Designed by Fable (the reference engine `tools/proto/comper_ref.py` defines what it plays), built by Opus.
+
+## What's new in 2.3.0
+
+- **Panel:** 38 HP with full-size labels (3.2 mm controls, 2.9 mm jacks). The 32 step knobs are gone: the chart is a strip of 16 steps
+  along the bottom of the screen. Tap a step, then set it with **EDIT ROOT** and **QUAL** in the CHART block. The playing step has a dot.
+  Old patches keep their charts (the step settings are still stored, just not on the panel).
+- **Presets on the screen:** the top line of the screen is a preset bar. Tap the arrows to step through the factory and your own
+  presets, or tap the name for a list. A `*` means you have changed something since loading.
+- **OCTAVE:** -3 to +3 octaves on the chord outputs (the bass outputs stay put).
+- **LENGTH:** short to legato. Notes now have a pianist's lengths: the top note rings longest, inner voices lift first, accents sit
+  longer, ghost notes are clipped, each groove has its own touch, and the touch drifts slowly so a phrase stays legato or detached.
+  SLOP and LOOSE set how much it varies. The default is longer than 2.2.0's.
+- **AUTRE:** the OUT knob and its CV input are renamed AUTRE (same job).
+- **Grooves:** a sixth groove, **Reggae** (straight eighths, chords chopped on the offbeat and on 2 and 4). Walker plays its soul line
+  and Rider its soul pattern under it.
+- **Chords:** plain major and minor triads (type `C`, `Am`, or use the QUAL knob's last two settings). In a typed chart a bare letter is now
+  a triad (it was a 6 chord before).
+- **Progressions:** 30 more, grouped by genre in the right-click menu: House (11), Gospel (2), Blues (2), Disco (4), Soul (4), Funk (3),
+  Reggae (4), on top of the 14 jazz ones.
+- Licence is now MIT.
 
 ## Walker
 
@@ -58,4 +78,4 @@ Walker panel: `python3 res/make_walker_panel.py`. Demos: `python3 tools/make_wal
 Panel: `python3 res/make_panel.py` (needs `pip install fonttools`). Presets: `python3 tools/proto/export_presets.py`.
 Golden cases: `python3 tools/proto/make_reference.py && python3 tools/golden_to_h.py`.
 
-GPL-3.0-or-later (see LICENSE.txt).
+MIT (see LICENSE.txt). Changed from GPL-3.0-or-later in 2.3.0: the code is all original.

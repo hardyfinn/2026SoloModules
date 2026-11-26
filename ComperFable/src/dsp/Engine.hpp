@@ -34,10 +34,13 @@ struct Rng {
 };
 
 // ------------------------------------------------------------------ chords
-enum Quality { MAJ, MAJ6, M7, M6, MMAJ, DOM, ALT, HDIM, DIM, SUS, NUM_Q };
-static const char* const Q_NAMES[NUM_Q] = {"maj7", "6", "m7", "m6", "mMaj7", "7", "7alt", "m7b5", "dim7", "7sus"};
+// TRI and MIN (plain triads) were added in 2.3.0 for reggae and pop-shaped progressions; they come last
+// so saved patches keep their qualities.
+enum Quality { MAJ, MAJ6, M7, M6, MMAJ, DOM, ALT, HDIM, DIM, SUS, TRI, MIN, NUM_Q };
+static const int NUM_Q_JAZZ = 10;   // the qualities the reference engine and POLY IN recognition know
+static const char* const Q_NAMES[NUM_Q] = {"maj7", "6", "m7", "m6", "mMaj7", "7", "7alt", "m7b5", "dim7", "7sus", "", "m"};
 static const char* const NOTE_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
-static inline bool minorFamily(int q) { return q == M7 || q == M6 || q == MMAJ || q == HDIM; }
+static inline bool minorFamily(int q) { return q == M7 || q == M6 || q == MMAJ || q == HDIM || q == MIN; }
 
 struct Chord {
 	int root = 0, q = MAJ;
@@ -99,17 +102,27 @@ struct Tables {
 		S(SUS, ROOTLESS, {{5,9,10,2},{10,2,5,9}});
 		S(SUS, QUARTAL, {{10,2,5},{2,5,10}});
 		S(SUS, SPREADV, {{10,5,9,2,7},{5,10,2,7,9}});
+		// plain triads: the three inversions, doubled at the top for fuller styles
+		S(TRI, SHELL, {{0,4,7},{4,7,0},{7,0,4}});
+		S(TRI, ROOTLESS, {{4,7,0,4},{7,0,4,7},{0,4,7,0}});
+		S(TRI, QUARTAL, {{7,0,4},{4,7,0}});
+		S(TRI, SPREADV, {{0,7,4,7},{4,0,7,0},{7,4,0,4}});
+		S(MIN, SHELL, {{0,3,7},{3,7,0},{7,0,3}});
+		S(MIN, ROOTLESS, {{3,7,0,3},{7,0,3,7},{0,3,7,0}});
+		S(MIN, QUARTAL, {{7,0,3},{3,7,0}});
+		S(MIN, SPREADV, {{0,7,3,7},{3,0,7,0},{7,3,0,3}});
 	}
 };
 static inline const Tables& tables() { static Tables t; return t; }
 
 static const int WINDOW_LO[NUM_STYLE_SLOTS] = {48, 50, 52, 44, 0, 46};
 static const int WINDOW_HI[NUM_STYLE_SLOTS] = {64, 67, 68, 58, 0, 60};
-static const int GUIDES[NUM_Q][2] = {{4,11},{4,9},{3,10},{3,9},{3,11},{4,10},{4,10},{3,10},{3,9},{5,10}};
-static const int SCALE_LEN[NUM_Q] = {7, 5, 7, 7, 7, 6, 7, 7, 8, 6};
+static const int GUIDES[NUM_Q][2] = {{4,11},{4,9},{3,10},{3,9},{3,11},{4,10},{4,10},{3,10},{3,9},{5,10},{4,7},{3,7}};
+static const int SCALE_LEN[NUM_Q] = {7, 5, 7, 7, 7, 6, 7, 7, 8, 6, 7, 7};
 static const int SCALES[NUM_Q][8] = {
 	{0,2,4,6,7,9,11}, {0,2,4,7,9}, {0,2,3,5,7,9,10}, {0,2,3,5,7,9,11}, {0,2,3,5,7,9,11},
-	{0,2,4,7,9,10}, {0,1,3,4,6,8,10}, {0,1,3,5,6,8,10}, {0,2,3,5,6,8,9,11}, {0,2,5,7,9,10}};
+	{0,2,4,7,9,10}, {0,1,3,4,6,8,10}, {0,1,3,5,6,8,10}, {0,2,3,5,6,8,9,11}, {0,2,5,7,9,10},
+	{0,2,4,5,7,9,11}, {0,2,3,5,7,9,10}};
 
 static inline int pmod(int a, int m) { int r = a % m; return r < 0 ? r + m : r; }
 
@@ -176,9 +189,10 @@ static inline Notes limitVoices(Notes v, int root, int q, int nmax) {
 
 // ------------------------------------------------------------------ rhythm cells
 enum { S_ = 0, L_ = 1 };
-enum Groove { SWING, BOSSA, BALLAD, SOUL, HOUSE, NUM_GROOVES };
-static const char* const GROOVE_NAMES[NUM_GROOVES] = {"SWING", "BOSSA", "BALLAD", "SOUL", "HOUSE"};
-static const int GROOVE_SLOTS[NUM_GROOVES] = {8, 8, 8, 16, 16};
+// REGGAE (2.3.0): straight eighths, chords chopped on the offbeat (the skank) and on 2 and 4.
+enum Groove { SWING, BOSSA, BALLAD, SOUL, HOUSE, REGGAE, NUM_GROOVES };
+static const char* const GROOVE_NAMES[NUM_GROOVES] = {"SWING", "BOSSA", "BALLAD", "SOUL", "HOUSE", "REGGAE"};
+static const int GROOVE_SLOTS[NUM_GROOVES] = {8, 8, 8, 16, 16, 8};
 
 typedef std::pair<int, int> Hit;           // (slot, long?)
 typedef std::vector<Hit> Cell;
@@ -203,6 +217,9 @@ struct CellTables {
 		P(HOUSE, 0, {{{2,S},{10,S}}, {{0,L}}, {{6,S},{14,S}}});
 		P(HOUSE, 1, {{{2,S},{6,S},{10,S},{14,S}}, {{0,S},{3,S},{6,S},{10,S},{13,S}}, {{3,S},{6,S},{11,S},{14,S}}, {{0,S},{3,S},{6,L}}});
 		P(HOUSE, 2, {{{0,S},{3,S},{6,S},{8,S},{11,S},{14,S}}, {{2,S},{5,S},{6,S},{10,S},{13,S},{14,S}}});
+		P(REGGAE, 0, {{{2,S},{6,S}}, {{1,S},{3,S},{5,S},{7,S}}, {{2,S},{6,S}}});
+		P(REGGAE, 1, {{{1,S},{3,S},{5,S},{7,S}}, {{1,S},{2,S},{5,S},{6,S}}, {{2,S},{3,S},{6,S},{7,S}}, {{1,S},{3,S},{5,S},{7,S}}});
+		P(REGGAE, 2, {{{1,S},{2,S},{3,S},{5,S},{6,S},{7,S}}, {{1,S},{3,S},{4,S},{5,S},{7,S}}});
 	}
 };
 static inline const CellTables& cells() { static CellTables t; return t; }
@@ -238,6 +255,9 @@ struct Params {
 	double timing = 1.0, roll = 1.0, weight = 1.0, slop = 1.0;
 	double pedal = 0.0;
 	double listen = 0.0;
+	// 2.3.0 (host side, not in the reference engine): human note lengths. Off = the reference lengths.
+	bool human = false;
+	double length = 0.6;           // 0 short, 1 legato
 };
 
 struct Ctx {
