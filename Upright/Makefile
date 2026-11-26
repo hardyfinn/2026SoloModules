@@ -3,7 +3,7 @@ RACK_DIR ?= ../Rack-SDK
 
 FLAGS +=
 SOURCES += $(wildcard src/*.cpp)
-DISTRIBUTABLES += $(wildcard res/*.svg)
+DISTRIBUTABLES += res
 DISTRIBUTABLES += $(wildcard LICENSE*)
 
 ifneq ($(MAKECMDGOALS),test)
@@ -15,8 +15,8 @@ TESTFLAGS = -O3 -funsafe-math-optimizations -std=c++17
 ifeq ($(shell uname -m),x86_64)
 TESTFLAGS += -march=nehalem
 endif
-test/render: test/render.cpp src/UprightEngine.hpp
-	$(CXX) $(TESTFLAGS) test/render.cpp -o test/render
+test/render: test/render.cpp src/UprightEngine.hpp src/stb_vorbis_impl.cpp
+	$(CXX) $(TESTFLAGS) test/render.cpp src/stb_vorbis_impl.cpp -o test/render
 .PHONY: test
 test: test/render
 	mkdir -p test/out && ./test/render test/out

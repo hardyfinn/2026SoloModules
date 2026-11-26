@@ -1,0 +1,9 @@
+Piano samples: "VS Upright No. 1" by Versilian Studios LLC, from the
+VS Chamber Orchestra: Community Edition (VSCO 2 CE), recorded by Sam Gossner
+and Simon Dalzell. Released under CC0 1.0 Universal (public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://github.com/sgossner/VSCO-2-CE (Keys/Upright Nr1)
+
+Changes for this module: leading silence trimmed to 3 ms before the note,
+a 0.3 s fade at the end, encoded as Ogg Vorbis (quality 6). Credit to
+Versilian Studios is appreciated, not required.

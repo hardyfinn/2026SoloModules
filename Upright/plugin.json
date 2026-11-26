@@ -1,0 +1,23 @@
+{
+  "slug": "Upright",
+  "name": "Upright",
+  "version": "2.0.0",
+  "license": "MIT (code); samples CC0 1.0 (VS Upright No. 1, Versilian Studios)",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Upright",
+      "name": "Upright",
+      "description": "Sampled upright piano: three velocity layers, two takes per note, sustain pedal, dampers, tone and release",
+      "tags": ["Synth Voice", "Polyphonic", "Sampler"]
+    }
+  ]
+}
