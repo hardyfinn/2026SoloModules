@@ -47,7 +47,7 @@ GRID = [
     ("SEED", 5, 2, "knob"), ("NEW", 6, 2, "button"),
     ("LOOSE", 8, 0, "large"), ("TIMING", 9, 0, "trim"), ("ROLL", 10, 0, "trim"),
     ("PEDAL", 8, 1, "knob"), ("WEIGHT", 9, 1, "trim"), ("SLOP", 10, 1, "trim"),
-    ("LISTEN", 11, 0, "knob"), ("TEMPO", 12, 0, "knob"), ("RUN", 11, 1, "latch"),
+    ("LISTEN", 11, 0, "knob"), ("TEMPO", 12, 0, "knob"), ("RUN", 11, 1, "latch"), ("PRESET", 12, 1, "knob"),
     ("HIT", 11, 2, "light"), ("SOLO", 12, 2, "light"),
 ]
 LABEL = {"EDIT_ROOT": "ROOT", "EDIT_QUAL": "QUAL", "OUT": "AUTRE"}
@@ -126,7 +126,6 @@ x, y, _ = pos("ROOTS"); add(text("OFF·SOME·ALL", x, y + 6.6, 1.9, FONT_BOLD, S
 x, y, _ = pos("OCTAVE"); add(text("−3", x - 5.4, y + 5.6, SMALL, FONT_BOLD, SOFT, check=False)); add(text("+3", x + 5.4, y + 5.6, SMALL, FONT_BOLD, SOFT, check=False))
 x, y, _ = pos("LENGTH"); add(text("SHORT", x - 2.4, y + 6.6, 1.9, FONT_BOLD, SOFT, anchor="end", check=False)); add(text("LEGATO", x + 2.4, y + 6.6, 1.9, FONT_BOLD, SOFT, anchor="start", check=False))
 x, y, _ = pos("KEY"); add(text("± 6 ST", x, y + 6.6, 1.9, FONT_BOLD, SOFT, check=False))
-x, y, _ = pos("TEMPO"); add(text("BPM", x, y + 7.0, 1.9, FONT_BOLD, SOFT, check=False))
 add(text("EDIT", kc(1), RY[2] - 1.2, CONTROL, FONT_BOLD, ACCENT))
 add(text("TAPPED STEP", kc(1), RY[2] + 2.4, 1.9, FONT_BOLD, SOFT, check=False))
 add(text("TRIMS × LOOSE", (kc(9) + kc(10)) / 2, RY[2] - 0.4, SMALL, FONT_BOLD, SOFT))

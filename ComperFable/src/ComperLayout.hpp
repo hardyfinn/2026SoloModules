@@ -32,6 +32,7 @@ static const float SLOP_X = 154.467f, SLOP_Y = 71.600f;
 static const float LISTEN_X = 168.953f, LISTEN_Y = 55.600f;
 static const float TEMPO_X = 183.440f, TEMPO_Y = 55.600f;
 static const float RUN_X = 168.953f, RUN_Y = 71.600f;
+static const float PRESET_X = 183.440f, PRESET_Y = 71.600f;
 static const float HIT_X = 168.953f, HIT_Y = 86.000f;
 static const float SOLO_X = 183.440f, SOLO_Y = 86.000f;
 static const float IN_CLOCK_X = 8.400f, IN_CLOCK_Y = 104.800f;

@@ -23,6 +23,7 @@ struct Comper : Module {
 		ENUMS(ROOT_PARAM, 16), ENUMS(QUAL_PARAM, 16),
 		// 2.3.0 (appended so old patches and presets keep their ids)
 		OCTAVE_PARAM, LENGTH_PARAM, EDIT_ROOT_PARAM, EDIT_QUAL_PARAM,
+		PRESET_PARAM,   // 2.3.1
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -50,11 +51,8 @@ struct Comper : Module {
 	int editStep = 0;
 	float lastEditRoot = -1.f, lastEditQual = -1.f;
 	int lastEditStep = -1;
-	// 2.3.0: preset browser on the screen
-	std::string presetName;
-	int presetIndex = -1;
-	std::vector<float> presetSnap;
-	bool snapPending = true;
+	// 2.3.1: the screen's top bar browses the progressions; -1 = a chart of your own
+	int progIndex = 0;
 
 	Comper() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -109,6 +107,26 @@ struct Comper : Module {
 			configSwitch(QUAL_PARAM + i, 0.f, (float)(NUM_Q - 1), 0.f, string::f("Step %d quality", i + 1), QUAL_LABELS);
 		}
 		configParam(OCTAVE_PARAM, -3.f, 3.f, 0.f, "Octave (moves the chord outputs; the bass outputs stay)", " oct")->snapEnabled = true;
+		{
+			// PRESET (2.3.1): one setting per factory preset, named from presets/Comper; turning it loads that preset
+			std::vector<std::string> names;
+			std::string dir = asset::plugin(pluginInstance, "presets/Comper");
+			if (system::isDirectory(dir)) {
+				std::vector<std::string> fs;
+				for (const std::string& f : system::getEntries(dir)) {
+					std::string ext = system::getExtension(f);
+					if (ext == ".vcvm" || ext == "vcvm") fs.push_back(f);
+				}
+				std::sort(fs.begin(), fs.end());
+				for (const std::string& f : fs) {
+					std::string n = system::getStem(f);
+					size_t u = n.find('_');
+					names.push_back(u != std::string::npos && u <= 3 ? n.substr(u + 1) : n);
+				}
+			}
+			if (names.empty()) names.push_back("(no presets)");
+			configSwitch(PRESET_PARAM, 0.f, (float)(names.size() - 1), 0.f, "Preset (turn to load)", names);
+		}
 		configParam(LENGTH_PARAM, 0.f, 1.f, 0.6f, "Length (short to legato)", "%", 0.f, 100.f)->description =
 			"How long the hands hold each chord. SLOP and LOOSE set how much the lengths vary: top notes ring longest, inner voices lift first, accents sit longer.";
 		{
@@ -119,7 +137,7 @@ struct Comper : Module {
 			configSwitch(EDIT_QUAL_PARAM, 0.f, (float)(NUM_Q - 1), (float)M7, "Quality of the tapped step", QUAL_LABELS);
 		}
 		for (int id : {(int)STEPS_PARAM, (int)BEATS_PARAM, (int)KEY_PARAM, (int)SEED_PARAM, (int)NEW_PARAM, (int)TEMPO_PARAM, (int)RUN_PARAM,
-		               (int)OCTAVE_PARAM, (int)EDIT_ROOT_PARAM, (int)EDIT_QUAL_PARAM})
+		               (int)OCTAVE_PARAM, (int)EDIT_ROOT_PARAM, (int)EDIT_QUAL_PARAM, (int)PRESET_PARAM})
 			getParamQuantity(id)->randomizeEnabled = false;
 		for (int i = 0; i < 16; i++) { getParamQuantity(ROOT_PARAM + i)->randomizeEnabled = false; getParamQuantity(QUAL_PARAM + i)->randomizeEnabled = false; }
 
@@ -154,6 +172,9 @@ struct Comper : Module {
 	}
 
 	void loadProgression(int i) {
+		i = pmod(i, NUM_PROGRESSIONS);
+		progIndex = i;
+		lastEditStep = -1;
 		const Progression& p = PROGRESSIONS[i];
 		std::vector<Chord> ch; std::string bad;
 		if (!parseChart(p.text, ch, bad)) return;
@@ -181,7 +202,7 @@ struct Comper : Module {
 
 	void onReset() override {
 		ppbIndex = 0; channels = 12; bassEveryBar = false; resetReplays = true; keepRootsWithWalker = false;
-		editStep = 0; lastEditStep = -1; presetName.clear(); presetIndex = -1; snapPending = true;
+		editStep = 0; lastEditStep = -1;
 		loadProgression(0);
 		host = Host();
 	}
@@ -296,21 +317,16 @@ struct Comper : Module {
 		else if (sq != eq) { params[EDIT_QUAL_PARAM].setValue(sq); lastEditQual = sq; }
 	}
 
-	// ---- preset browser
-	// params that count as "changed since the preset loaded" (not the transport or the edit knobs)
-	bool countsForDirty(int id) const {
-		return id != RUN_PARAM && id != NEW_PARAM && id != EDIT_ROOT_PARAM && id != EDIT_QUAL_PARAM;
-	}
-	void takeSnapshot() {
-		presetSnap.resize(NUM_PARAMS);
-		for (int i = 0; i < NUM_PARAMS; i++) presetSnap[i] = params[i].getValue();
-		snapPending = false;
-	}
-	bool presetDirty() {
-		if (snapPending) takeSnapshot();
-		if ((int)presetSnap.size() != NUM_PARAMS) return false;
-		for (int i = 0; i < NUM_PARAMS; i++)
-			if (countsForDirty(i) && std::fabs(params[i].getValue() - presetSnap[i]) > 1e-4f) return true;
+	// true when the chart no longer matches the progression it was loaded from
+	bool progChanged() {
+		if (progIndex < 0 || progIndex >= NUM_PROGRESSIONS) return false;
+		const Progression& p = PROGRESSIONS[progIndex];
+		std::vector<Chord> ch; std::string bad;
+		if (!parseChart(p.text, ch, bad)) return false;
+		if ((int)params[STEPS_PARAM].getValue() != (int)ch.size()) return true;
+		if (BEATS_CHOICES[clamp((int)params[BEATS_PARAM].getValue(), 0, 3)] != p.beats) return true;
+		for (size_t k = 0; k < ch.size(); k++)
+			if ((int)params[ROOT_PARAM + k].getValue() != ch[k].root || (int)params[QUAL_PARAM + k].getValue() != ch[k].q) return true;
 		return false;
 	}
 
@@ -340,7 +356,7 @@ struct Comper : Module {
 		json_object_set_new(root, "resetReplays", json_boolean(resetReplays));
 		json_object_set_new(root, "keepRootsWithWalker", json_boolean(keepRootsWithWalker));
 		json_object_set_new(root, "editStep", json_integer(editStep));
-		if (!presetName.empty()) json_object_set_new(root, "presetName", json_string(presetName.c_str()));
+		json_object_set_new(root, "progIndex", json_integer(progIndex));
 		return root;
 	}
 	void dataFromJson(json_t* root) override {
@@ -350,10 +366,9 @@ struct Comper : Module {
 		if (json_t* j = json_object_get(root, "resetReplays")) resetReplays = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "keepRootsWithWalker")) keepRootsWithWalker = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "editStep")) { editStep = clamp((int)json_integer_value(j), 0, 15); lastEditStep = -1; }
-		// a patch carries the preset name; a preset loaded from Rack's own menu doesn't, so the screen shows "--"
-		if (json_t* j = json_object_get(root, "presetName")) presetName = json_string_value(j);
-		else presetName.clear();
-		snapPending = true;
+		// patches and presets from before 2.3.1 carry no progression: the screen shows the chart as your own
+		if (json_t* j = json_object_get(root, "progIndex")) progIndex = clamp((int)json_integer_value(j), -1, NUM_PROGRESSIONS - 1);
+		else progIndex = -1;
 	}
 };
 
@@ -361,24 +376,20 @@ struct Comper : Module {
 static NVGcolor AMBER() { return nvgRGB(0xF2, 0xC2, 0x5C); }
 static NVGcolor DIMCOL() { return nvgRGB(0x8A, 0x7A, 0x55); }
 
-// ---------------------------------------------------------------- the screen (2.3.0)
-// Top: preset bar (tap the arrows to step, the name for a list). Middle: chord, voicing, source.
+// ---------------------------------------------------------------- the screen (2.3.0, 2.3.1)
+// Top: progression bar (tap the arrows to step, the name for a list by genre). Middle: chord, voicing, source.
 // Bottom: the 16-step chart; tap a step to edit it with EDIT ROOT and QUAL.
-static std::vector<std::string> comperPresetFiles(Model* model) {
-	std::vector<std::string> out;
-	if (!model) return out;
-	std::string dirs[2] = {model->getFactoryPresetDirectory(), model->getUserPresetDirectory()};
-	for (const std::string& dir : dirs) {
-		if (dir.empty() || !system::isDirectory(dir)) continue;
-		std::vector<std::string> fs;
-		for (const std::string& f : system::getEntries(dir)) {
-			std::string ext = system::getExtension(f);
-			if (ext == ".vcvm" || ext == "vcvm") fs.push_back(f);
-		}
-		std::sort(fs.begin(), fs.end());
-		out.insert(out.end(), fs.begin(), fs.end());
+// Presets are on the PRESET knob (the factory presets in presets/Comper).
+static std::vector<std::string> comperPresetFiles() {
+	std::vector<std::string> fs;
+	std::string dir = asset::plugin(pluginInstance, "presets/Comper");
+	if (!system::isDirectory(dir)) return fs;
+	for (const std::string& f : system::getEntries(dir)) {
+		std::string ext = system::getExtension(f);
+		if (ext == ".vcvm" || ext == "vcvm") fs.push_back(f);
 	}
-	return out;
+	std::sort(fs.begin(), fs.end());
+	return fs;
 }
 static std::string comperPresetName(const std::string& path) {
 	std::string n = system::getStem(path);
@@ -390,29 +401,43 @@ static std::string comperPresetName(const std::string& path) {
 	}
 	return n;
 }
-static int comperPresetIndex(Comper* m, const std::vector<std::string>& files) {
-	if (m->presetIndex >= 0 && m->presetIndex < (int)files.size() && comperPresetName(files[m->presetIndex]) == m->presetName)
-		return m->presetIndex;
-	for (int i = 0; i < (int)files.size(); i++) if (comperPresetName(files[i]) == m->presetName) return i;
-	return -1;
-}
 static void comperLoadPreset(ModuleWidget* mw, Comper* m, int idx) {
-	std::vector<std::string> files = comperPresetFiles(m->model);
+	std::vector<std::string> files = comperPresetFiles();
 	if (files.empty() || !mw) return;
-	idx = pmod(idx, (int)files.size());
+	idx = clamp(idx, 0, (int)files.size() - 1);
 	// presets made before 2.3.0 don't store these; start them from their defaults
 	m->params[Comper::OCTAVE_PARAM].setValue(0.f);
 	m->params[Comper::LENGTH_PARAM].setValue(0.6f);
+	float keep = m->params[Comper::PRESET_PARAM].getValue();
 	try {
 		mw->loadAction(files[idx]);
 	} catch (Exception& e) {
 		WARN("Comper: could not load preset %s: %s", files[idx].c_str(), e.what());
-		return;
 	}
-	m->presetIndex = idx;
-	m->presetName = comperPresetName(files[idx]);
+	m->params[Comper::PRESET_PARAM].setValue(keep);   // the knob stays where you put it
 	m->lastEditStep = -1;
-	m->takeSnapshot();
+}
+static std::string progGroup(int i) {
+	std::string n = PROGRESSIONS[i].name; size_t c = n.find(": ");
+	return c == std::string::npos ? "Jazz" : n.substr(0, c);
+}
+static std::string progShort(int i) {
+	std::string n = PROGRESSIONS[i].name; size_t c = n.find(": ");
+	return c == std::string::npos ? n : n.substr(c + 2);
+}
+static void progMenu(Menu* menu, Comper* m) {
+	std::vector<std::string> groups;
+	for (int i = 0; i < NUM_PROGRESSIONS; i++)
+		if (std::find(groups.begin(), groups.end(), progGroup(i)) == groups.end()) groups.push_back(progGroup(i));
+	for (const std::string& g : groups) {
+		menu->addChild(createSubmenuItem(g, "", [=](Menu* gm) {
+			for (int i = 0; i < NUM_PROGRESSIONS; i++) {
+				if (progGroup(i) != g) continue;
+				gm->addChild(createCheckMenuItem(progShort(i), PROGRESSIONS[i].text,
+					[=]() { return m->progIndex == i; }, [=]() { m->loadProgression(i); }));
+			}
+		}));
+	}
 }
 
 struct ComperScreen : OpaqueWidget {
@@ -422,19 +447,14 @@ struct ComperScreen : OpaqueWidget {
 	void onButton(const ButtonEvent& e) override {
 		if (e.action != GLFW_PRESS || e.button != GLFW_MOUSE_BUTTON_LEFT || !module) { OpaqueWidget::onButton(e); return; }
 		float x = e.pos.x / K(), y = e.pos.y / K(), w = box.size.x / K();
-		ModuleWidget* mw = getAncestorOfType<ModuleWidget>();
 		if (y < 7.4f) {
-			std::vector<std::string> files = comperPresetFiles(module->model);
-			int cur = comperPresetIndex(module, files);
-			if (x < 9.f) comperLoadPreset(mw, module, cur < 0 ? (int)files.size() - 1 : cur - 1);
-			else if (x > w - 9.f) comperLoadPreset(mw, module, cur < 0 ? 0 : cur + 1);
+			int cur = module->progIndex;
+			if (x < 9.f) module->loadProgression(cur < 0 ? NUM_PROGRESSIONS - 1 : cur - 1);
+			else if (x > w - 9.f) module->loadProgression(cur < 0 ? 0 : cur + 1);
 			else {
-				Comper* m = module;
 				Menu* menu = createMenu();
-				menu->addChild(createMenuLabel("Presets"));
-				for (int i = 0; i < (int)files.size(); i++)
-					menu->addChild(createCheckMenuItem(string::f("%02d  %s", i + 1, comperPresetName(files[i]).c_str()), "",
-						[=]() { return i == cur; }, [=]() { comperLoadPreset(mw, m, i); }));
+				menu->addChild(createMenuLabel("Progressions"));
+				progMenu(menu, module);
 			}
 			e.consume(this);
 			return;
@@ -471,19 +491,18 @@ struct ComperScreen : OpaqueWidget {
 		nvgFillColor(vg, amber);
 		nvgBeginPath(vg); nvgMoveTo(vg, 3.2f * k, 3.9f * k); nvgLineTo(vg, 5.8f * k, 2.0f * k); nvgLineTo(vg, 5.8f * k, 5.8f * k); nvgClosePath(vg); nvgFill(vg);
 		nvgBeginPath(vg); nvgMoveTo(vg, (w - 3.2f) * k, 3.9f * k); nvgLineTo(vg, (w - 5.8f) * k, 2.0f * k); nvgLineTo(vg, (w - 5.8f) * k, 5.8f * k); nvgClosePath(vg); nvgFill(vg);
-		std::string pname = "BOSSA", pright = "4 / 12 · TAP NAME FOR LIST";
-		int pnum = 4; bool dirty = false;
+		std::string pname = "HOUSE: ORGAN I-IV", pright = "15 / 44 · TAP NAME FOR LIST";
+		int pnum = 15; bool changed = true;
 		if (module) {
-			std::vector<std::string> files = comperPresetFiles(module->model);
-			int cur = comperPresetIndex(module, files);
+			int cur = module->progIndex;
 			pnum = cur + 1;
-			pname = module->presetName.empty() ? "" : string::uppercase(module->presetName);
-			dirty = !module->presetName.empty() && module->presetDirty();
-			pright = cur >= 0 ? string::f("%d / %d · TAP NAME FOR LIST", cur + 1, (int)files.size()) : string::f("%d PRESETS · TAP NAME FOR LIST", (int)files.size());
+			pname = cur >= 0 ? string::uppercase(PROGRESSIONS[cur].name) : "YOUR OWN CHART";
+			changed = cur >= 0 && module->progChanged();
+			pright = cur >= 0 ? string::f("%d / %d · TAP NAME FOR LIST", cur + 1, NUM_PROGRESSIONS) : string::f("%d PROGRESSIONS · TAP NAME FOR LIST", NUM_PROGRESSIONS);
 		}
-		text(vg, 8.2f, 5.0f, 2.3f, dim, NVG_ALIGN_LEFT, "PRESET");
-		std::string ps = pname.empty() ? "--" : (pnum > 0 ? string::f("%02d · ", pnum) : std::string()) + pname + (dirty ? " *" : "");
-		text(vg, 21.0f, 5.15f, 3.4f, amber, NVG_ALIGN_LEFT, ps);
+		text(vg, 8.2f, 5.0f, 2.3f, dim, NVG_ALIGN_LEFT, "PROG");
+		std::string ps = (pnum > 0 ? string::f("%02d · ", pnum) : std::string()) + pname + (changed ? " *" : "");
+		text(vg, 17.5f, 5.15f, 3.4f, amber, NVG_ALIGN_LEFT, ps);
 		text(vg, w - 8.0f, 5.0f, 2.3f, dim, NVG_ALIGN_RIGHT, pright);
 
 		// ---- chord, voicing, source
@@ -550,6 +569,7 @@ struct ChartField : ui::TextField {
 			std::vector<Chord> ch; std::string bad;
 			if (parseChart(text, ch, bad)) {
 				module->setChart(ch);
+				module->progIndex = -1;
 				ui::MenuOverlay* ov = getAncestorOfType<ui::MenuOverlay>();
 				if (ov) ov->requestDelete();
 			} else {
@@ -608,6 +628,7 @@ struct ComperWidget : ModuleWidget {
 		// band
 		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(LISTEN_X, LISTEN_Y)), module, Comper::LISTEN_PARAM));
 		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(TEMPO_X, TEMPO_Y)), module, Comper::TEMPO_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(PRESET_X, PRESET_Y)), module, Comper::PRESET_PARAM));
 		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>(mm2px(Vec(RUN_X, RUN_Y)), module, Comper::RUN_PARAM, Comper::RUN_LIGHT));
 		addChild(createLightCentered<MediumLight<AmberLightBase>>(mm2px(Vec(HIT_X, HIT_Y)), module, Comper::HIT_LIGHT));
 		addChild(createLightCentered<MediumLight<AmberLightBase>>(mm2px(Vec(SOLO_X, SOLO_Y)), module, Comper::SOLO_LIGHT));
@@ -638,30 +659,22 @@ struct ComperWidget : ModuleWidget {
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(OUT_EOC_X, OUT_EOC_Y)), module, Comper::EOC_OUTPUT));
 	}
 
+	// PRESET knob: load the preset it lands on (only when it is turned, not when a patch opens)
+	int lastPreset = -1;
+	void step() override {
+		ModuleWidget::step();
+		Comper* m = dynamic_cast<Comper*>(module);
+		if (!m) return;
+		int v = (int)std::round(m->params[Comper::PRESET_PARAM].getValue());
+		if (lastPreset >= 0 && v != lastPreset) comperLoadPreset(this, m, v);
+		lastPreset = v;
+	}
+
 	void appendContextMenu(Menu* menu) override {
 		Comper* m = dynamic_cast<Comper*>(module);
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
-		menu->addChild(createSubmenuItem("Load progression", "", [=](Menu* sub) {
-			// grouped by the "Genre: " prefix; the first ones (no prefix) are the jazz standards
-			std::vector<std::string> groups;
-			for (int i = 0; i < NUM_PROGRESSIONS; i++) {
-				std::string n = PROGRESSIONS[i].name; size_t c = n.find(": ");
-				std::string g = c == std::string::npos ? "Jazz" : n.substr(0, c);
-				if (std::find(groups.begin(), groups.end(), g) == groups.end()) groups.push_back(g);
-			}
-			for (const std::string& g : groups) {
-				sub->addChild(createSubmenuItem(g, "", [=](Menu* gm) {
-					for (int i = 0; i < NUM_PROGRESSIONS; i++) {
-						std::string n = PROGRESSIONS[i].name; size_t c = n.find(": ");
-						std::string gg = c == std::string::npos ? "Jazz" : n.substr(0, c);
-						if (gg != g) continue;
-						std::string label = c == std::string::npos ? n : n.substr(c + 2);
-						gm->addChild(createMenuItem(label, PROGRESSIONS[i].text, [=]() { m->loadProgression(i); }));
-					}
-				}));
-			}
-		}));
+		menu->addChild(createSubmenuItem("Load progression", "", [=](Menu* sub) { progMenu(sub, m); }));
 		menu->addChild(createMenuLabel("Type a chart (Enter to set; % repeats, up to 16 steps):"));
 		ChartField* f = new ChartField;
 		f->module = m; f->box.size.x = 360.f; f->text = m->chartText();
