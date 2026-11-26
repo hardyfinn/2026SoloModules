@@ -385,10 +385,10 @@ struct Horn {
 	double tipDelay(double w) const { double a = 1 - tipLP.k; return std::atan2(a * std::sin(w), 1 - a * std::cos(w)) / w; }
 	double lossKNow() const { return kind == TENOR ? 0.80 : (kind == TRUMPET ? 0.75 : 0.62); }
 	double levelComp(double p) const {
+		static const double LEVEL_DB[NUM_KINDS][3] = {{-1.5, 0, 0}, {0, -2, 0}, {-1, -2, 0}};   // a local table: one copy, no link-time symbol
 		double key = clampd((p - RANGE_LO[kind]) / (double)(RANGE_TOP[kind] - RANGE_LO[kind]), 0, 1);
 		return std::pow(10.0, LEVEL_DB[kind][0] / 20.0 + (LEVEL_DB[kind][1] / 20.0) * key + (LEVEL_DB[kind][2] / 20.0) * key * key);
 	}
-	static constexpr double LEVEL_DB[NUM_KINDS][3] = {{-1.5, 0, 0}, {0, -2, 0}, {-1, -2, 0}};
 	double tuneCents(double p, double) const { double x = clampd((p - 68.0) / 12.0, 0, 1.2); return 8.0 * x; }   // the top of the sax sits sharp; pull the bore down
 
 	// ---------------------------------------------------------------- audio rate
@@ -483,7 +483,6 @@ struct Horn {
 		return y;
 	}
 };
-constexpr double Horn::LEVEL_DB[NUM_KINDS][3];
 
 // A small club room around the horn: a few early reflections and a short tail, mono in, stereo out.
 struct Room {
