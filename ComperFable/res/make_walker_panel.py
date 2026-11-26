@@ -87,24 +87,23 @@ add(text("LINES OUT", col(4), Y_PLAYER + 8.0, SMALL, FONT_BOLD, SOFT))
 add(text("0 · +1 · +2", col(8), Y_PLAYER + 8.0, SMALL, FONT_BOLD, SOFT))
 
 # HANDS
-heading("HANDS", 3.2, W - 3.2, 54.4)
+heading("HANDS", 3.2, W - 3.2, 53.4)
 HANDS = ["LOOSE", "AHEAD", "TIMING", "WEIGHT", "SLOP", "PITCH", "LENGTH", "VARY"]
 for i, n in enumerate(HANDS):
-    add(text(n, col(i), Y_HANDS - (8.4 if n == "LOOSE" else 6.6 if n in ("AHEAD", "LENGTH", "VARY") else 5.2), CONTROL))
+    add(text(n, col(i), Y_HANDS - (7.9 if n == "LOOSE" else 6.6 if n in ("AHEAD", "LENGTH", "VARY") else 5.2), CONTROL))
 add(text("TRIMS × LOOSE", (col(2) + col(5)) / 2, Y_HANDS + 6.4, SMALL, FONT_BOLD, SOFT))
 add(text("BEHIND · AHEAD", col(1), Y_HANDS + 8.0, SMALL, FONT_BOLD, SOFT))
 add(text("SHORT · LONG", col(6), Y_HANDS + 8.0, SMALL, FONT_BOLD, SOFT))
 add(text("SAME · MIXED", col(7), Y_HANDS + 8.0, SMALL, FONT_BOLD, SOFT))
 # lights, stacked in the last column
-add(text("PLUCK", col(8), Y_HANDS - 5.2, CONTROL))
-add(text("LINK", col(8), Y_HANDS + 2.6, CONTROL))
-add(text("COMPER", col(8), Y_HANDS + 9.0, SMALL, FONT_BOLD, SOFT))
+add(text("PLUCK", col(8), Y_HANDS - 5.6, CONTROL))
+add(text("LINK", col(8), Y_HANDS + 2.4, CONTROL))
 
 # SOUND
-heading("SOUND", 3.2, W - 3.2, 77.4)
+heading("SOUND", 3.2, W - 3.2, 76.6)
 SOUND = ["ATTACK", "PLUCK", "BRIGHT", "SUSTAIN", "GROWL", "BODY", "PICKUP", "THUMP", "AGE", "LEVEL"]
 for i, n in enumerate(SOUND):
-    add(text(n, scol(i), Y_SOUND - (8.0 if n == "ATTACK" else 6.6), CONTROL))
+    add(text(n, scol(i), Y_SOUND - (7.7 if n == "ATTACK" else 6.6), CONTROL))
 add(text("MIC · PICKUP", scol(6), Y_SOUND + 7.6, SMALL, FONT_BOLD, SOFT))
 add(text("NEAR · FAR", scol(1), Y_SOUND + 7.6, SMALL, FONT_BOLD, SOFT))
 
