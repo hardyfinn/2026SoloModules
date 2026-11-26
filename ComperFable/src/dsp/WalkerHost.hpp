@@ -97,7 +97,7 @@ struct WalkerHost {
 	}
 	int wantFeel(const WIn& in) const {
 		if (in.feelPos > 0) return std::min(5, in.feelPos - 1);
-		if (source == WS_LINK) { static const int M[5] = {WALK, BOSSA, BALLAD, SOUL, HOUSE}; return M[std::max(0, std::min(4, in.link.groove))]; }
+		if (source == WS_LINK) { static const int M[6] = {WALK, BOSSA, BALLAD, SOUL, HOUSE, SOUL}; return M[std::max(0, std::min(5, in.link.groove))]; }   // Comper's REGGAE: Walker plays its soul line
 		return WALK;
 	}
 	// for the band (the link): planned notes not yet played that fall off the beat, as beats on the clock of phi
