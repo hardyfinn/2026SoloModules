@@ -49,6 +49,9 @@ struct BP {
 	int feel = WALK;
 	double activity = 0.5, reg = 40.0, roam = 0.5, out = 0.2, repeat = 0.7;
 	double loose = 1.0, timing = 1.0, weight = 1.0, slop = 1.0, pitch = 1.0, ahead = 0.5, swing = 0.0;
+	// 2.4.0: note lengths. length scales every note (1 = as the reference); vary mixes in short and long notes.
+	// At length 1, vary 0 nothing changes and no random numbers are drawn (the golden test still holds).
+	double length = 1.0, vary = 0.0;
 };
 
 enum Kind { K_WALK, K_SKIP, K_RUN, K_TWO, K_PICKUP, K_BOSSA, K_CELL };
@@ -57,6 +60,7 @@ struct Note {
 	double t = 0, vel = 0, dur = 0, scoop = 0, cents = 0, vib = 0, beat = 0;
 	int pitch = 0, string = 0, fret = 0, kind = 0;
 	bool dead = false, stopped = false;
+	bool held = false;     // lengthened by LENGTH/VARY: the next note ends it, whatever the string
 };
 
 static inline int nearN(int pc, double ref, int lo = LO, int hi = HI) {
@@ -92,7 +96,7 @@ struct Player {
 	std::function<Chord(double)> chordAt;
 	double bpm = 120.0;
 	BP p;
-	Rng r, h;
+	Rng r, h, lr;          // lr: note lengths only (2.4.0), so the line and the hands keep their random streams
 	double cperiod = 5, cphase = 0;
 	// hands state
 	bool haveLast = false; Note* last = nullptr;
@@ -106,7 +110,7 @@ struct Player {
 	const std::vector<CellHit>* cell = nullptr; std::vector<CellHit> kept; bool haveKept = false;
 
 	void reset(int seed) {
-		r = Rng(seed); h = Rng((int64_t)seed * 7919 + 17);
+		r = Rng(seed); h = Rng((int64_t)seed * 7919 + 17); lr = Rng((int64_t)seed * 104729 + 3);
 		haveLast = false; last = nullptr; drift = 0; phrase = 0; hand = 2;
 		feelStarted = -1; t1 = 0; walkB0 = 0; lastP = 0; nextBar = 0; cell = nullptr; kept.clear(); haveKept = false;
 		cperiod = 5 + r.n(5); cphase = r.u();
@@ -337,6 +341,19 @@ struct Player {
 		}
 	}
 	// ---------------------------------------------------------------- the hands
+	// 2.4.0 LENGTH / VARY: the length multiplier for one event. Long notes favour the beat, short ones the offbeats.
+	double lengthMul(const Event& e) {
+		double m = p.length;
+		if (p.vary <= 0.0) return m;
+		double v = std::min(1.0, p.vary), u = lr.u(), x = lr.u();
+		double frac = e.beat - std::floor(e.beat);
+		bool onBeat = frac < 0.02 || frac > 0.98;
+		double pLong = v * (onBeat ? 0.42 : 0.16), pShort = v * (onBeat ? 0.14 : 0.40);
+		if (u < pLong) m *= 1.8 + 1.2 * x;
+		else if (u < pLong + pShort) m *= 0.35 + 0.25 * x;
+		else m *= 1.0 + 0.3 * v * (2.0 * x - 1.0);
+		return m;
+	}
 	// Appends to `out` (a std::deque, or a std::vector that is only ever appended to by this function).
 	// May change dur/stopped of the note it returned last, through `last`; onPrevChanged is told when it does.
 	template <class C>
@@ -347,23 +364,28 @@ struct Player {
 			if ((int)e.beat % 8 == 0 && e.beat == (double)(int)e.beat) phrase = 0.05 * h.g() * L * p.weight;
 			double t = e.beat * spb - 0.016 * p.ahead * std::min(1.5, L + 0.25) + drift + 0.0045 * h.g() * L * p.timing;
 			double vel = 0.74 * e.w + phrase + 0.045 * h.g() * L * p.weight;
-			double dur = e.len * spb;
+			double dur = e.len * spb, dur0 = dur;   // dur0: vibrato is decided on the written length, so LENGTH never moves the hands' random draws
 			bool dead = e.dead; Note* a = haveLast ? last : nullptr;
 			int leap = a ? std::abs(e.pitch - a->pitch) : 0;
 			bool changed = false;
 			if (leap >= 5 && !dead && a) { a->dur = std::max(0.06, a->dur - std::min(0.05, 0.12 * spb)); changed = true; }
 			if (!dead && e.kind == K_WALK && h.u() < 0.018 * L * p.slop) dead = true;
+			double lm = dead ? 1.0 : lengthMul(e);
+			bool held = lm > 1.0;
+			if (lm != 1.0) dur = std::min(4.0 * spb, std::max(0.04, dur * lm));
 			double scoop = 0;
 			if (!dead && (leap >= 5 || h.u() < 0.1 * L)) scoop = (18 + 40 * h.u()) * std::min(1.5, L) * p.pitch;
 			double cents = 4.5 * h.g() * L * p.pitch + (e.pitch > 47 ? 3.0 * L * p.pitch : 0.0);
-			double vib = ((e.vib && dur > 0.8) || dur > 1.3) ? (5 + 5 * h.u()) * std::min(1.5, L) : 0.0;
+			double vib = ((e.vib && dur0 > 0.8) || dur0 > 1.3) ? (5 + 5 * h.u()) * std::min(1.5, L) : 0.0;
 			Note n; n.t = t; n.pitch = e.pitch; n.vel = std::max(0.12, std::min(1.0, vel)); n.dur = dur; n.dead = dead; n.scoop = scoop;
-			n.cents = cents; n.vib = vib; n.kind = e.kind; n.beat = e.beat; n.stopped = false;
+			n.cents = cents; n.vib = vib; n.kind = e.kind; n.beat = e.beat; n.stopped = false; n.held = held;
 			noteString(n.pitch, hand, n.string, n.fret);
 			if (n.fret > 0 && std::abs(n.fret - hand) > 3) hand = n.fret;
 			if (a) {
 				double gap = n.t - a->t, touch = std::min(TOUCH_S, 0.22 * gap);
 				if (a->string == n.string && a->t + a->dur > n.t - touch - 0.02) { a->dur = std::max(0.04, gap - touch); a->stopped = true; changed = true; }
+				// a held (lengthened) note on another string: the player lets go as the next note speaks, so the line stays one voice
+				else if (a->held && a->t + a->dur > n.t) { a->dur = std::max(0.04, gap - 0.3 * touch); changed = true; }
 			}
 			if (changed && onPrevChanged) onPrevChanged(a);
 			out.push_back(n);

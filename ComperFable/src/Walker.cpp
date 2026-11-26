@@ -23,6 +23,7 @@ struct Walker : Module {
 		FEEL_PARAM, ACTIVITY_PARAM, REGISTER_PARAM, ROAM_PARAM, OUT_PARAM, REPEAT_PARAM, SEED_PARAM, NEW_PARAM,
 		LOOSE_PARAM, AHEAD_PARAM, TIMING_PARAM, WEIGHT_PARAM, SLOP_PARAM, PITCH_PARAM,
 		ATTACK_PARAM, PLUCK_PARAM, BRIGHT_PARAM, SUSTAIN_PARAM, GROWL_PARAM, BODY_PARAM, PICKUP_PARAM, THUMP_PARAM, AGE_PARAM, LEVEL_PARAM,
+		OCTAVE_PARAM, LENGTH_PARAM, VARY_PARAM,   // 2.4.0 (added at the end so old patches keep their knobs)
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -78,6 +79,14 @@ struct Walker : Module {
 		configParam(THUMP_PARAM, 0.f, 1.f, 0.5f, "Thump (finger noise)", "%", 0.f, 100.f);
 		configParam(AGE_PARAM, 0.f, 1.f, 0.3f, "Age (old strings: duller, shorter, buzzier)", "%", 0.f, 100.f);
 		configParam(LEVEL_PARAM, 0.f, 2.f, 1.f, "Level", "%", 0.f, 100.f);
+		struct OctQ : ParamQuantity {
+			std::string getDisplayValueString() override { int o = (int)std::round(getValue()); return o == 0 ? "as written" : "+" + std::to_string(o); }
+		};
+		configParam<OctQ>(OCTAVE_PARAM, 0.f, 2.f, 0.f, "Octave (moves the bass up, audio and V/OCT)", " oct")->snapEnabled = true;
+		configParam(LENGTH_PARAM, 0.3f, 3.f, 1.4f, "Length (every note shorter or longer)", "x")->description =
+			"1 is how the reference player holds notes. Long notes never overlap: the next note ends them.";
+		configParam(VARY_PARAM, 0.f, 1.f, 0.5f, "Vary (a mix of short and long notes)", "%", 0.f, 100.f)->description =
+			"0 every note the same length. Up: more notes held long (mostly on the beat) and clipped short (mostly off it).";
 		for (int id : {(int)SEED_PARAM, (int)NEW_PARAM, (int)LEVEL_PARAM}) getParamQuantity(id)->randomizeEnabled = false;
 
 		configInput(CLOCK_INPUT, "Clock (pulses per beat in the right-click menu; used without Comper)");
@@ -150,6 +159,9 @@ struct Walker : Module {
 		p.slop = params[SLOP_PARAM].getValue();
 		p.pitch = params[PITCH_PARAM].getValue();
 		p.swing = 0.0;
+		p.length = params[LENGTH_PARAM].getValue();
+		p.vary = params[VARY_PARAM].getValue();
+		in.octave = clamp((int)std::round(params[OCTAVE_PARAM].getValue()), 0, 2);
 		in.seed = (int)params[SEED_PARAM].getValue();
 		upright::Tone& t = in.tone;
 		t.attack = clamp(params[ATTACK_PARAM].getValue() + (inputs[ATTACK_INPUT].isConnected() ? 0.25f * inputs[ATTACK_INPUT].getVoltage() : 0.f), 0.f, 2.5f);
