@@ -1,0 +1,23 @@
+{
+  "slug": "DubSiren",
+  "name": "Dub Siren",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "DubSiren",
+      "name": "Dub Siren",
+      "description": "The classic UK sound-system transistor siren (NJD SE-1 circuit) modelled part by part: two transistor oscillators, the shaped sweep, SIREN and TONE buttons, the sag when you switch off, plus an 80s tape or 90s chip echo",
+      "tags": ["Synth voice", "Oscillator", "Delay"]
+    }
+  ]
+}
