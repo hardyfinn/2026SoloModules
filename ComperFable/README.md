@@ -27,13 +27,14 @@ Designed by Fable (the reference engine `tools/proto/comper_ref.py` defines what
   0 keeps every note at the same length. Turning LENGTH or VARY never changes which notes are played or when.
 - Old patches load with the new knobs at their defaults.
 
-## What's new in 2.3.0
+## What's new in 2.3.0 and 2.3.1
 
 - **Panel:** 38 HP with full-size labels (3.2 mm controls, 2.9 mm jacks). The 32 step knobs are gone: the chart is a strip of 16 steps
   along the bottom of the screen. Tap a step, then set it with **EDIT ROOT** and **QUAL** in the CHART block. The playing step has a dot.
   Old patches keep their charts (the step settings are still stored, just not on the panel).
-- **Presets on the screen:** the top line of the screen is a preset bar. Tap the arrows to step through the factory and your own
-  presets, or tap the name for a list. A `*` means you have changed something since loading.
+- **Progressions on the screen** (2.3.1): the top line of the screen is a progression bar. Tap the arrows to step through all 44
+  progressions, or tap the name for a list by genre. A `*` means the chart has been changed since it was loaded.
+- **PRESET knob** (2.3.1, BAND section): turn it to load one of the 12 factory presets (the knob's tooltip names them).
 - **OCTAVE:** -3 to +3 octaves on the chord outputs (the bass outputs stay put).
 - **LENGTH:** short to legato. Notes now have a pianist's lengths: the top note rings longest, inner voices lift first, accents sit
   longer, ghost notes are clipped, each groove has its own touch, and the touch drifts slowly so a phrase stays legato or detached.
