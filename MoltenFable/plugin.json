@@ -1,0 +1,23 @@
+{
+  "slug": "MoltenFable",
+  "name": "Molten Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Molten",
+      "name": "Molten",
+      "description": "A sheet of metal held singing by a pickup and a driver while you heat it. Heat loosens it into chords and roar, sinks its partials, melts it into a dense seething liquid, and every quench casts a new tuning.",
+      "tags": ["Synth voice", "Physical modeling", "Drone", "Effect"]
+    }
+  ]
+}
