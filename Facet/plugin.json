@@ -1,0 +1,23 @@
+{
+  "slug": "Facet",
+  "name": "Facet",
+  "version": "2.1.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Facet",
+      "name": "Facet",
+      "description": "Early-90s digital layered synth: 4 tones per patch from an original wave ROM (loops, moving waves, attacks, noise, 4 user WAVs), JD-style filters, envelopes and LFOs, full effects rack, 90s converter, 96 presets, safe RAND, MUTATE + LOCK, 8 memories",
+      "tags": ["Synth voice", "Polyphonic", "Oscillator", "Filter", "Effect"]
+    }
+  ]
+}
