@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="19.0mm" height="19.0mm" viewBox="0 0 19.0 19.0">
+<circle cx="9.5" cy="9.5" r="9.5" fill="#121212"/>
+<line x1="18.950" y1="9.500" x2="18.000" y2="9.500" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="18.768" y1="11.344" x2="17.837" y2="11.158" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="18.231" y1="13.116" x2="17.353" y2="12.753" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="17.357" y1="14.750" x2="16.567" y2="14.222" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="16.182" y1="16.182" x2="15.510" y2="15.510" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="14.750" y1="17.357" x2="14.222" y2="16.567" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="13.116" y1="18.231" x2="12.753" y2="17.353" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="11.344" y1="18.768" x2="11.158" y2="17.837" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="9.500" y1="18.950" x2="9.500" y2="18.000" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="7.656" y1="18.768" x2="7.842" y2="17.837" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="5.884" y1="18.231" x2="6.247" y2="17.353" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="4.250" y1="17.357" x2="4.778" y2="16.567" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="2.818" y1="16.182" x2="3.490" y2="15.510" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="1.643" y1="14.750" x2="2.433" y2="14.222" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="0.769" y1="13.116" x2="1.647" y2="12.753" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="0.232" y1="11.344" x2="1.163" y2="11.158" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="0.050" y1="9.500" x2="1.000" y2="9.500" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="0.232" y1="7.656" x2="1.163" y2="7.842" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="0.769" y1="5.884" x2="1.647" y2="6.247" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="1.643" y1="4.250" x2="2.433" y2="4.778" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="2.818" y1="2.818" x2="3.490" y2="3.490" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="4.250" y1="1.643" x2="4.778" y2="2.433" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="5.884" y1="0.769" x2="6.247" y2="1.647" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="7.656" y1="0.232" x2="7.842" y2="1.163" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="9.500" y1="0.050" x2="9.500" y2="1.000" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="11.344" y1="0.232" x2="11.158" y2="1.163" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="13.116" y1="0.769" x2="12.753" y2="1.647" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="14.750" y1="1.643" x2="14.222" y2="2.433" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="16.182" y1="2.818" x2="15.510" y2="3.490" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="17.357" y1="4.250" x2="16.567" y2="4.778" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="18.231" y1="5.884" x2="17.353" y2="6.247" stroke="#3A3A3A" stroke-width="0.34"/>
+<line x1="18.768" y1="7.656" x2="17.837" y2="7.842" stroke="#3A3A3A" stroke-width="0.34"/>
+<circle cx="9.5" cy="9.5" r="7.030" fill="#FED100" stroke="#000000" stroke-opacity="0.35" stroke-width="0.25"/>
+<circle cx="7.742" cy="7.391" r="3.515" fill="#FFFFFF" fill-opacity="0.14"/>
+<rect x="9.000" y="2.822" width="1.0" height="4.921" rx="0.5" fill="#111111"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="8.5mm" height="8.5mm" viewBox="0 0 8.5 8.5">
+<circle cx="4.25" cy="4.25" r="4.25" fill="#121212"/>
+<line x1="8.450" y1="4.250" x2="7.500" y2="4.250" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="8.244" y1="5.548" x2="7.341" y2="5.254" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="7.648" y1="6.719" x2="6.879" y2="6.160" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="6.719" y1="7.648" x2="6.160" y2="6.879" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="5.548" y1="8.244" x2="5.254" y2="7.341" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="4.250" y1="8.450" x2="4.250" y2="7.500" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="2.952" y1="8.244" x2="3.246" y2="7.341" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="1.781" y1="7.648" x2="2.340" y2="6.879" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="0.852" y1="6.719" x2="1.621" y2="6.160" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="0.256" y1="5.548" x2="1.159" y2="5.254" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="0.050" y1="4.250" x2="1.000" y2="4.250" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="0.256" y1="2.952" x2="1.159" y2="3.246" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="0.852" y1="1.781" x2="1.621" y2="2.340" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="1.781" y1="0.852" x2="2.340" y2="1.621" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="2.952" y1="0.256" x2="3.246" y2="1.159" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="4.250" y1="0.050" x2="4.250" y2="1.000" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="5.548" y1="0.256" x2="5.254" y2="1.159" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="6.719" y1="0.852" x2="6.160" y2="1.621" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="7.648" y1="1.781" x2="6.879" y2="2.340" stroke="#3A3A3A" stroke-width="0.24"/>
+<line x1="8.244" y1="2.952" x2="7.341" y2="3.246" stroke="#3A3A3A" stroke-width="0.24"/>
+<circle cx="4.25" cy="4.25" r="3.145" fill="#FED100" stroke="#000000" stroke-opacity="0.35" stroke-width="0.25"/>
+<circle cx="3.464" cy="3.306" r="1.573" fill="#FFFFFF" fill-opacity="0.14"/>
+<rect x="3.875" y="1.262" width="0.75" height="2.201" rx="0.375" fill="#111111"/>
+</svg>
