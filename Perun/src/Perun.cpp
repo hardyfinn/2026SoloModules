@@ -7,16 +7,21 @@
 #include <atomic>
 #include <fstream>
 
-// ---- LAYOUT (same numbers in res/make_panel.py) ----
-static const float COL[8] = {11.4f, 29.9f, 48.4f, 66.9f, 85.4f, 103.9f, 122.4f, 140.9f};
-static const float ROW[4] = {30.f, 55.f, 80.f, 105.f};
-static const float JACK_DY = 10.f;
-static const float IOX[4] = {71.f, 93.5f, 116.f, 138.5f};
-static const float IO_TOP = 103.f, IO_BOT = 117.f;
-static const float MEMX[4] = {111.8f, 119.0f, 126.2f, 133.4f};
-static const float MEMY[2] = {8.f, 15.5f};
-static const float STORE_X = 143.4f, STORE_Y = 11.5f;
-static const float SCREEN_X = 31.f, SCREEN_Y = 3.f, SCREEN_W = 71.f, SCREEN_H = 16.5f;
+// ---- LAYOUT (same numbers in res/make_panel.py) ---- 26 HP
+static const float COL[7] = {12.f, 29.8f, 47.6f, 65.4f, 83.2f, 101.f, 118.8f};
+static const float ROW[4] = {31.f, 50.5f, 70.f, 89.5f};
+static const float TRIM_DX = -2.5f, LEARN_DX = 5.0f, LEARN_DY = 4.0f;
+static const float IO_TOP = 106.f, IO_BOT = 118.6f;
+static const float MEMX[4] = {96.5f, 103.5f, 110.5f, 117.5f};
+static const float MEMY[2] = {9.5f, 16.8f};
+static const float STORE_X = 125.6f, STORE_Y = 12.8f;
+static const float SCREEN_X = 27.5f, SCREEN_Y = 3.f, SCREEN_W = 62.5f, SCREEN_H = 16.5f;
+
+// what CV A / CV B can be learned onto (the 24 memory values + LEVEL)
+static const int NUM_TARGETS = 25;
+static const char* const TARGET_NAMES[NUM_TARGETS] = {
+	"ALGO A", "ALGO B", "MORPH", "MODE", "TUNE", "BEND", "SWEEP", "CLICK", "DECAY", "P1", "P2", "NOISE",
+	"CUTOFF", "RES", "ENV", "VCF", "DRIVE", "TONE", "SEND", "TIME", "FDBK", "ACCENT", "WEAR", "MUTATE", "LEVEL"};
 
 static const char* const ALGO_NAMES[perun::NUM_ALGOS] = {
 	"Fold BD", "Wavetable BD", "Resonant BD", "Complex (FM)", "Res Snare", "Slap",
@@ -102,20 +107,24 @@ struct Perun : Module {
 		DRIVE_PARAM, TONE_PARAM, SEND_PARAM, TIME_PARAM, FDBK_PARAM, ACCENT_PARAM, WEAR_PARAM, MUTATE_PARAM,
 		LEVEL_PARAM, LOCK_PARAM, HIT_PARAM, STORE_PARAM,
 		ENUMS(MEM_PARAM, 8),
+		CVA_AMT_PARAM, CVB_AMT_PARAM, LEARNA_PARAM, LEARNB_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
-		ENUMS(CV_INPUT, 22), // one per control ALGOA .. ACCENT (same order as the params)
-		WEAR_INPUT, MUTATE_INPUT, LEVEL_INPUT, LOCK_INPUT,
-		TRIG_INPUT, ACC_INPUT, CHOKE_INPUT, PATCH_INPUT,
+		TRIG_INPUT, VOCT_INPUT, ACC_INPUT, CHOKE_INPUT, PATCH_INPUT, CVA_INPUT, CVB_INPUT, LOCK_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds { ENV_OUTPUT, SEND_OUTPUT, OUT_OUTPUT, NUM_OUTPUTS };
-	enum LightIds { LOCK_LIGHT, HIT_LIGHT, STORE_LIGHT, ENUMS(MEM_LIGHT, 8), NUM_LIGHTS };
+	enum LightIds { LOCK_LIGHT, HIT_LIGHT, STORE_LIGHT, ENUMS(MEM_LIGHT, 8), LEARNA_LIGHT, LEARNB_LIGHT, NUM_LIGHTS };
 
 	perun::Engine engine;
 	perun::Controls ctl;
-	dsp::SchmittTrigger trigIn, chokeIn, hitButton, storeButton, memButton[8];
+	dsp::SchmittTrigger trigIn, chokeIn, hitButton, storeButton, memButton[8], learnButton[2];
+	// CV A / CV B: learned target (-1 = none); LEARN arms, the next knob you move becomes the target
+	int cvTarget[2] = {12, 2};
+	bool learnArmed[2] = {false, false};
+	float learnSnap[NUM_TARGETS];
+	int learnCheck = 0;
 	dsp::ClockDivider lightDivider;
 	float mem[8][perun::NUM_MEM_VALUES];
 	std::string memName[8];
@@ -157,26 +166,20 @@ struct Perun : Module {
 		configParam(FDBK_PARAM, 0.f, 1.f, 0.3f, "Delay feedback", "%", 0.f, 100.f);
 		configParam(ACCENT_PARAM, 0.f, 1.f, 0.5f, "Accent amount (level, brightness, drive)", "%", 0.f, 100.f);
 		configParam(WEAR_PARAM, 0.f, 1.f, 0.1f, "Wear (every hit slightly different, like a real drum)", "%", 0.f, 100.f);
-		configParam(MUTATE_PARAM, 0.f, 1.f, 0.f, "Mutate (P1, P2, morph and mode wander from hit to hit)", "%", 0.f, 100.f);
+		configParam(MUTATE_PARAM, 0.f, 1.f, 0.f, "Mutate (P1, P2, morph and mode wander from hit to hit)", "%", 0.f, 100.f)->randomizeEnabled = false;
 		configParam(LEVEL_PARAM, 0.f, 1.f, 0.8f, "Level", "%", 0.f, 100.f)->randomizeEnabled = false;
 		configSwitch(LOCK_PARAM, 0.f, 1.f, 0.f, "Lock (freeze what MUTATE has changed)", {"off", "on"});
 		configButton(HIT_PARAM, "Hit");
 		configButton(STORE_PARAM, "Store (then press a memory)");
 		for (int i = 0; i < 8; i++) configButton(MEM_PARAM + i, string::f("Memory %d", i + 1));
 
-		const char* cvNames[22] = {"Algorithm A", "Algorithm B", "Morph", "Mode", "V/OCT (tune)", "Bend", "Sweep", "Click",
-		                           "Decay", "Parameter 1", "Parameter 2", "Noise", "Cutoff", "Resonance", "Filter envelope", "Filter type",
-		                           "Drive", "Tone", "FX send", "Delay time", "Delay feedback", "Accent amount"};
-		for (int i = 0; i < 22; i++) {
-			std::string n = cvNames[i];
-			if (i == 0 || i == 1) n += " CV (1 V per algorithm)";
-			else if (i == 3 || i == 15) n += " CV (3.3 V per step)";
-			else if (i != 4) n += " CV (+-5 V = full range)";
-			configInput(CV_INPUT + i, n);
-		}
-		configInput(WEAR_INPUT, "Wear CV (+-5 V = full range)");
-		configInput(MUTATE_INPUT, "Mutate CV (+-5 V = full range)");
-		configInput(LEVEL_INPUT, "Level CV (VCA, 0-10 V)");
+		configParam(CVA_AMT_PARAM, -1.f, 1.f, 1.f, "CV A amount (attenuverter)", "%", 0.f, 100.f);
+		configParam(CVB_AMT_PARAM, -1.f, 1.f, 1.f, "CV B amount (attenuverter)", "%", 0.f, 100.f);
+		configButton(LEARNA_PARAM, "Learn CV A (press, then move the knob it should control)");
+		configButton(LEARNB_PARAM, "Learn CV B (press, then move the knob it should control)");
+		configInput(VOCT_INPUT, "V/OCT (tune)");
+		configInput(CVA_INPUT, "CV A (+-5 V = full range of the learned knob)");
+		configInput(CVB_INPUT, "CV B (+-5 V = full range of the learned knob)");
 		configInput(LOCK_INPUT, "Lock gate (high = locked)");
 		configInput(TRIG_INPUT, "Trigger");
 		configInput(ACC_INPUT, "Accent (read at each trigger, 5 V = full accent)");
@@ -246,7 +249,24 @@ struct Perun : Module {
 		pendingState[slot] = 2;
 	}
 
-	float cvAdd(int i) { return inputs[CV_INPUT + i].getVoltage(); }
+	float targetValue(int t) { return params[t == 24 ? (int) LEVEL_PARAM : t].getValue(); }
+
+	void armLearn(int k) {
+		learnArmed[k] = !learnArmed[k];
+		learnArmed[1 - k] = false;
+		for (int t = 0; t < NUM_TARGETS; t++) learnSnap[t] = targetValue(t);
+	}
+
+	// add a CV (+-5 V = full range) to one knob value, with each control's own scaling
+	static void applyCv(float* v, float& level, int t, float cv) {
+		if (t < 0) return;
+		if (t == 24) level = clamp(level + cv * 0.1f, 0.f, 1.f);
+		else if (t == ALGOA_PARAM || t == ALGOB_PARAM) v[t] = clamp(v[t] + std::round(cv * 1.4f), 0.f, 14.f);
+		else if (t == MODE_PARAM || t == VCF_PARAM) v[t] = clamp(v[t] + std::round(cv * 0.3f), 0.f, 2.f);
+		else if (t == TUNE_PARAM) v[t] = v[t] + cv / 7.f;
+		else if (t == FENV_PARAM) v[t] = clamp(v[t] + cv * 0.2f, -1.f, 1.f);
+		else v[t] = clamp(v[t] + cv * 0.1f, 0.f, 1.f);
+	}
 
 	void process(const ProcessArgs& args) override {
 		engine.setSampleRate(args.sampleRate);
@@ -271,22 +291,29 @@ struct Perun : Module {
 		else
 			lastPatch = -1;
 
+		// LEARN: the first knob that moves becomes the target
+		for (int k = 0; k < 2; k++)
+			if (learnButton[k].process(params[LEARNA_PARAM + k].getValue())) armLearn(k);
+		if ((learnArmed[0] || learnArmed[1]) && ++learnCheck >= 32) {
+			learnCheck = 0;
+			int k = learnArmed[0] ? 0 : 1;
+			for (int t = 0; t < NUM_TARGETS; t++)
+				if (std::fabs(targetValue(t) - learnSnap[t]) > 1e-3f) {
+					cvTarget[k] = t;
+					learnArmed[k] = false;
+					break;
+				}
+		}
+
 		float v[perun::NUM_MEM_VALUES];
 		for (int i = 0; i < perun::NUM_MEM_VALUES; i++) v[i] = params[i].getValue();
-		for (int i = 0; i < 22; i++) {
-			if (!inputs[CV_INPUT + i].isConnected()) continue;
-			float cv = cvAdd(i);
-			if (i == ALGOA_PARAM || i == ALGOB_PARAM) v[i] = clamp(v[i] + std::round(cv), 0.f, 14.f);
-			else if (i == MODE_PARAM || i == VCF_PARAM) v[i] = clamp(v[i] + std::round(cv * 0.3f), 0.f, 2.f);
-			else if (i == TUNE_PARAM) v[i] = v[i] + cv / 7.f;
-			else if (i == FENV_PARAM) v[i] = clamp(v[i] + cv * 0.2f, -1.f, 1.f);
-			else v[i] = clamp(v[i] + cv * 0.1f, 0.f, 1.f);
-		}
-		if (inputs[WEAR_INPUT].isConnected()) v[WEAR_PARAM] = clamp(v[WEAR_PARAM] + inputs[WEAR_INPUT].getVoltage() * 0.1f, 0.f, 1.f);
-		if (inputs[MUTATE_INPUT].isConnected()) v[MUTATE_PARAM] = clamp(v[MUTATE_PARAM] + inputs[MUTATE_INPUT].getVoltage() * 0.1f, 0.f, 1.f);
+		float level = params[LEVEL_PARAM].getValue();
+		if (inputs[VOCT_INPUT].isConnected()) v[TUNE_PARAM] += inputs[VOCT_INPUT].getVoltage() / 7.f;
+		for (int k = 0; k < 2; k++)
+			if (inputs[CVA_INPUT + k].isConnected())
+				applyCv(v, level, cvTarget[k], inputs[CVA_INPUT + k].getVoltage() * params[CVA_AMT_PARAM + k].getValue());
 		perun::valuesToControls(v, ctl);
-		ctl.level = params[LEVEL_PARAM].getValue();
-		if (inputs[LEVEL_INPUT].isConnected()) ctl.level *= clamp(inputs[LEVEL_INPUT].getVoltage() * 0.1f, 0.f, 1.f);
+		ctl.level = level;
 		ctl.lock = params[LOCK_PARAM].getValue() > 0.5f || inputs[LOCK_INPUT].getVoltage() > 1.f;
 		ctl.sendPatched = outputs[SEND_OUTPUT].isConnected();
 
@@ -316,6 +343,7 @@ struct Perun : Module {
 			lights[HIT_LIGHT].setBrightness(hitFlash);
 			lights[LOCK_LIGHT].setBrightness(ctl.lock ? 1.f : 0.f);
 			lights[STORE_LIGHT].setBrightness(storeArmed ? (blink < 0.5f ? 1.f : 0.2f) : 0.f);
+			for (int k = 0; k < 2; k++) lights[LEARNA_LIGHT + k].setBrightness(learnArmed[k] ? (blink < 0.5f ? 1.f : 0.15f) : 0.f);
 			for (int m = 0; m < 8; m++) {
 				float b = m == currentMem ? 1.f : 0.f;
 				if (storeArmed) b = blink < 0.5f ? 0.5f : 0.1f;
@@ -337,6 +365,8 @@ struct Perun : Module {
 		}
 		json_object_set_new(root, "memories", mems);
 		json_object_set_new(root, "currentMem", json_integer(currentMem));
+		json_object_set_new(root, "cvTargetA", json_integer(cvTarget[0]));
+		json_object_set_new(root, "cvTargetB", json_integer(cvTarget[1]));
 		json_t* smp = json_array();
 		for (int i = 0; i < 3; i++) json_array_append_new(smp, json_string(samplePath[i].c_str()));
 		json_object_set_new(root, "samples", smp);
@@ -358,6 +388,10 @@ struct Perun : Module {
 				for (int i = 0; vals && i < perun::NUM_MEM_VALUES && i < (int) json_array_size(vals); i++)
 					mem[m][i] = json_number_value(json_array_get(vals, i));
 			}
+		json_t* ta = json_object_get(root, "cvTargetA");
+		if (ta) cvTarget[0] = clamp((int) json_integer_value(ta), -1, NUM_TARGETS - 1);
+		json_t* tb = json_object_get(root, "cvTargetB");
+		if (tb) cvTarget[1] = clamp((int) json_integer_value(tb), -1, NUM_TARGETS - 1);
 		json_t* c = json_object_get(root, "currentMem");
 		if (c) currentMem = clamp((int) json_integer_value(c), 0, 7);
 		json_t* smp = json_object_get(root, "samples");
@@ -395,7 +429,7 @@ struct PerunScreen : TransparentWidget {
 		if (!module) {
 			l1 = "A 01 FOLD BD > 15% > B 03 RESONANT BD";
 			l2 = "MODE A sine | P1 fold | P2 symmetry";
-			l3 = "MEM 1 Thunder Kick";
+			l3 = "MEM 1 Thunder Kick | A>CUTOFF";
 		}
 		else {
 			Perun* m = module;
@@ -411,13 +445,17 @@ struct PerunScreen : TransparentWidget {
 			else l1 = string::f("A %02d %s > %d%% > B %02d %s", c.algoA + 1, a.name, (int) std::round(morph * 100.f), c.algoB + 1, b.name);
 			l2 = string::f("MODE %c %s | P1 %s %d | P2 %s %d", 'A' + mode, cur.mode[mode], cur.p1, (int) std::round(e.effP1(c) * 100.f),
 			               cur.p2, (int) std::round(e.effP2(c) * 100.f));
-			if (m->storeArmed) l3 = "STORE: press a memory 1-8";
+			if (m->learnArmed[0] || m->learnArmed[1]) l3 = string::f("LEARN CV %c: move a knob", m->learnArmed[0] ? 'A' : 'B');
+			else if (m->storeArmed) l3 = "STORE: press a memory 1-8";
 			else {
 				l3 = string::f("MEM %d %s", m->currentMem + 1, m->memName[m->currentMem].c_str());
 				if (perun::isDrone(c.decay)) l3 += " | DRONE";
 				if (c.wear > 0.005f) l3 += string::f(" | WEAR %d", (int) std::round(c.wear * 100.f));
 				if (c.mutate > 0.005f) l3 += string::f(" | MUT %d", (int) std::round(c.mutate * 100.f));
 				if (c.lock) l3 += " | LOCK";
+				for (int k = 0; k < 2; k++)
+					if (m->inputs[Perun::CVA_INPUT + k].isConnected() && m->cvTarget[k] >= 0)
+						l3 += string::f(" | %c>%s", 'A' + k, TARGET_NAMES[m->cvTarget[k]]);
 			}
 		}
 		nvgFontFaceId(args.vg, font->handle);
@@ -456,36 +494,31 @@ struct PerunWidget : ModuleWidget {
 		addChild(screen);
 
 		typedef Perun P;
-		// rows 1-3: a control and its CV jack in every column
-		const int rows[3][8] = {
-			{P::ALGOA_PARAM, P::ALGOB_PARAM, P::MORPH_PARAM, P::MODE_PARAM, P::TUNE_PARAM, P::BEND_PARAM, P::SWEEP_PARAM, P::CLICK_PARAM},
-			{P::DECAY_PARAM, P::P1_PARAM, P::P2_PARAM, P::NOISE_PARAM, P::CUTOFF_PARAM, P::RES_PARAM, P::FENV_PARAM, P::VCF_PARAM},
-			{P::DRIVE_PARAM, P::TONE_PARAM, P::SEND_PARAM, P::TIME_PARAM, P::FDBK_PARAM, P::ACCENT_PARAM, P::LEVEL_PARAM, -1}};
-		for (int r = 0; r < 3; r++)
-			for (int c = 0; c < 8; c++) {
+		const int rows[4][7] = {
+			{P::ALGOA_PARAM, P::ALGOB_PARAM, P::MORPH_PARAM, P::MODE_PARAM, P::TUNE_PARAM, P::BEND_PARAM, P::SWEEP_PARAM},
+			{P::DECAY_PARAM, P::P1_PARAM, P::P2_PARAM, P::CLICK_PARAM, P::NOISE_PARAM, P::WEAR_PARAM, P::MUTATE_PARAM},
+			{P::CUTOFF_PARAM, P::RES_PARAM, P::FENV_PARAM, P::VCF_PARAM, P::DRIVE_PARAM, P::TONE_PARAM, P::LOCK_PARAM},
+			{P::SEND_PARAM, P::TIME_PARAM, P::FDBK_PARAM, P::ACCENT_PARAM, P::LEVEL_PARAM, P::CVA_AMT_PARAM, P::CVB_AMT_PARAM}};
+		for (int r = 0; r < 4; r++)
+			for (int c = 0; c < 7; c++) {
 				int id = rows[r][c];
-				if (id < 0) continue;
 				Vec pos = mm2px(Vec(COL[c], ROW[r]));
 				if (id == P::MODE_PARAM || id == P::VCF_PARAM) addParam(createParamCentered<CKSSThree>(pos, module, id));
 				else if (id == P::ALGOA_PARAM || id == P::ALGOB_PARAM) addParam(createParamCentered<RoundBlackSnapKnob>(pos, module, id));
+				else if (id == P::LOCK_PARAM) addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<YellowLight>>>(pos, module, P::LOCK_PARAM, P::LOCK_LIGHT));
+				else if (id == P::CVA_AMT_PARAM || id == P::CVB_AMT_PARAM) addParam(createParamCentered<Trimpot>(mm2px(Vec(COL[c] + TRIM_DX, ROW[r])), module, id));
 				else addParam(createParamCentered<RoundBlackKnob>(pos, module, id));
-				int in = id == P::LEVEL_PARAM ? (int) P::LEVEL_INPUT : (int) P::CV_INPUT + id;
-				addInput(createInputCentered<PJ301MPort>(mm2px(Vec(COL[c], ROW[r] + JACK_DY)), module, in));
 			}
-		// row 4: movement
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(COL[0], ROW[3])), module, P::WEAR_PARAM));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(COL[0], ROW[3] + JACK_DY)), module, P::WEAR_INPUT));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(COL[1], ROW[3])), module, P::MUTATE_PARAM));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(COL[1], ROW[3] + JACK_DY)), module, P::MUTATE_INPUT));
-		addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<YellowLight>>>(mm2px(Vec(COL[2], ROW[3])), module, P::LOCK_PARAM, P::LOCK_LIGHT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(COL[2], ROW[3] + JACK_DY)), module, P::LOCK_INPUT));
+		for (int k = 0; k < 2; k++)
+			addParam(createLightParamCentered<VCVLightButton<MediumSimpleLight<YellowLight>>>(mm2px(Vec(COL[5 + k] + LEARN_DX, ROW[3] + LEARN_DY)), module, P::LEARNA_PARAM + k, P::LEARNA_LIGHT + k));
 		// trigger + output block
-		const int ins[4] = {P::TRIG_INPUT, P::ACC_INPUT, P::CHOKE_INPUT, P::PATCH_INPUT};
-		for (int i = 0; i < 4; i++) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(IOX[i], IO_TOP)), module, ins[i]));
-		addParam(createLightParamCentered<VCVLightBezel<YellowLight>>(mm2px(Vec(IOX[0], IO_BOT)), module, P::HIT_PARAM, P::HIT_LIGHT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(IOX[1], IO_BOT)), module, P::ENV_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(IOX[2], IO_BOT)), module, P::SEND_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(IOX[3], IO_BOT)), module, P::OUT_OUTPUT));
+		const int ins[7] = {P::TRIG_INPUT, P::VOCT_INPUT, P::ACC_INPUT, P::CHOKE_INPUT, P::PATCH_INPUT, P::CVA_INPUT, P::CVB_INPUT};
+		for (int i = 0; i < 7; i++) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(COL[i], IO_TOP)), module, ins[i]));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(COL[2], IO_BOT)), module, P::LOCK_INPUT));
+		addParam(createLightParamCentered<VCVLightBezel<YellowLight>>(mm2px(Vec(COL[3], IO_BOT)), module, P::HIT_PARAM, P::HIT_LIGHT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(COL[4], IO_BOT)), module, P::ENV_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(COL[5], IO_BOT)), module, P::SEND_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(COL[6], IO_BOT)), module, P::OUT_OUTPUT));
 		// memories
 		for (int m = 0; m < 8; m++)
 			addParam(createLightParamCentered<VCVLightBezel<YellowLight>>(mm2px(Vec(MEMX[m % 4], MEMY[m / 4])), module, P::MEM_PARAM + m, P::MEM_LIGHT + m));
@@ -502,6 +535,16 @@ struct PerunWidget : ModuleWidget {
 			m->recall(m->currentMem);
 		}));
 		menu->addChild(createMenuItem("Clear mutation (back to the knobs)", "", [=]() { m->engine.clearMutation(); }));
+		menu->addChild(new MenuSeparator);
+		menu->addChild(createMenuLabel("CV inputs (or press LEARN and move a knob)"));
+		for (int k = 0; k < 2; k++) {
+			std::string cur = m->cvTarget[k] < 0 ? "none" : TARGET_NAMES[m->cvTarget[k]];
+			menu->addChild(createSubmenuItem(string::f("CV %c controls", 'A' + k), cur, [=](Menu* sub) {
+				sub->addChild(createCheckMenuItem("Nothing", "", [=]() { return m->cvTarget[k] < 0; }, [=]() { m->cvTarget[k] = -1; }));
+				for (int t = 0; t < NUM_TARGETS; t++)
+					sub->addChild(createCheckMenuItem(TARGET_NAMES[t], "", [=]() { return m->cvTarget[k] == t; }, [=]() { m->cvTarget[k] = t; }));
+			}));
+		}
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createMenuLabel("SAMPLE algorithm (MODE picks the slot)"));
 		for (int s = 0; s < 3; s++) {

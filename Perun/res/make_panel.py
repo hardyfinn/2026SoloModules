@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FONT_BOLD = os.environ.get("PANEL_FONT_BOLD", "/usr/share/fonts/opentype/inter/Inter-Bold.otf")
 FONT_MED = os.environ.get("PANEL_FONT_MED", "/usr/share/fonts/opentype/inter/Inter-Medium.otf")
 
-W, H = 152.4, 128.5  # 30 HP
+W, H = 132.08, 128.5  # 26 HP
 
 BG = "#1B1D22"
 BAND = "#23262C"
@@ -21,19 +21,20 @@ AMBER = "#FFB233"
 IOBG = "#2E2A22"
 
 # ---- LAYOUT (same numbers in src/Perun.cpp) ----
-COL = [11.4, 29.9, 48.4, 66.9, 85.4, 103.9, 122.4, 140.9]
-ROW = [30.0, 55.0, 80.0, 105.0]
-JACK_DY = 10.0
-IOX = [71.0, 93.5, 116.0, 138.5]
-IO_TOP, IO_BOT = 103.0, 117.0
-MEMX = [111.8, 119.0, 126.2, 133.4]
-MEMY = [8.0, 15.5]
-STORE_X, STORE_Y = 143.4, 11.5
-SCREEN = (31.0, 3.0, 71.0, 16.5)
+COL = [12.0, 29.8, 47.6, 65.4, 83.2, 101.0, 118.8]
+ROW = [31.0, 50.5, 70.0, 89.5]
+TRIM_DX, LEARN_DX, LEARN_DY = -2.5, 5.0, 4.0
+IO_TOP, IO_BOT = 106.0, 118.6
+MEMX = [96.5, 103.5, 110.5, 117.5]
+MEMY = [9.5, 16.8]
+STORE_X, STORE_Y = 125.6, 12.8
+SCREEN = (27.5, 3.0, 62.5, 16.5)
 
 CONTROL = 3.2   # control label size (project standard)
 JACK = 2.9      # jack label size (project standard)
 SMALL = 2.3
+# half heights of the Rack parts, so labels sit just above them
+R_KNOB, R_TRIM, R_JACK, R_BEZEL, R_SWITCH = 4.8, 3.0, 4.0, 3.6, 4.8
 
 fonts = {}
 
@@ -61,61 +62,51 @@ add = parts.append
 add(f'<rect width="{W}" height="{H}" fill="{BG}"/>')
 
 # ---- header
-add(text("PERUN", 4.6, 11.0, 6.2, FONT_BOLD, AMBER, anchor="start", spacing=0.12))
-add(text("thunder drum voice", 4.8, 16.2, 2.4, FONT_MED, SOFT, anchor="start"))
+add(text("PERUN", 4.2, 11.0, 5.0, FONT_BOLD, AMBER, anchor="start", spacing=0.12))
+add(text("thunder drum voice", 4.4, 16.0, 2.0, FONT_MED, SOFT, anchor="start"))
 sx, sy, sw, sh = SCREEN
 add(f'<rect x="{sx - 0.6}" y="{sy - 0.6}" width="{sw + 1.2}" height="{sh + 1.2}" rx="1.2" fill="#000"/>')
-add(text("1-4", MEMX[0] - 4.4, MEMY[0] + 0.9, SMALL, FONT_BOLD, SOFT, anchor="end"))
-add(text("5-8", MEMX[0] - 4.4, MEMY[1] + 0.9, SMALL, FONT_BOLD, SOFT, anchor="end"))
-add(text("STORE", STORE_X, STORE_Y + 7.6, SMALL, FONT_BOLD, AMBER))
+add(text("STORE", STORE_X, STORE_Y + 7.4, SMALL, FONT_BOLD, AMBER))
 
-# ---- sections: a darker band per row, name written up the left edge
-SECTIONS = ["SOURCE", "BODY + FILTER", "DRIVE + FX", "MOVE"]
+# ---- four bands, name written up the left edge
+SECTIONS = ["SOURCE", "BODY", "FILTER", "FX + MOD"]
 for r, name in enumerate(SECTIONS):
-    y0 = ROW[r] - 9.6
-    y1 = ROW[r] + 14.6
-    if r < 3:
-        add(f'<rect x="1.0" y="{y0}" width="{W - 2.0}" height="{y1 - y0}" rx="1.2" fill="{BAND}"/>')
-    yc = (y0 + y1) / 2 if r < 3 else ROW[3] + 2.0
-    add(f'<g transform="rotate(-90 3.3 {yc})">' + text(name, 3.3, yc + 0.85, 2.3, FONT_BOLD, AMBER, spacing=0.08) + '</g>')
+    y0, y1 = ROW[r] - 9.0, ROW[r] + 7.5
+    add(f'<rect x="1.0" y="{y0}" width="{W - 2.0}" height="{y1 - y0}" rx="1.2" fill="{BAND}"/>')
+    yc = (y0 + y1) / 2
+    add(f'<g transform="rotate(-90 3.2 {yc})">' + text(name, 3.2, yc + 0.85, 2.3, FONT_BOLD, AMBER, spacing=0.08) + '</g>')
 
 LABELS = [
-    ["ALGO A", "ALGO B", "MORPH", "MODE", "TUNE", "BEND", "SWEEP", "CLICK"],
-    ["DECAY", "P1", "P2", "NOISE", "CUTOFF", "RES", "ENV", "VCF"],
-    ["DRIVE", "TONE", "SEND", "TIME", "FDBK", "ACCENT", "LEVEL", None],
-    ["WEAR", "MUTATE", "LOCK", None, None, None, None, None],
+    [("ALGO A", R_KNOB), ("ALGO B", R_KNOB), ("MORPH", R_KNOB), ("MODE", R_SWITCH), ("TUNE", R_KNOB), ("BEND", R_KNOB), ("SWEEP", R_KNOB)],
+    [("DECAY", R_KNOB), ("P1", R_KNOB), ("P2", R_KNOB), ("CLICK", R_KNOB), ("NOISE", R_KNOB), ("WEAR", R_KNOB), ("MUTATE", R_KNOB)],
+    [("CUTOFF", R_KNOB), ("RES", R_KNOB), ("ENV", R_KNOB), ("VCF", R_SWITCH), ("DRIVE", R_KNOB), ("TONE", R_KNOB), ("LOCK", R_BEZEL)],
+    [("SEND", R_KNOB), ("TIME", R_KNOB), ("FDBK", R_KNOB), ("ACCENT", R_KNOB), ("LEVEL", R_KNOB), ("CV A", R_TRIM), ("CV B", R_TRIM)],
 ]
 for r, row in enumerate(LABELS):
-    for c, name in enumerate(row):
-        if name:
-            add(text(name, COL[c], ROW[r] - 6.6, CONTROL))
+    for c, (name, rad) in enumerate(row):
+        x = COL[c] + (TRIM_DX if rad == R_TRIM else 0.0)
+        add(text(name, x, ROW[r] - rad - 1.4, CONTROL))
+
+# LEARN buttons beside the CV trims
+for c in (5, 6):
+    add(text("LEARN", COL[c] + LEARN_DX, ROW[3] + LEARN_DY - 3.7, 1.9, FONT_BOLD, SOFT))
+
 
 # switch positions (CKSSThree: value 0 = lever down)
-def switch_marks(x, y, top, mid, bot):
-    add(text(top, x + 3.2, y - 2.6, SMALL, FONT_BOLD, SOFT, anchor="start"))
-    add(text(mid, x + 3.2, y + 0.8, SMALL, FONT_BOLD, SOFT, anchor="start"))
-    add(text(bot, x + 3.2, y + 4.2, SMALL, FONT_BOLD, SOFT, anchor="start"))
+def switch_marks(x, y, marks):
+    for k, mk in enumerate(marks):
+        add(text(mk, x + 3.1, y - 2.6 + 3.4 * k, 2.2, FONT_BOLD, SOFT, anchor="start"))
 
-switch_marks(COL[3], ROW[0], "C", "B", "A")
-switch_marks(COL[7], ROW[1], "LP", "BP", "HP")
 
-# small hints under a few knobs (between knob and jack would collide; put them beside)
-add(text("V/OCT", COL[4] + 5.2, ROW[0] + JACK_DY + 0.8, 2.0, FONT_BOLD, SOFT, anchor="start"))
-add(text("VCA", COL[6] + 5.2, ROW[2] + JACK_DY + 0.8, 2.0, FONT_BOLD, SOFT, anchor="start"))
-add(text("GATE", COL[2] + 5.2, ROW[3] + JACK_DY + 0.8, 2.0, FONT_BOLD, SOFT, anchor="start"))
-# empty slot in row 3: a reminder
-add(text("DECAY", COL[7], ROW[2] - 1.6, 2.2, FONT_BOLD, SOFT))
-add(text("fully up", COL[7], ROW[2] + 1.6, 2.2, FONT_MED, SOFT))
-add(text("= drone", COL[7], ROW[2] + 4.8, 2.2, FONT_MED, SOFT))
+switch_marks(COL[3], ROW[0], ("C", "B", "A"))
+switch_marks(COL[3], ROW[2], ("LP", "BP", "HP"))
 
 # ---- trigger + output block
-bx0, bx1 = IOX[0] - 8.0, W - 2.0
-add(f'<rect x="{bx0}" y="{IO_TOP - 9.0}" width="{bx1 - bx0}" height="{IO_BOT - IO_TOP + 14.0}" rx="1.4" fill="{IOBG}"/>')
-for x, n in zip(IOX, ["TRIG", "ACC", "CHOKE", "PATCH"]):
-    add(text(n, x, IO_TOP - 5.3, JACK, fill=AMBER if n == "TRIG" else INK))
-add(text("HIT", IOX[0], IO_BOT - 5.3, JACK, fill=INK))
-for x, n in zip(IOX[1:], ["ENV", "SEND", "OUT"]):
-    add(text(n, x, IO_BOT - 5.3, JACK, fill=AMBER))
+add(f'<rect x="1.5" y="97.6" width="{W - 3.0}" height="25.8" rx="1.4" fill="{IOBG}"/>')
+for x, n in zip(COL, ["TRIG", "V/OCT", "ACC", "CHOKE", "PATCH", "CV A", "CV B"]):
+    add(text(n, x, IO_TOP - R_JACK - 1.4, JACK, fill=AMBER if n == "TRIG" else INK))
+for x, n, rad, col in zip(COL[2:], ["LOCK", "HIT", "ENV", "SEND", "OUT"], [R_JACK, R_BEZEL, R_JACK, R_JACK, R_JACK], [INK, INK, AMBER, AMBER, AMBER]):
+    add(text(n, x, IO_BOT - rad - 1.4, JACK, fill=col))
 
 svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}mm" height="{H}mm" viewBox="0 0 {W} {H}">\n'
        + "\n".join(p for p in parts if p) + "\n</svg>\n")
@@ -126,4 +117,4 @@ print("ok")
 import sys as _sys
 _sys.path.insert(0, HERE)
 import haer_logo
-haer_logo.add_to_file(os.path.join(HERE, "Perun.svg"), x=30.0, y=126.0, cap=3.0, bg=BG)
+haer_logo.add_to_file(os.path.join(HERE, "Perun.svg"), x=20.0, y=118.0, cap=3.0, bg=BG)
