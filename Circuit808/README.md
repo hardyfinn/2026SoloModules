@@ -124,9 +124,12 @@ the single modules at the same settings.
 - **KITS** steps through four kit memories (A-D), all saved in the patch; SHIFT + KITS puts the
   current kit back to the stock 808. Whatever a memory holds when you step to it is "the loaded
   kit" for double-click, SHIFT + STOCK and RAND.
-- **Factory kits** (right-click > Factory kit) load into the current memory only: Stock 808,
-  Boom, Miami Bass, Electro, Acid House, Deep House, Driven Techno, Tuned Congas, Worn Unit,
-  Circuit Bent. Right-click also saves the current kit to a `.808kit` file and loads one back.
+- **Factory kits** (right-click > Factory kit) load into the current memory only, and use the
+  inner parts as well as the 808's own knobs: Stock 808, Boom (endless sub kick, big room),
+  Miami Bass (swooping kick, laser toms), Electro (zaps, metallic snare, one-burst clap), Acid
+  House (dry, short, bright, driven), Deep House (soft mallets, dark long tails), Driven Techno
+  (everything clipped), Percussion Orchestra (congas, marimba, log drum, agogo, bells), Worn Unit
+  (AGE full, drifting and dull), Circuit Bent, Broken Toy (glitched past Circuit Bent). Right-click also saves the current kit to a `.808kit` file and loads one back.
 - **RAND** rolls the selected voice near the loaded kit (small moves likely, big ones rare;
   pressing again rolls from the loaded kit again, so it never drifts away). **SHIFT + RAND**
   rolls it anywhere, every value equally likely. LEVEL and PAN never move. The **IN** jack beside

@@ -55,6 +55,24 @@ static void writeWav(const char* path, const std::vector<float>& L, const std::v
 	for (uint32_t i = 0; i < n; i++) for (float x : {L[i], R[i]}) { float c = std::max(-1.f, std::min(1.f, x * 0.5f / 10.f)); w16((uint16_t)(int16_t)(c * 32767)); }
 	fclose(f);
 }
+// a voice's character for comparing kits: brightness (zero crossings per second, weighted
+// by level), length (time to fall 30 dB under its peak) and loudness (RMS over the hit)
+struct Feat { float zcr, len, rms; };
+static Feat feat(Kit& k, int v) {
+	k.v[v]->reset();
+	k.hit(v, 0.5f);
+	int n = (int)(3.f * FS); float pk = 0.f; std::vector<float> x(n);
+	for (int i = 0; i < n; i++) { k.v[v]->process(); x[i] = k.v[v]->out; pk = std::max(pk, std::fabs(x[i])); }
+	double zc = 0, w = 0, e = 0; int last = 0;
+	for (int i = 1; i < n; i++) {
+		float a = std::fabs(x[i]);
+		if (a > pk * 0.0316f) last = i;
+		if ((x[i] > 0) != (x[i - 1] > 0)) zc += a;
+		w += a; e += x[i] * x[i];
+	}
+	Feat f; f.zcr = w > 0 ? (float)(zc / w * FS) : 0.f; f.len = last / FS; f.rms = (float)std::sqrt(e / std::max(1, last));
+	return f;
+}
 int main() {
 	printf("808 Circuit Bench\n");
 	Kit kit; kit.setSampleRate(FS); kit.setSerial(808);
@@ -197,6 +215,47 @@ int main() {
 		}
 		writeWav("test/out/bench-02-factory-kits.wav", L, R);
 		check(ok, "every factory kit plays within -6/+3.5 dB of the stock kit");
+	}
+
+	// how far each factory kit moves from the stock kit: a voice counts as changed when its
+	// brightness or length moves by a third or more (or its loudness by 4 dB)
+	{
+		Kit ks; ks.setSampleRate(FS); ks.setSerial(808);
+		Feat st[NV]; for (int v = 0; v < NV; v++) st[v] = feat(ks, v);
+		bool ok = true;
+		const auto& fk = factoryKits();
+		std::vector<std::vector<Feat>> all(fk.size(), std::vector<Feat>(st, st + NV));
+		for (size_t n = 1; n < fk.size(); n++) {
+			Kit kk; kk.setSampleRate(FS); kk.setSerial(808); applyKit(kk, fk[n].text);
+			int changed = 0; double score = 0; std::string which;
+			for (int v = 0; v < NV; v++) {
+				Feat f = feat(kk, v); all[n][v] = f;
+				double db = std::fabs(std::log(f.zcr / st[v].zcr)), dl = std::fabs(std::log((f.len + 0.01) / (st[v].len + 0.01))),
+					dr = std::fabs(20.0 * std::log10((f.rms + 1e-6) / (st[v].rms + 1e-6)));
+				score += db + dl;
+				if (db > 0.29 || dl > 0.29 || dr > 4.0) { changed++; which += std::string(" ") + code(v); }
+			}
+			printf("  %-28s %2d/13 voices changed, distance %.1f:%s\n", fk[n].name, changed, score, which.c_str());
+			if (changed < 9) ok = false;
+		}
+		check(ok, "every factory kit changes at least 9 of the 13 voices audibly");
+		// and the kits differ from each other, not only from stock
+		double worst = 1e9; std::string pair;
+		for (size_t a = 0; a < fk.size(); a++) for (size_t b = a + 1; b < fk.size(); b++) {
+			double d = 0;
+			for (int v = 0; v < NV; v++)
+				d += std::fabs(std::log(all[a][v].zcr / all[b][v].zcr)) + std::fabs(std::log((all[a][v].len + 0.01) / (all[b][v].len + 0.01)));
+			if (d < worst) { worst = d; pair = std::string(fk[a].name) + " / " + fk[b].name; }
+		}
+		double quiet = 0; std::string qv;
+		for (size_t a = 1; a < fk.size(); a++) for (int v = 0; v < NV; v++) {
+			double r = 20.0 * std::log10((all[a][v].rms + 1e-6) / (st[v].rms + 1e-6));
+			if (r < quiet) { quiet = r; qv = std::string(fk[a].name) + " " + code(v); }
+		}
+		printf("  quietest voice against stock: %s (%.1f dB)\n", qv.c_str(), quiet);
+		check(quiet > -17.0, "no factory kit leaves a voice near silent (RMS within 17 dB of stock)");
+		printf("  closest pair of kits: %s (distance %.1f)\n", pair.c_str(), worst);
+		check(worst > 8.0, "no two factory kits sound alike (distance > 8)");
 	}
 
 	printf(fails ? "%d FAILED\n" : "all bench checks passed\n", fails);
