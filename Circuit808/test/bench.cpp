@@ -12,6 +12,49 @@ static float peakOf(Kit& kit, int v, float acc, float sec) {
 	for (int i = 0; i < sec * FS; i++) { kit.v[v]->process(); float o = kit.v[v]->out; if (!std::isfinite(o)) fin = false; p = std::max(p, std::fabs(o)); }
 	return fin ? p : -1.f;
 }
+static const char* PAT[NV] = {
+	"x.....x...x.....|x.....x...x..x..",   // BD
+	"....x.......x...|....x.......x.x.",   // SD
+	"................|.............x..",   // LT
+	"................|..............x.",   // MT
+	"................|...............x",   // HT
+	"...x......x.....|...x............",   // RS
+	"..x..x..........|..x..x..........",   // CL
+	"............x...|............x...",   // CP
+	"x.xxx.xxx.xxx.xx|x.xxx.xxx.xxx.xx",   // MA
+	".......x...x....|.......x........",   // CB
+	"x...............|................",   // CY
+	"..............x.|..............x.",   // OH
+	"x.x.x.x.x.x.x.x.|x.x.x.x.x.x.x.x.",   // CH
+};
+// bars of the pattern at 120 BPM, accents on the beat, mixed as the module's L/R (before -6 dB)
+static void playBars(Kit& kd, int bars, std::vector<float>& L, std::vector<float>& R) {
+	int step = (int)(60.f / 120.f / 4.f * FS);
+	for (int bar = 0; bar < bars; bar++) for (int st = 0; st < 16; st++) {
+		for (int v = 0; v < NV; v++) if (PAT[v][(bar % 2) * 17 + st] == 'x') kd.hit(v, (st % 4 == 0) ? 1.f : 0.f);
+		for (int i = 0; i < step; i++) {
+			float l = 0, r = 0;
+			for (int v = 0; v < NV; v++) {
+				kd.v[v]->process(); float o = kd.v[v]->out;
+				if (v == MA) o *= 0.5f;
+				l += o * std::min(1.f, 2.f * (1.f - kd.v[v]->pan)); r += o * std::min(1.f, 2.f * kd.v[v]->pan);
+			}
+			L.push_back(l); R.push_back(r);
+		}
+	}
+}
+static void writeWav(const char* path, const std::vector<float>& L, const std::vector<float>& R) {
+	FILE* f = fopen(path, "wb");
+	if (!f) return;
+	uint32_t n = L.size(), bytes = n * 4;
+	auto w32 = [&](uint32_t x) { fwrite(&x, 4, 1, f); };
+	auto w16 = [&](uint16_t x) { fwrite(&x, 2, 1, f); };
+	fwrite("RIFF", 1, 4, f); w32(36 + bytes); fwrite("WAVEfmt ", 1, 8, f);
+	w32(16); w16(1); w16(2); w32((uint32_t)FS); w32((uint32_t)FS * 4); w16(4); w16(16);
+	fwrite("data", 1, 4, f); w32(bytes);
+	for (uint32_t i = 0; i < n; i++) for (float x : {L[i], R[i]}) { float c = std::max(-1.f, std::min(1.f, x * 0.5f / 10.f)); w16((uint16_t)(int16_t)(c * 32767)); }
+	fclose(f);
+}
 int main() {
 	printf("808 Circuit Bench\n");
 	Kit kit; kit.setSampleRate(FS); kit.setSerial(808);
@@ -56,71 +99,104 @@ int main() {
 		}
 		check(all, "every voice sleeps after its sound ends");
 	}
-	// every block parameter is a valid index and every voice's params appear once
+	// every parameter of every voice sits on exactly one of the 16 knobs
 	{
 		bool ok = true;
 		for (int v = 0; v < NV; v++) {
-			const Layout& L = layout(kindOf(v));
-			std::vector<int> seen(MAXK, 0);
-			for (int b = 0; b < L.nBlocks; b++) for (int j = 0; j < L.blocks[b].n; j++) {
-				int p = L.blocks[b].p[j]; if (p == PAN) continue;
+			const Slots& S = slots(kindOf(v));
+			if (S.n > NSLOT) ok = false;
+			std::vector<int> seen(MAXK, 0); int pans = 0;
+			for (int s = 0; s < S.n; s++) {
+				int p = S.p[s];
+				if (p == PAN) { pans++; continue; }
 				if (p < 0 || p >= kit.v[v]->nK()) ok = false; else seen[p]++;
 			}
+			if (pans != 1) ok = false;
 			for (int i = 0; i < kit.v[v]->nK(); i++) {
 				bool hidden = kindOf(v) == K_TOM && i == c808::tom::RANGE;
 				if (seen[i] != (hidden ? 0 : 1)) { ok = false; printf("  %s param %s appears %d times\n", code(v), kit.v[v]->def(i).id, seen[i]); }
 			}
 		}
-		check(ok, "screen blocks show every parameter exactly once");
+		check(ok, "the 16 knobs show every parameter of every voice exactly once");
+	}
+	// RAND: LEVEL and PAN never move, values stay 0..1, a nudge stays nearer home than wild
+	{
+		Kit kr; Rng r; bool keep = true, range = true;
+		double dn = 0, dw = 0; int cnt = 0;
+		for (int t = 0; t < 400; t++) for (int v = 0; v < NV; v++) {
+			Voice* vo = kr.v[v];
+			vo->toStock();
+			if (t % 2) vo->set(0, 0.9f);   // a loaded kit away from stock
+			float home[MAXK + 1];
+			for (int i = 0; i < MAXK; i++) home[i] = vo->k[i];
+			home[MAXK] = vo->pan = 0.3f;
+			bool wild = t % 4 >= 2;
+			roll(vo, home, wild, r);
+			for (int i = 0; i < vo->nK(); i++) {
+				if (vo->k[i] < 0.f || vo->k[i] > (vo->def(i).kind == 1 ? 2.f : 1.f)) range = false;
+				if (!rollable(vo, i) && vo->k[i] != home[i]) keep = false;
+				if (rollable(vo, i) && vo->def(i).kind == 0) { (wild ? dw : dn) += std::fabs(vo->k[i] - home[i]); if (!wild) cnt++; }
+			}
+			if (vo->pan != 0.3f) keep = false;
+			if (kindOf(v) == K_TOM && vo->k[c808::tom::RANGE] != (float)(v - LT)) keep = false;
+		}
+		printf("  mean move: nudge %.3f, wild %.3f (of the knob's travel)\n", dn / cnt, dw / cnt);
+		check(keep, "RAND never moves LEVEL, PAN or a tom's range");
+		check(range, "RAND keeps every knob in range");
+		check(dn / cnt < 0.13 && dw / cnt > 0.25, "RAND nudge stays near the loaded kit, wild goes anywhere");
+	}
+	// factory kits: every name they use exists on the voices they name
+	{
+		bool ok = true;
+		Kit kf;
+		for (auto& fk : factoryKits()) {
+			std::string s(fk.text);
+			size_t pos = 0;
+			while (pos < s.size()) {
+				size_t end = s.find(';', pos); if (end == std::string::npos) end = s.size();
+				std::string part = s.substr(pos, end - pos); pos = end + 1;
+				size_t c = part.find(':'); if (c == std::string::npos) continue;
+				std::string who = " " + part.substr(0, c) + " ", sets = part.substr(c + 1);
+				for (int v = 0; v < NV; v++) {
+					if (who.find(std::string(" ") + code(v) + " ") == std::string::npos) continue;
+					size_t i = 0;
+					while (i < sets.size()) {
+						while (i < sets.size() && sets[i] == ' ') i++;
+						size_t j = sets.find('=', i); if (j == std::string::npos) break;
+						std::string id = sets.substr(i, j - i);
+						if (paramByIdString(kf.v[v], id) < 0) { ok = false; printf("  %s: %s has no %s\n", fk.name, code(v), id.c_str()); }
+						i = sets.find(' ', j); if (i == std::string::npos) break;
+					}
+				}
+			}
+		}
+		check(ok, "factory kits only use parameters their voices have");
 	}
 	// demo: four bars of a kit pattern through the stereo mix
 	{
 		Kit kd; kd.setSampleRate(FS); kd.setSerial(808);
 		kd.v[CY]->pan = 0.7f; kd.v[OH]->pan = 0.35f; kd.v[CH]->pan = 0.35f; kd.v[CB]->pan = 0.65f; kd.v[CL]->pan = 0.7f;
 		kd.v[LT]->pan = 0.3f; kd.v[HT]->pan = 0.7f; kd.v[MA]->pan = 0.6f;
-		const char* pat[NV] = {
-			"x.....x...x.....|x.....x...x..x..",   // BD
-			"....x.......x...|....x.......x.x.",   // SD
-			"................|.............x..",   // LT
-			"................|..............x.",   // MT
-			"................|...............x",   // HT
-			"...x......x.....|...x............",   // RS
-			"..x..x..........|..x..x..........",   // CL
-			"............x...|............x...",   // CP
-			"x.xxx.xxx.xxx.xx|x.xxx.xxx.xxx.xx",   // MA
-			".......x...x....|.......x........",   // CB
-			"x...............|................",   // CY
-			"..............x.|..............x.",   // OH
-			"x.x.x.x.x.x.x.x.|x.x.x.x.x.x.x.x.",   // CH
-		};
-		int step = (int)(60.f / 120.f / 4.f * FS);
 		std::vector<float> L, R;
-		for (int bar = 0; bar < 4; bar++) for (int st = 0; st < 16; st++) {
-			for (int v = 0; v < NV; v++) {
-				char c = pat[v][(bar % 2) * 17 + st];
-				if (c == 'x') kd.hit(v, (st % 4 == 0) ? 1.f : 0.f);
-			}
-			for (int i = 0; i < step; i++) {
-				float l = 0, r = 0;
-				for (int v = 0; v < NV; v++) {
-					kd.v[v]->process(); float o = kd.v[v]->out;
-					if (v == MA) o *= 0.5f;
-					l += o * std::min(1.f, 2.f * (1.f - kd.v[v]->pan)); r += o * std::min(1.f, 2.f * kd.v[v]->pan);
-				}
-				L.push_back(l); R.push_back(r);
-			}
+		playBars(kd, 4, L, R);
+		writeWav("test/out/bench-01-kit.wav", L, R);
+	}
+	// the factory kits, two bars each, in menu order; each within -6/+3.5 dB of the stock kit's mix peak
+	{
+		std::vector<float> L, R; bool ok = true; float stockPk = 0.f;
+		for (auto& fk : factoryKits()) {
+			Kit kd; kd.setSampleRate(FS); kd.setSerial(808);
+			applyKit(kd, fk.text);
+			size_t from = L.size();
+			playBars(kd, 2, L, R);
+			float pk = 0.f;
+			for (size_t i = from; i < L.size(); i++) pk = std::max(pk, std::max(std::fabs(L[i]), std::fabs(R[i])) * 0.5f);
+			printf("  kit %-28s mix peak %.2f V\n", fk.name, pk);
+			if (stockPk == 0.f) stockPk = pk;
+			if (!(pk > 0.5f * stockPk && pk < 1.5f * stockPk)) ok = false;
 		}
-		FILE* f = fopen("test/out/bench-01-kit.wav", "wb");
-		if (f) {
-			uint32_t n = L.size(), bytes = n * 4;
-			auto w32 = [&](uint32_t x) { fwrite(&x, 4, 1, f); };
-			auto w16 = [&](uint16_t x) { fwrite(&x, 2, 1, f); };
-			fwrite("RIFF", 1, 4, f); w32(36 + bytes); fwrite("WAVEfmt ", 1, 8, f);
-			w32(16); w16(1); w16(2); w32((uint32_t)FS); w32((uint32_t)FS * 4); w16(4); w16(16);
-			fwrite("data", 1, 4, f); w32(bytes);
-			for (uint32_t i = 0; i < n; i++) for (float x : {L[i], R[i]}) { float c = std::max(-1.f, std::min(1.f, x * 0.5f / 10.f)); w16((uint16_t)(int16_t)(c * 32767)); }
-			fclose(f);
-		}
+		writeWav("test/out/bench-02-factory-kits.wav", L, R);
+		check(ok, "every factory kit plays within -6/+3.5 dB of the stock kit");
 	}
 
 	printf(fails ? "%d FAILED\n" : "all bench checks passed\n", fails);

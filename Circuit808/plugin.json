@@ -1,7 +1,7 @@
 {
   "slug": "Circuit808",
   "name": "808 Circuits",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "license": "GPL-3.0-or-later",
   "brand": "Haer",
   "author": "Haer",
@@ -88,7 +88,7 @@
     {
       "slug": "Bench808",
       "name": "808 Circuit Bench",
-      "description": "All thirteen TR-808 voices in one module (808 Circuits engines plus 808 Metal hats and cymbal): a screen draws each voice's circuit, tap a block and four knobs edit it; trigger and output per voice, stereo mix, four kit memories",
+      "description": "All thirteen TR-808 voices in one 36 HP kit: 16 knobs take every part of the selected voice (named and valued live, grouped by circuit stage), four kit memories with 10 factory kits, double-click a knob for the loaded kit value then stock, RAND near the kit or SHIFT + RAND anywhere (with trigger input), a trigger and output per voice, poly trigger and accent inputs, stereo mix.",
       "tags": [
         "Drum",
         "Mixer",

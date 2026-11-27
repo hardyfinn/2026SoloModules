@@ -107,35 +107,42 @@ the circuit (no click). The kick's attack-jump size is unchanged until it is che
 schematic.
 
 
-## 808 Circuit Bench (48 HP)
+## 808 Circuit Bench (36 HP)
 
 All thirteen voices of the kit in one module: BD, SD, LT, MT, HT, RS, CL, CP, MA, CB from the
 808 Circuits engines above, and CY, OH, CH from the 808 Metal engine. They sound exactly like
 the single modules at the same settings.
 
-- **Screen.** It draws the selected voice's circuit as blocks (for the snare: TRIG, 2 SHELLS,
-  NOISE, VCA, OUT) with each part's value and a red dot: filled at the stock 808 setting, a ring
-  once moved. Tap a block to select it; drag a value up or down to change it (SHIFT held = fine);
-  double-click a value to put it back to stock.
-- **Knobs.** The four knobs under the screen take the selected block's parts (their names are
-  shown above them); SELECT steps through the blocks.
+- **16 knobs** take every part of the selected voice, in signal-flow order, grouped under the
+  circuit stage they belong to (for the snare: TRIG, 2 SHELLS, NOISE, VCA, OUT). The name and
+  value under each knob change with the voice. Round each knob, a red dot marks the stock 808
+  setting and an amber dot the loaded kit's setting (when it differs).
+- **Double-click a knob**: back to the loaded kit's value; double-click again: the stock 808.
 - **Voice buttons** select a voice. **SHIFT** then a voice button hits it.
-- **STOCK** puts the block on screen back to the 808 (SHIFT + STOCK: the whole voice).
+- **STOCK** puts the voice back to the 808; SHIFT + STOCK puts it back to the loaded kit.
   **COPY** then another voice of the same kind (tom to tom, hat to hat) pastes the settings.
-  **KITS** steps through four kit memories (A-D), all saved in the patch; SHIFT + KITS puts the
-  current kit back to the stock 808.
+- **KITS** steps through four kit memories (A-D), all saved in the patch; SHIFT + KITS puts the
+  current kit back to the stock 808. Whatever a memory holds when you step to it is "the loaded
+  kit" for double-click, SHIFT + STOCK and RAND.
+- **Factory kits** (right-click > Factory kit) load into the current memory only: Stock 808,
+  Boom, Miami Bass, Electro, Acid House, Deep House, Driven Techno, Tuned Congas, Worn Unit,
+  Circuit Bent. Right-click also saves the current kit to a `.808kit` file and loads one back.
+- **RAND** rolls the selected voice near the loaded kit (small moves likely, big ones rare;
+  pressing again rolls from the loaded kit again, so it never drifts away). **SHIFT + RAND**
+  rolls it anywhere, every value equally likely. LEVEL and PAN never move. The **IN** jack beside
+  it rolls on a trigger (wild while SHIFT is lit). Ctrl+R rolls the whole kit anywhere.
 - **Jacks.** A TRIG input and an OUT for every voice. A patched OUT takes that voice out of the
   mix. ACC: mono = accent for all voices, poly = one channel per voice (BD first). POLY: poly
   triggers, channel 1 = BD ... 13 = CH. L/R: the stereo mix, 6 dB below the single outputs,
-  with a PAN for each voice in its OUT block.
+  with a PAN for each voice.
 - The closed hat chokes the open hat, as on the 808. LT, MT and HT are the LOW, MID and HIGH
-  tom; each has the TOM/CONGA switch in its BRIDGED-T block.
+  tom; each has the TOM/CONGA switch (MODE).
 - Silent voices are skipped, so an idle kit costs little CPU.
 
 ## Build
 
 `make test` runs the offline checks (kick, voices, bench) and writes demo WAVs to `test/out/`.
-`python3 res/make_kick_panel.py` and `python3 res/make_voice_panels.py` draw the panels;
+`python3 res/make_kick_panel.py`, `python3 res/make_voice_panels.py` and `python3 res/make_bench_panel.py` draw the panels;
 `python3 tools/preview.py out.png` and `python3 tools/preview_voices.py outdir` render previews.
 The repository's GitHub Action builds the plugin.
 
@@ -145,3 +152,5 @@ The 808 Circuits plugin as a whole is distributed under the **GPL-3.0-or-later**
 because 808 Circuit Bench includes the 808 Metal engine (`src/metal/MetalEngine.hpp`, GPL-3, which
 follows mjsyts' cymbal model). Every other file here is our own and stays under the **MIT** licence
 (`LICENSE.txt`), so it can be reused on its own under MIT.
+
+The bench draws its labels in DejaVu Sans Bold (`res/fonts/`, Bitstream Vera / DejaVu licence, `res/fonts/DejaVu-LICENSE.txt`).

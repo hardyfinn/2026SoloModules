@@ -4,6 +4,7 @@ RACK_DIR ?= ../Rack-SDK
 FLAGS +=
 SOURCES += $(wildcard src/*.cpp)
 DISTRIBUTABLES += $(wildcard res/*.svg)
+DISTRIBUTABLES += res/fonts
 DISTRIBUTABLES += $(wildcard LICENSE*)
 
 ifneq ($(MAKECMDGOALS),test)

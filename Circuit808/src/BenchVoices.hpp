@@ -1,5 +1,6 @@
-// 808 Circuit Bench: the thirteen voices of the kit behind one interface, and the
-// circuit-diagram layout the screen draws for each. Rack-free (see test/bench.cpp).
+// 808 Circuit Bench: the thirteen voices of the kit behind one interface, the circuit
+// stages each voice's parameters are grouped in, the 16 knob slots they fill on the panel,
+// the RAND rolls and the factory kits. Rack-free (see test/bench.cpp).
 //
 // BD = the 808 Kick engine; SD, LT/MT/HT, RS, CL, CP, MA, CB = the 808 Circuits voice
 // engines; CY, OH, CH = the 808 Metal engine (src/metal/MetalEngine.hpp, GPL-3).
@@ -11,6 +12,10 @@
 #include "metal/MetalEngine.hpp"
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#include <algorithm>
 
 namespace bench {
 
@@ -120,9 +125,10 @@ static inline void format(char* buf, int n, int kind, const KnobDef& d, float k)
 	else snprintf(buf, n, "%.2f%s", v, u);
 }
 
-// ---------------------------------------------------------------- the circuit diagrams
-// A block sits in a column (0..4) and row (0 top, 1 bottom, 0.5 middle) of the screen and
-// holds up to four parameters (indices into k[], or PAN). Arrows join blocks.
+// ---------------------------------------------------------------- the circuit stages
+// A block is one stage of the voice's circuit and holds up to four parameters (indices into
+// k[], or PAN). col/row give the stage's place in the signal flow (row 0 top, 1 bottom,
+// 0.5 middle); the knob slots follow that order. Arrows join blocks (signal flow).
 struct Block { const char* name; float col, row; int n; int p[4]; };
 struct Arrow { int from, to; };
 struct Layout { int nBlocks; const Block* blocks; int nArrows; const Arrow* arrows; };
@@ -333,5 +339,163 @@ struct Kit {
 	// the 808's closed hat chokes the open hat
 	void hit(int i, float acc) { if (i == CH) v[OH]->choke(); v[i]->hit(acc); }
 };
+
+// ---------------------------------------------------------------- the 16 knob slots
+// Every parameter of a voice on one knob, in signal-flow order (blocks by column, then row).
+static const int NSLOT = 16;
+struct Slots { int n; int p[NSLOT]; int blk[NSLOT]; };
+static inline const Slots& slots(int kind) {
+	static const std::vector<Slots> all = [] {
+		std::vector<Slots> out;
+		for (int kd = 0; kd <= K_METAL; kd++) {
+			const Layout& L = layout(kd);
+			std::vector<int> order;
+			for (int b = 0; b < L.nBlocks; b++) order.push_back(b);
+			std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+				const Block &A = L.blocks[a], &B = L.blocks[b];
+				return A.col != B.col ? A.col < B.col : A.row < B.row;
+			});
+			Slots s; s.n = 0;
+			for (int b : order)
+				for (int j = 0; j < L.blocks[b].n && s.n < NSLOT; j++) { s.p[s.n] = L.blocks[b].p[j]; s.blk[s.n] = b; s.n++; }
+			out.push_back(s);
+		}
+		return out;
+	}();
+	return all[kind];
+}
+
+// ---------------------------------------------------------------- RAND
+// A small generator so the rolls are reproducible in the tests.
+struct Rng {
+	uint32_t s = 0x808808u;
+	float uni() { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return (s >> 8) * (1.f / 16777216.f); }
+};
+// LEVEL and PAN are never rolled (a roll must not make a voice loud, silent or move it).
+static inline bool rollable(const Voice* v, int p) { return p != PAN && std::strcmp(v->def(p).id, "LEVEL") != 0; }
+// wild: any value, equally likely. Nudge: values near `home` (the loaded kit setting, or
+// stock) are the most likely: home + a bell-shaped offset (sd ~0.12, at most 0.36 of the
+// knob's travel), folded back at the ends. Switches stay put on a nudge 4 times in 5.
+// home: MAXK knob positions + pan, as Bench808 keeps its snapshot.
+static inline void roll(Voice* v, const float* home, bool wild, Rng& r) {
+	for (int p = 0; p < v->nK(); p++) {
+		if (!rollable(v, p)) continue;
+		const KnobDef& d = v->def(p);
+		float k;
+		if (d.kind != 0) {
+			int nPos = d.kind == 1 ? 3 : 2;
+			int pos = (int)std::round(home[p] * (nPos - 1));
+			if (wild || r.uni() < 0.2f) pos = std::min(nPos - 1, (int)(r.uni() * nPos));
+			k = (float)pos / (nPos - 1);
+		}
+		else if (wild) k = r.uni();
+		else {
+			k = home[p] + 0.24f * (r.uni() + r.uni() + r.uni() - 1.5f);
+			if (k < 0.f) k = -k;
+			if (k > 1.f) k = 2.f - k;
+		}
+		v->set(p, k);
+	}
+}
+
+// ---------------------------------------------------------------- factory kits
+// Each kit starts from the stock 808 and changes knob positions (0..1):
+// "VOICES: ID=value ID=value; ..." where VOICES is one or more codes, or ALL.
+struct FactoryKit { const char* name; const char* text; };
+static inline const std::vector<FactoryKit>& factoryKits() {
+	static const std::vector<FactoryKit> k = {
+		{"Stock 808", ""},
+		{"Boom (long tuned kick)",
+			"BD: TUNE=0.30 DECAY=0.97 SWEEP=0.32 TONE=0.36 SIGH=0.45 DRIVE=0.15 LEVEL=0.92;"
+			"SD: TUNE=0.42 DECAY=0.56 SNAPPY=0.42;"
+			"LT MT HT: DECAY=0.72 BEND=0.12;"
+			"CP: TAIL=0.56; CH: DECAY=0.38; OH: DECAY=0.6; CY: DECAY=0.62"},
+		{"Miami Bass",
+			"BD: TUNE=0.33 DECAY=0.99 SWEEP=0.58 TONE=0.6 CLICK=0.72 DRIVE=0.25 LEVEL=0.9;"
+			"SD: TONE=0.35 SNAPPY=0.7 SNAPDECAY=0.45 TUNE=0.55;"
+			"LT MT HT: TUNE=0.72 DECAY=0.75 BEND=0.25;"
+			"CB: DECAY=0.66; CL: TUNE=0.76; CP: SPREAD=0.4 TAIL=0.4;"
+			"CH: DECAY=0.3 PAN=0.6; OH: PAN=0.6"},
+		{"Electro",
+			"BD: TUNE=0.41 DECAY=0.55 SWEEP=0.62 CLICK=0.82 STRIKE=0.4;"
+			"SD: SNAPPY=0.76 SNAPDECAY=0.36 DECAY=0.3 TONE=0.4 HISS=0.66;"
+			"CH: DECAY=0.2 TONE=0.62; OH: DECAY=0.36; CP: SNAP=0.3 TAIL=0.36;"
+			"RS: RING=0.36; CB: DECAY=0.4 PAN=0.38; CL: PAN=0.64"},
+		{"Acid House",
+			"BD: TUNE=0.36 DECAY=0.4 TONE=0.66 CLICK=0.66 DRIVE=0.2;"
+			"SD: TONE=0.6 SNAPPY=0.6; CP: TAIL=0.56 MIX=0.62;"
+			"CH: DECAY=0.3 TONE=0.66 CUT=0.75 PAN=0.58; OH: DECAY=0.46 PAN=0.42;"
+			"RS: RING=0.5 PAN=0.4; MA: LENGTH=0.4 PAN=0.62"},
+		{"Deep House (soft, round)",
+			"BD: TUNE=0.35 DECAY=0.55 TONE=0.3 CLICK=0.3 STRIKE=0.66;"
+			"SD: TONE=0.7 SNAPPY=0.35 HISS=0.35 STRIKE=0.66;"
+			"CP: TONE=0.5 TAIL=0.62; RS: STRIKE=0.66 SNAP=0.45 PAN=0.4; CL: STRIKE=0.66 PAN=0.62;"
+			"LT MT HT: DECAY=0.62 TONE=0.5; MA: CUT=0.6 PAN=0.64;"
+			"CH: TONE=0.3 DECAY=0.36 PAN=0.6; OH: TONE=0.36 DECAY=0.5 PAN=0.42; CY: TONE=0.3"},
+		{"Driven Techno",
+			"BD: TUNE=0.4 DECAY=0.5 DRIVE=0.7 SHELF=0.5 TENSION=0.3;"
+			"SD: DRIVE=0.6 SNAPPY=0.66; CP: DRIVE=0.5; RS: DRIVE=0.6; CB: DRIVE=0.5;"
+			"LT MT HT: DRIVE=0.4; CH: DRIVE=0.5 DECAY=0.3; OH: DRIVE=0.5; CY: DRIVE=0.5 CUT=0.75"},
+		{"Tuned Congas",
+			"LT MT HT: MODE=1 DECAY=0.42 SLAP=0.56;"
+			"LT: PAN=0.36; HT: PAN=0.64;"
+			"BD: TUNE=0.45 DECAY=0.35; CL: TUNE=0.6 RING=0.45 PAN=0.6;"
+			"RS: RING=0.56 PAN=0.42; CB: TUNE=0.4; MA: LENGTH=0.36 SHAKE=0.3 PAN=0.66"},
+		{"Worn Unit (aged, drifting)",
+			"ALL: AGE=0.72; BD: TENSION=0.2;"
+			"CY OH CH: DRIFT=0.6 SPREAD=0.62"},
+		{"Circuit Bent",
+			"BD: SWEEP=0.95 BEND=0.8 RETRIG=0.8 SIGH=0.9 TENSION=0.7 CLICK=1;"
+			"SD: RATIO=0.85 SWEEP=0.6 NOISECOL=0.9;"
+			"LT MT HT: BEND=0.8 DOUBLE=0.8;"
+			"RS: RATIO=0.9 RING=0.8; CL: BEND=0.7 OVERTONE=0.8 RATIO=0.8;"
+			"CP: BURSTS=1 SPREAD=0.8 RES=0.8; MA: GRAINS=0.8 SHAKE=0.8; CB: INTERVAL=0.9 RES=0.8;"
+			"CY OH CH: TRIMA=0.2 TRIMB=0.1 SPREAD=0.9 WIDTH=0.85 COLOUR=0.8 RES=0.8"},
+	};
+	return k;
+}
+static inline int paramByIdString(const Voice* v, const std::string& id) {
+	if (id == "PAN") return PAN;
+	for (int i = 0; i < v->nK(); i++) if (id == v->def(i).id) return i;
+	return -1;
+}
+// the whole kit to stock, then the kit's changes (unknown ids are skipped)
+static inline void applyKit(Kit& kit, const char* text) {
+	for (auto* v : kit.v) v->toStock();
+	std::string s(text);
+	size_t pos = 0;
+	while (pos < s.size()) {
+		size_t end = s.find(';', pos);
+		if (end == std::string::npos) end = s.size();
+		std::string part = s.substr(pos, end - pos);
+		pos = end + 1;
+		size_t colon = part.find(':');
+		if (colon == std::string::npos) continue;
+		std::vector<std::string> who, sets;
+		auto split = [](const std::string& x, std::vector<std::string>& out) {
+			size_t i = 0;
+			while (i < x.size()) {
+				while (i < x.size() && x[i] == ' ') i++;
+				size_t j = i;
+				while (j < x.size() && x[j] != ' ') j++;
+				if (j > i) out.push_back(x.substr(i, j - i));
+				i = j;
+			}
+		};
+		split(part.substr(0, colon), who);
+		split(part.substr(colon + 1), sets);
+		for (int vi = 0; vi < NV; vi++) {
+			bool mine = false;
+			for (auto& w : who) if (w == "ALL" || w == code(vi)) mine = true;
+			if (!mine) continue;
+			for (auto& a : sets) {
+				size_t eq = a.find('=');
+				if (eq == std::string::npos) continue;
+				int p = paramByIdString(kit.v[vi], a.substr(0, eq));
+				if (p >= 0) kit.v[vi]->set(p, (float)std::atof(a.c_str() + eq + 1));
+			}
+		}
+	}
+}
 
 }  // namespace bench
