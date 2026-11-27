@@ -1,0 +1,23 @@
+{
+  "slug": "Circuit808",
+  "name": "808 Circuits",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Kick808",
+      "name": "808 Kick",
+      "description": "Circuit model of the TR-808 bass drum (pulse shaper, bridged-T, feedback decay, attack jump, pitch sigh) with its inner parts on the panel, extended ranges, sustain and AGE",
+      "tags": ["Drum", "Synth Voice"]
+    }
+  ]
+}
