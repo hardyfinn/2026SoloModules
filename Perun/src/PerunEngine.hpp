@@ -18,7 +18,7 @@
 
 namespace perun {
 
-static const int NUM_ALGOS = 12;
+static const int NUM_ALGOS = 15;
 static const int MAX_HITS = 4; // sounding at once
 static const int KS_SIZE = 8192;
 static const float PI = 3.14159265f;
@@ -45,6 +45,9 @@ inline const AlgoInfo& algoInfo(int i) {
 		{"KARPLUS", "bright", "damp", {"string", "drum", "metal"}},
 		{"SAMPLE", "start", "attack", {"slot 1", "slot 2", "slot 3"}},
 		{"METAL", "inharm", "strike", {"cowbell", "bell", "plate"}},
+		{"PARTICLES", "beads", "size", {"maracas", "tambourine", "scrape"}},
+		{"CIRCUIT 909", "shape", "attack", {"kick", "snare", "rim"}},
+		{"CHAOS", "chaos", "speed", {"logistic", "feedback", "lorenz"}},
 	};
 	return T[std::max(0, std::min(NUM_ALGOS - 1, i))];
 }
@@ -143,7 +146,7 @@ struct AlgoState {
 	float z[8];
 	float ratio[8];
 	float prev, sPos, ksLp, apZ, holdV, holdPh;
-	SVF f1, f2;
+	SVF f1, f2, f3;
 	int ksW;
 	float ks[KS_SIZE];
 	void reset(bool clearKs) {
@@ -153,6 +156,7 @@ struct AlgoState {
 		prev = sPos = ksLp = apZ = holdV = holdPh = 0.f;
 		f1.reset();
 		f2.reset();
+		f3.reset();
 		ksW = 0;
 		if (clearKs) std::memset(ks, 0, sizeof(ks));
 	}
@@ -462,6 +466,128 @@ inline float algoMetal(AlgoState& s, const Ctx& c) {
 	return sum / std::max(norm, 1.f) * 1.6f + strike;
 }
 
+// 13 PARTICLES: many little collisions (shaker physics after the stochastic "PhISEM" idea, our own tuning)
+inline float algoParticles(AlgoState& s, const Ctx& c) {
+	float cen = std::min(0.4f * c.sr, c.f * 12.f * (1.4f - c.p2)); // bigger beads, lower ring
+	if (c.mode == 2) {
+		// scrape: a stick across teeth; the stroke speeds up then slows (guiro / sandpaper)
+		float gesture = std::sin(PI * std::min(1.f, c.t / std::max(c.decayT * 2.f, 0.02f)));
+		float rate = c.f * 0.12f * (0.3f + 1.7f * c.p1) * (0.3f + 0.7f * gesture);
+		s.holdPh += rate * c.dt * (0.8f + 0.4f * c.rng->uni());
+		if (s.holdPh >= 1.f) {
+			s.holdPh -= 1.f;
+			s.z[0] += 0.6f + 0.4f * c.rng->uni();
+		}
+		s.z[0] *= 1.f - rateCoef(0.004f, c.sr);
+		float n = c.rng->bi() * c.nsc;
+		s.f1.process(n * s.z[0], svfG(cen * 0.6f, c.sr), 0.7f);
+		return s.f1.bp * std::min(1.f, gesture * 3.f + c.e) * c.e * 2.2f;
+	}
+	// beads: collision chance rises with the shake energy (the envelope)
+	float rate = (40.f + c.p1 * c.p1 * 2400.f) * c.e;
+	if (c.first) s.z[0] = 1.f; // the shake itself
+	if (c.rng->uni() < rate * c.dt) s.z[0] += (0.3f + 0.7f * c.rng->uni()) * c.e;
+	s.z[0] *= 1.f - rateCoef(c.mode == 1 ? 0.0015f : 0.004f, c.sr);
+	float n = c.rng->bi() * c.nsc * s.z[0];
+	if (c.mode == 0) {
+		s.f1.process(n, svfG(cen, c.sr), 0.5f);
+		return s.f1.bp * 0.7f;
+	}
+	// tambourine: metal jingles ring on after each collision
+	s.f1.process(n, svfG(cen * 0.55f, c.sr), 0.12f);
+	s.f2.process(n, svfG(cen * 1.27f, c.sr), 0.1f);
+	s.f3.process(n, svfG(cen * 1.83f, c.sr), 0.08f);
+	return (s.f1.bp * 0.12f + s.f2.bp * 0.1f + s.f3.bp * 0.08f) * 0.95f + n * 0.06f;
+}
+
+// 14 CIRCUIT 909: our own take on the analogue house/techno kit voices
+inline float algoCircuit909(AlgoState& s, const Ctx& c) {
+	if (c.mode == 0) {
+		// kick: shaped sine with its own fast pitch drop (on top of BEND), attack click
+		float f = c.f * (1.f + 2.2f * std::exp(-c.t / 0.010f) + 0.35f * std::exp(-c.t / 0.06f));
+		s.ph[0] = wrap1(s.ph[0] + f * c.dt);
+		float sh = 1.f + 3.f * c.p1;
+		float y = std::tanh(sinp(s.ph[0]) * sh) / std::tanh(sh);
+		s.z[0] += (c.rng->bi() * c.nsc - s.z[0]) * rateCoef(0.25f, c.sr);
+		float click = (s.z[0] * 1.5f + std::exp(-c.t / 0.0004f)) * std::exp(-c.t / 0.003f) * c.p2;
+		return y * c.e + click;
+	}
+	if (c.mode == 1) {
+		// snare: two detuned body oscillators (ratio set by P1) + "snappy" noise
+		if (c.first) s.z[1] = 1.f;
+		float bend = 1.f + 0.6f * std::exp(-c.t / 0.008f);
+		float d0 = c.f * bend * c.dt, d1 = c.f * (1.5f + 0.3f * c.p1) * bend * c.dt;
+		s.ph[0] = wrap1(s.ph[0] + d0);
+		s.ph[1] = wrap1(s.ph[1] + d1);
+		float tri0 = 1.f - 4.f * std::fabs(s.ph[0] - 0.5f), tri1 = 1.f - 4.f * std::fabs(s.ph[1] - 0.5f);
+		float body = (0.6f * std::tanh(1.6f * tri0) + 0.45f * std::tanh(1.6f * tri1)) * c.e * c.e;
+		if (!c.drone) s.z[1] *= std::exp(-c.dt / (c.decayT * 0.9f));
+		float n = c.rng->bi() * c.nsc;
+		s.f1.process(n, svfG(1100.f, c.sr), 1.f);
+		s.f2.process(s.f1.hp, svfG(7500.f, c.sr), 1.2f);
+		float snappy = s.f2.lp * s.z[1] * (0.2f + 1.3f * c.p2);
+		return body * (1.1f - 0.4f * c.p2) + snappy;
+	}
+	// rim: two ringing bandpasses pinged by a pulse, short and woody
+	float pulse = c.t < 0.0003f ? 1.f : 0.f;
+	pulse *= std::sqrt(48000.f / c.sr) * c.nsc; // same energy at any rate
+	float e3 = c.e * c.e * c.e;
+	s.f1.process(pulse * 6.f, svfG(c.f, c.sr), 0.06f);
+	s.f2.process(pulse * 6.f, svfG(c.f * (2.6f + 1.2f * c.p1), c.sr), 0.05f);
+	float y = (s.f1.bp * 0.08f + s.f2.bp * 0.06f) * e3;
+	float clk = c.rng->bi() * c.nsc * std::exp(-c.t / 0.0008f) * c.p2 * 0.8f;
+	return std::tanh(y * 3.f) * 0.8f + clk;
+}
+
+// 15 CHAOS: chaotic maths as a drum; every hit starts from a new place
+inline float algoChaos(AlgoState& s, const Ctx& c) {
+	if (c.mode == 0) {
+		// logistic map, iterated at a rate set by TUNE and P2, smoothed between steps
+		if (c.first) {
+			s.z[0] = 0.1f + 0.8f * c.rng->uni();
+			s.z[1] = s.z[2] = s.z[0];
+		}
+		float r = 3.55f + 0.449f * c.p1;
+		s.holdPh += c.f * (0.5f + 6.f * c.p2) * c.dt;
+		while (s.holdPh >= 1.f) {
+			s.holdPh -= 1.f;
+			s.z[1] = s.z[0];
+			s.z[0] = r * s.z[0] * (1.f - s.z[0]);
+		}
+		float x = s.z[1] + (s.z[0] - s.z[1]) * s.holdPh;
+		s.z[2] += (x - s.z[2]) * rateCoef(0.5f, c.sr);
+		return (2.f * s.z[2] - 1.f) * c.e;
+	}
+	if (c.mode == 1) {
+		// feedback FM: one sine modulating itself; past about 1.2 it tears into noise
+		s.ph[0] = wrap1(s.ph[0] + c.f * (0.5f + 2.f * c.p2) * c.dt);
+		float fb = (0.6f + 2.6f * c.p1) * (0.4f + 0.6f * c.e);
+		float y = std::sin(TWO_PI * s.ph[0] + fb * 0.5f * (s.prev + s.z[0]));
+		s.z[0] = s.prev;
+		s.prev = y;
+		return y * c.e;
+	}
+	// Lorenz attractor, running at a speed set by TUNE and P2
+	if (c.first) {
+		s.z[0] = c.rng->bi() * 10.f;
+		s.z[1] = c.rng->bi() * 10.f;
+		s.z[2] = 20.f + c.rng->bi() * 5.f;
+	}
+	float rho = 20.f + 16.f * c.p1;
+	float step = c.f * (0.2f + 2.f * c.p2) * c.dt * 0.8f;
+	int n = 1 + (int) (step / 0.004f);
+	n = std::min(n, 16);
+	float h = step / n;
+	for (int i = 0; i < n; i++) {
+		float x = s.z[0], y = s.z[1], z = s.z[2];
+		s.z[0] += h * 10.f * (y - x);
+		s.z[1] += h * (x * (rho - z) - y);
+		s.z[2] += h * (x * y - 2.6667f * z);
+	}
+	if (!std::isfinite(s.z[0])) s.z[0] = s.z[1] = 1.f, s.z[2] = 20.f;
+	return std::tanh(s.z[0] * 0.07f) * 1.1f * c.e;
+}
+
 inline float runAlgo(int algo, AlgoState& s, const Ctx& c) {
 	switch (algo) {
 		case 0: return algoFold(s, c);
@@ -475,7 +601,10 @@ inline float runAlgo(int algo, AlgoState& s, const Ctx& c) {
 		case 8: return algoPulseHat(s, c);
 		case 9: return algoKarplus(s, c);
 		case 10: return algoSample(s, c) * 1.3f;
-		default: return algoMetal(s, c) * (c.mode == 0 ? 0.65f : 1.f);
+		case 11: return algoMetal(s, c) * (c.mode == 0 ? 0.65f : 1.f);
+		case 12: return algoParticles(s, c);
+		case 13: return algoCircuit909(s, c);
+		default: return algoChaos(s, c);
 	}
 }
 

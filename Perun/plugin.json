@@ -1,7 +1,7 @@
 {
   "slug": "Perun",
   "name": "Perun",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "license": "MIT",
   "brand": "Haer",
   "author": "Haer",
@@ -16,7 +16,7 @@
     {
       "slug": "Perun",
       "name": "Perun",
-      "description": "Thunder drum voice in the Perkons style: 12 algorithms with A/B MORPH, multimode filter, overdrive and bucket-brigade delay, every control on CV, WEAR and MUTATE for hits that never repeat exactly, 8 memories",
+      "description": "Thunder drum voice in the Perkons style: 15 algorithms with A/B MORPH, multimode filter, overdrive and bucket-brigade delay, every control on CV, WEAR and MUTATE for hits that never repeat exactly, 8 memories",
       "tags": ["Drum", "Synth voice", "Filter", "Distortion", "Delay"]
     }
   ]

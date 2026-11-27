@@ -197,6 +197,43 @@ int main(int argc, char** argv) {
 		std::vector<float> o = pattern(e, c, "x.xx.x.xx.x.x.xx", 124.f, 8);
 		writeWav(dir + "/mutate-fm-perc.wav", o);
 	}
+	// tom -> bell: memory 8 with MORPH swept 0 -> 1 over 8 bars
+	{
+		Engine e; Controls c = fromPreset(7);
+		std::vector<float> o = pattern(e, c, "X..x..x...x.X...", 124.f, 8, [](Controls& cc, int s) -> Controls* { cc.morph = s / 127.f; return nullptr; });
+		writeWav(dir + "/morph-tom-to-bell.wav", o);
+	}
+	// new in 2.2.0: Particles, Circuit 909, Chaos
+	{
+		Engine e; Controls c = fromPreset(6); c.algoA = 12; c.morph = 0; c.mode = 0; c.tuneHz = 400; c.decay = 0.35f; c.p1 = 0.5f; c.p2 = 0.4f; c.cutoff = 0.3f; c.vcf = 0; c.wear = 0.3f;
+		std::vector<float> o = pattern(e, c, "xxXxxxXxxxXxxxXx", 124.f, 2);
+		c.mode = 1; c.decay = 0.5f; std::vector<float> o2 = pattern(e, c, "X...x.x.X...x.x.", 124.f, 2);
+		c.mode = 2; c.decay = 0.55f; c.tuneHz = 300; std::vector<float> o3 = pattern(e, c, "X.......X...x...", 124.f, 2);
+		o.insert(o.end(), o2.begin(), o2.end()); o.insert(o.end(), o3.begin(), o3.end());
+		writeWav(dir + "/particles-maracas-tambourine-scrape.wav", o);
+	}
+	{
+		Engine k, s, r; Controls ck = fromPreset(0), cs = fromPreset(0), cr = fromPreset(0);
+		ck.algoA = 13; ck.morph = 0; ck.mode = 0; ck.tuneHz = 48; ck.bend = 0.1f; ck.decay = 0.55f; ck.p1 = 0.4f; ck.p2 = 0.5f; ck.click = 0; ck.drive = 0.25f;
+		cs = ck; cs.mode = 1; cs.tuneHz = 185; cs.decay = 0.45f; cs.p1 = 0.5f; cs.p2 = 0.6f; cs.level = 0.6f;
+		cr = ck; cr.mode = 2; cr.tuneHz = 480; cr.decay = 0.3f; cr.p1 = 0.4f; cr.p2 = 0.5f; cr.level = 0.5f;
+		std::vector<float> o; int stepLen = (int) (SR * 60.f / 126.f / 4.f);
+		const char* pk = "X...X...X...X..."; const char* ps = "....X.......X..x"; const char* pr = "..x...x..x....x.";
+		for (int st = 0; st < 16 * 8; st++) {
+			int i = st % 16;
+			if (pk[i] != '.') k.hit(pk[i] == 'X', ck);
+			if (ps[i] != '.') s.hit(ps[i] == 'X', cs);
+			if (pr[i] != '.') r.hit(0, cr);
+			for (int j = 0; j < stepLen; j++) { k.process(ck); s.process(cs); r.process(cr); o.push_back(k.out + s.out + r.out); }
+		}
+		writeWav(dir + "/circuit909-kick-snare-rim.wav", o, 0.08f);
+	}
+	{
+		Engine e; Controls c = fromPreset(3); c.algoA = 14; c.morph = 0; c.decay = 0.4f; c.tuneHz = 220; c.mutate = 0.6f; c.wear = 0.2f; c.send = 0.25f;
+		std::vector<float> o;
+		for (int m = 0; m < 3; m++) { c.mode = m; c.p1 = 0.6f; c.p2 = 0.4f; std::vector<float> x = pattern(e, c, "x.xX.x.xx.x.X.xx", 124.f, 2); o.insert(o.end(), x.begin(), x.end()); }
+		writeWav(dir + "/chaos-logistic-feedback-lorenz.wav", o);
+	}
 	// groove: three Peruns summed (kick, snare, hat)
 	{
 		Engine k, s, h; Controls ck = fromPreset(0), cs = fromPreset(4), ch = fromPreset(6);

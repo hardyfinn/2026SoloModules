@@ -20,7 +20,7 @@ static const float SCREEN_X = 31.f, SCREEN_Y = 3.f, SCREEN_W = 71.f, SCREEN_H = 
 
 static const char* const ALGO_NAMES[perun::NUM_ALGOS] = {
 	"Fold BD", "Wavetable BD", "Resonant BD", "Complex (FM)", "Res Snare", "Slap",
-	"Tom", "Noise Hat", "Pulse Hat", "Karplus", "Sample", "Metal"};
+	"Tom", "Noise Hat", "Pulse Hat", "Karplus", "Sample", "Metal", "Particles", "Circuit 909", "Chaos"};
 
 // Minimal WAV reader: PCM 8/16/24/32 bit or float, any channel count (mixed to mono), up to 20 s.
 static bool readWav(const std::string& path, perun::Sample& out, std::string& err) {
@@ -134,8 +134,8 @@ struct Perun : Module {
 	Perun() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		std::vector<std::string> algos(ALGO_NAMES, ALGO_NAMES + perun::NUM_ALGOS);
-		configSwitch(ALGOA_PARAM, 0.f, 11.f, 0.f, "Algorithm A", algos);
-		configSwitch(ALGOB_PARAM, 0.f, 11.f, 2.f, "Algorithm B", algos);
+		configSwitch(ALGOA_PARAM, 0.f, 14.f, 0.f, "Algorithm A", algos);
+		configSwitch(ALGOB_PARAM, 0.f, 14.f, 2.f, "Algorithm B", algos);
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.15f, "Morph (A <-> B)", "%", 0.f, 100.f);
 		configSwitch(MODE_PARAM, 0.f, 2.f, 0.f, "Mode (variant of each algorithm)", {"A", "B", "C"});
 		configParam(TUNE_PARAM, 0.f, 1.f, 0.189f, "Tune", " Hz", 128.f, 20.f);
@@ -276,7 +276,7 @@ struct Perun : Module {
 		for (int i = 0; i < 22; i++) {
 			if (!inputs[CV_INPUT + i].isConnected()) continue;
 			float cv = cvAdd(i);
-			if (i == ALGOA_PARAM || i == ALGOB_PARAM) v[i] = clamp(v[i] + std::round(cv), 0.f, 11.f);
+			if (i == ALGOA_PARAM || i == ALGOB_PARAM) v[i] = clamp(v[i] + std::round(cv), 0.f, 14.f);
 			else if (i == MODE_PARAM || i == VCF_PARAM) v[i] = clamp(v[i] + std::round(cv * 0.3f), 0.f, 2.f);
 			else if (i == TUNE_PARAM) v[i] = v[i] + cv / 7.f;
 			else if (i == FENV_PARAM) v[i] = clamp(v[i] + cv * 0.2f, -1.f, 1.f);

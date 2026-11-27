@@ -17,7 +17,7 @@ ALGO B ──┘                                                ┘
                                           └ SEND ─ delay ─┘   (or SEND output when patched)
 ```
 
-## The 12 algorithms (MODE switch = 3 variants of each; P1 and P2 change meaning, shown on the screen)
+## The 15 algorithms (MODE switch = 3 variants of each; P1 and P2 change meaning, shown on the screen)
 
 | # | Algorithm | P1 | P2 | MODE A / B / C |
 |---|---|---|---|---|
@@ -33,6 +33,9 @@ ALGO B ──┘                                                ┘
 | 10 | Karplus | bright | damp | string / drum / metal |
 | 11 | Sample | start | attack | slot 1 / 2 / 3 (right-click to load WAVs) |
 | 12 | Metal | inharmonic | strike | cowbell / bell / plate |
+| 13 | Particles | beads | size | maracas / tambourine / scrape (guiro) |
+| 14 | Circuit 909 | shape | attack | kick / snare / rim (our own analogue-style model) |
+| 15 | Chaos | chaos | speed | logistic map / feedback FM / Lorenz attractor |
 
 ## Controls
 
