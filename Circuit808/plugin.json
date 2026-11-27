@@ -1,0 +1,99 @@
+{
+  "slug": "Circuit808",
+  "name": "808 Circuits",
+  "version": "2.5.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Kick808",
+      "name": "808 Kick",
+      "description": "Circuit model of the TR-808 bass drum (pulse shaper, bridged-T, feedback decay, attack jump, pitch sigh) with its inner parts on the panel, extended ranges, sustain and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Snare808",
+      "name": "808 Snare",
+      "description": "Circuit model of the TR-808 snare: two tuned bridged-T heads plus filtered noise (SNAPPY), with TONE (shell balance), RATIO, HISS, SWEEP, SNAP DECAY, COLOUR and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Clap808",
+      "name": "808 Clap",
+      "description": "Circuit model of the TR-808 hand clap: band-passed noise with a burst sawtooth and reverb tail; BURSTS 1-8, SPREAD, SNAP, TAIL, BAND and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "TomConga808",
+      "name": "808 Tom / Conga",
+      "description": "Circuit model of the TR-808 toms and congas: bridged-T with pitch bend and pink-noise slap, LOW/MID/HIGH and TOM/CONGA, with BEND, MUTE, DOUBLE and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Rim808",
+      "name": "808 Rim",
+      "description": "Circuit model of the TR-808 rim shot: two high resonators through a fast transistor VCA and high-pass; RATIO, RING, GATE, SNAP and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Clave808",
+      "name": "808 Clave",
+      "description": "Circuit model of the TR-808 claves: a high bridged-T with RING, STRIKE, BEND, OVERTONE and AGE, from click to tuned wood",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Maracas808",
+      "name": "808 Maracas",
+      "description": "Circuit model of the TR-808 maracas: high-passed noise through a short VCA, with LENGTH, CUT, GRAINS, SHAKE, ATTACK and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Cowbell808",
+      "name": "808 Cowbell",
+      "description": "Circuit model of the TR-808 cowbell: two squares (540/800 Hz) through a band-pass and a two-stage VCA, with INTERVAL, WIDTH, FILTER, SHAPE and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Bench808",
+      "name": "808 Circuit Bench",
+      "description": "All thirteen TR-808 voices in one 36 HP kit: 16 knobs take every part of the selected voice (named and valued live, grouped by circuit stage), four kit memories with 11 factory kits, double-click a knob for the loaded kit value then stock, RAND near the kit or SHIFT + RAND anywhere (with trigger input), a trigger and output per voice, poly trigger and accent inputs, stereo mix.",
+      "tags": [
+        "Drum",
+        "Mixer",
+        "Polyphonic"
+      ]
+    }
+  ]
+}
