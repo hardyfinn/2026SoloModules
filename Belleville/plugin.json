@@ -1,0 +1,35 @@
+{
+  "slug": "Belleville",
+  "name": "Belleville",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Strata",
+      "name": "Strata",
+      "description": "Chord player and harmony leader for house and techno: 16 styles and 93 progressions (Detroit, Chicago, deep, garage, dub, warehouse, acid, minimal, electro, ambient, IDM, piano, disco, progressive, melodic, soulful), voice-led voicings, stab rhythms and DRIFT that lets the chords wander. Follows poly chords from a Hapax. Undertow and Signal follow it with no cables. Notes out",
+      "tags": ["Sequencer", "Polyphonic", "Random", "Quantizer"]
+    },
+    {
+      "slug": "Undertow",
+      "name": "Undertow",
+      "description": "Bass line player for Strata: offbeat, rolling, acid, Reese, dub, electro, Chicago, pedal, 2-step, sub and broken lines that follow the chords, leave room for your kick and slide and accent like a 303. Notes out",
+      "tags": ["Sequencer", "Random"]
+    },
+    {
+      "slug": "Signal",
+      "name": "Signal",
+      "description": "Melody player for Strata: string lines, arps, hooks, call and answer, bleeps, leads, acid lines and glitches from a short motif that MUTATE slowly evolves. Plays into the gaps between the chords. Notes out",
+      "tags": ["Sequencer", "Random"]
+    }
+  ]
+}
