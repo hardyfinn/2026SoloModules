@@ -22,9 +22,9 @@ def img(path, x, y, angle=0.0):
     g.append(f'<g transform="rotate({angle} {x} {y})"><image href="data:image/svg+xml;base64,{data}" x="{x - w/2}" y="{y - h/2}" width="{w}" height="{h}"/></g>')
 def knob(name, key, v):
     img(os.path.join(RES, name + ".svg"), L[f"K_{key}_X"], L[f"K_{key}_Y"], -150 + 300 * v)
-knob("knob-red", "SPEED", 0.5); knob("knob-red", "PITCH", 1/3)
-knob("knob-yellow", "FEEDBACK", 0.45); knob("knob-yellow", "MODE", 1.0); knob("knob-yellow", "BEAT", 0.0)
-knob("knob-green", "VOLUME", 0.8)
+knob("knob-gold-big", "SPEED", 0.5); knob("knob-gold-big", "PITCH", 1/3)
+knob("knob-gold", "FEEDBACK", 0.45); knob("knob-white", "MODE", 1.0); knob("knob-white", "BEAT", 0.0)
+knob("knob-gold", "VOLUME", 0.8)
 for k, v in (("DEPTH", 0.67), ("RELEASE", 0.56), ("TIME", 0.65)): knob("knob-trim", k, v)
 img(os.path.join(LIB, "CKSS_1.svg"), L["S_TRIG_X"], L["S_TRIG_Y"]); img(os.path.join(LIB, "CKSS_1.svg"), L["S_ERA_X"], L["S_ERA_Y"]); img(os.path.join(LIB, "CKSS_0.svg"), L["S_EXTRAS_X"], L["S_EXTRAS_Y"])
 for k in ("SIREN", "TONE"): img(os.path.join(LIB, "VCVBezel.svg"), L[f"B_{k}_X"], L[f"B_{k}_Y"])

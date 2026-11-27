@@ -96,13 +96,13 @@ struct DubSirenModule : Module {
 	}
 };
 
-// Knobs with coloured caps, like the hardware box
+// Knobs with gold and white caps on the flag panel
 struct CapKnob : app::SvgKnob {
 	CapKnob() { minAngle = -0.83f * M_PI; maxAngle = 0.83f * M_PI; }
 };
-struct RedKnob : CapKnob { RedKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-red.svg"))); } };
-struct YellowKnob : CapKnob { YellowKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-yellow.svg"))); } };
-struct GreenKnob : CapKnob { GreenKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-green.svg"))); } };
+struct BigGoldKnob : CapKnob { BigGoldKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-gold-big.svg"))); } };
+struct GoldKnob : CapKnob { GoldKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-gold.svg"))); } };
+struct WhiteKnob : CapKnob { WhiteKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-white.svg"))); } };
 struct TrimKnob : CapKnob { TrimKnob() { setSvg(Svg::load(asset::plugin(pluginInstance, "res/knob-trim.svg"))); } };
 
 struct DubSirenWidget : ModuleWidget {
@@ -114,20 +114,20 @@ struct DubSirenWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		typedef DubSirenModule M;
-		addParam(createParamCentered<RedKnob>(mm2px(Vec(K_SPEED_X, K_SPEED_Y)), module, M::SPEED_PARAM));
-		addParam(createParamCentered<RedKnob>(mm2px(Vec(K_PITCH_X, K_PITCH_Y)), module, M::PITCH_PARAM));
-		addParam(createParamCentered<YellowKnob>(mm2px(Vec(K_FEEDBACK_X, K_FEEDBACK_Y)), module, M::FEEDBACK_PARAM));
-		addParam(createParamCentered<YellowKnob>(mm2px(Vec(K_MODE_X, K_MODE_Y)), module, M::MODE_PARAM));
-		addParam(createParamCentered<YellowKnob>(mm2px(Vec(K_BEAT_X, K_BEAT_Y)), module, M::BEAT_PARAM));
-		addParam(createParamCentered<GreenKnob>(mm2px(Vec(K_VOLUME_X, K_VOLUME_Y)), module, M::VOLUME_PARAM));
+		addParam(createParamCentered<BigGoldKnob>(mm2px(Vec(K_SPEED_X, K_SPEED_Y)), module, M::SPEED_PARAM));
+		addParam(createParamCentered<BigGoldKnob>(mm2px(Vec(K_PITCH_X, K_PITCH_Y)), module, M::PITCH_PARAM));
+		addParam(createParamCentered<GoldKnob>(mm2px(Vec(K_FEEDBACK_X, K_FEEDBACK_Y)), module, M::FEEDBACK_PARAM));
+		addParam(createParamCentered<WhiteKnob>(mm2px(Vec(K_MODE_X, K_MODE_Y)), module, M::MODE_PARAM));
+		addParam(createParamCentered<WhiteKnob>(mm2px(Vec(K_BEAT_X, K_BEAT_Y)), module, M::BEAT_PARAM));
+		addParam(createParamCentered<GoldKnob>(mm2px(Vec(K_VOLUME_X, K_VOLUME_Y)), module, M::VOLUME_PARAM));
 		addParam(createParamCentered<TrimKnob>(mm2px(Vec(K_DEPTH_X, K_DEPTH_Y)), module, M::DEPTH_PARAM));
 		addParam(createParamCentered<TrimKnob>(mm2px(Vec(K_RELEASE_X, K_RELEASE_Y)), module, M::RELEASE_PARAM));
 		addParam(createParamCentered<TrimKnob>(mm2px(Vec(K_TIME_X, K_TIME_Y)), module, M::TIME_PARAM));
 		addParam(createParamCentered<CKSS>(mm2px(Vec(S_TRIG_X, S_TRIG_Y)), module, M::TRIG_PARAM));
 		addParam(createParamCentered<CKSS>(mm2px(Vec(S_ERA_X, S_ERA_Y)), module, M::ERA_PARAM));
 		addParam(createParamCentered<CKSS>(mm2px(Vec(S_EXTRAS_X, S_EXTRAS_Y)), module, M::EXTRAS_PARAM));
-		addParam(createLightParamCentered<VCVLightBezel<RedLight>>(mm2px(Vec(B_SIREN_X, B_SIREN_Y)), module, M::SIREN_PARAM, M::SIREN_LIGHT));
-		addParam(createLightParamCentered<VCVLightBezel<WhiteLight>>(mm2px(Vec(B_TONE_X, B_TONE_Y)), module, M::TONE_PARAM, M::TONE_LIGHT));
+		addParam(createLightParamCentered<VCVLightBezel<GreenLight>>(mm2px(Vec(B_SIREN_X, B_SIREN_Y)), module, M::SIREN_PARAM, M::SIREN_LIGHT));
+		addParam(createLightParamCentered<VCVLightBezel<YellowLight>>(mm2px(Vec(B_TONE_X, B_TONE_Y)), module, M::TONE_PARAM, M::TONE_LIGHT));
 		addChild(createLightCentered<LargeLight<RedLight>>(mm2px(Vec(L_ACTIVE_X, L_ACTIVE_Y)), module, M::ACTIVE_LIGHT));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(I_VOCT_X, I_VOCT_Y)), module, M::VOCT_INPUT));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(I_SPEED_X, I_SPEED_Y)), module, M::SPEED_INPUT));
