@@ -93,6 +93,73 @@ int main(int argc, char** argv) {
 		for (int i = 0; i < 40; i++) e.hit(0, c);
 		CHECK(e.mutP1 == a, "LOCK holds the offsets");
 	}
+
+	// 5. review regressions (Fable DSP review 2026-11-27)
+	{
+		// voice stealing: long kick every 137 ms must never jump
+		Engine e; Controls c = fromPreset(0); c.decay = 0.8f; c.click = 0.f; c.send = 0.f; c.drive = 0.f; c.wear = 0.f; c.bend = 0.f;
+		float prev = 0.f, maxJump = 0.f, pk = 0.f;
+		int step = (int) (0.137f * SR);
+		for (int i = 0; i < step * 12; i++) {
+			if (i % step == 0) e.hit(0, c);
+			e.process(c);
+			if (i % step > 100) maxJump = std::max(maxJump, std::fabs(e.out - prev));
+			pk = std::max(pk, std::fabs(e.out));
+			prev = e.out;
+		}
+		CHECK(maxJump < pk * 0.1f, "no click when a fifth hit steals a voice (max jump %.3f V, peak %.2f V)", maxJump, pk);
+	}
+	{
+		// punch mode keeps its body
+		Engine e1, e2; Controls c = fromPreset(2); c.send = 0; c.drive = 0; c.click = 0; c.p1 = 0;
+		Controls cp = c; cp.mode = 1;
+		e1.hit(0, c); e2.hit(0, cp);
+		std::vector<float> a, b;
+		for (int i = 0; i < (int) (0.1f * SR); i++) { e1.process(c); e2.process(cp); a.push_back(e1.out); b.push_back(e2.out); }
+		CHECK(peak(b) > 0.6f * peak(a) && peak(b, (int) (0.05f * SR)) > 0.3f * peak(a, (int) (0.05f * SR)), "RESONANT punch as strong as pure (%.2f vs %.2f V)", peak(b), peak(a));
+	}
+	{
+		// morph moved mid-hit: B (resonant) still starts properly
+		Engine e; Controls c = fromPreset(0); c.algoA = 6; c.algoB = 2; c.morph = 0.f; c.send = 0; c.decay = 0.7f;
+		e.hit(0, c);
+		for (int i = 0; i < (int) (0.05f * SR); i++) e.process(c);
+		c.morph = 1.f;
+		std::vector<float> o;
+		for (int i = 0; i < (int) (0.1f * SR); i++) { e.process(c); o.push_back(e.out); }
+		CHECK(peak(o) > 0.5f, "MORPH to B during a hit: B sounds (%.2f V)", peak(o));
+	}
+	{
+		// noisy sounds keep their level at 96 kHz
+		auto lvl = [](float sr, int algo) {
+			Engine e; e.setSampleRate(sr); Controls c = fromPreset(5); c.algoA = algo; c.morph = 0; c.send = 0; c.drive = 0;
+			e.hit(0, c); double s2 = 0; int n = (int) (0.15f * sr);
+			for (int i = 0; i < n; i++) { e.process(c); s2 += e.out * e.out; }
+			return 10.f * std::log10((float) (s2 / n));
+		};
+		float d5 = lvl(96000.f, 5) - lvl(48000.f, 5), d7 = lvl(96000.f, 7) - lvl(48000.f, 7);
+		CHECK(std::fabs(d5) < 1.f && std::fabs(d7) < 1.f, "96 kHz vs 48 kHz level: slap %+.1f dB, noise hat %+.1f dB", d5, d7);
+	}
+	{
+		// Karplus in tune (string + metal, damp full)
+		for (int m = 0; m < 3; m += 2) {
+			Engine e; Controls c = fromPreset(0); c.algoA = 9; c.morph = 0; c.mode = m; c.p2 = 1.f; c.p1 = 0.3f; c.tuneHz = 220.f;
+			c.bend = 0; c.click = 0; c.drive = 0; c.send = 0; c.decay = 0.9f; c.wear = 0;
+			e.hit(0, c);
+			std::vector<float> o;
+			for (int i = 0; i < (int) (1.0f * SR); i++) { e.process(c); o.push_back(e.out); }
+			// autocorrelation peak near one period
+			int a = (int) (0.2f * SR), n = (int) (0.5f * SR);
+			float best = -1e9f; int bl = 0;
+			for (int L = 180; L < 260; L++) { double s2 = 0; for (int i = a; i < a + n; i++) s2 += o[i] * o[i + L]; if (s2 > best) { best = s2; bl = L; } }
+			// parabolic refine
+			auto ac = [&](int L) { double s2 = 0; for (int i = a; i < a + n; i++) s2 += o[i] * o[i + L]; return s2; };
+			double y0 = ac(bl - 1), y1 = ac(bl), y2 = ac(bl + 1);
+			double off = 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2);
+			double hz = SR / (bl + off);
+			double cents = 1200.0 * std::log2(hz / 220.0);
+			CHECK(std::fabs(cents) < 10.0, "Karplus %s at 220 Hz with DAMP full: %+.1f cents", algoInfo(9).mode[m], cents);
+		}
+	}
 	// 4. CPU
 	{
 		Engine e; Controls c = fromPreset(7); c.morph = 0.5f; c.decay = 0.9f;

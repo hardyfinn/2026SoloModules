@@ -126,8 +126,10 @@ struct Perun : Module {
 	float hitFlash = 0.f;
 	// samples (loaded on the UI thread, swapped in by process())
 	std::string samplePath[3];
+	// 0 = empty, 1 = UI thread writing, 2 = ready for the audio thread
 	perun::Sample pending[3];
-	std::atomic<bool> pendingReady[3];
+	std::atomic<int> pendingState[3];
+	int hitDelay = 0; // fire 2 samples after the trigger edge so ACC and CVs sent alongside are in
 
 	Perun() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -184,7 +186,7 @@ struct Perun : Module {
 		configOutput(SEND_OUTPUT, "FX send (patching it bypasses the built-in delay)");
 		configOutput(OUT_OUTPUT, "Audio");
 
-		for (int i = 0; i < 3; i++) pendingReady[i] = false;
+		for (int i = 0; i < 3; i++) pendingState[i] = 0;
 		lightDivider.setDivision(256);
 		restoreFactory();
 	}
@@ -229,15 +231,19 @@ struct Perun : Module {
 			WARN("Perun: %s: %s", path.c_str(), err.c_str());
 			return;
 		}
-		pending[slot] = s;
+		int expected = 0;
+		if (!pendingState[slot].compare_exchange_strong(expected, 1)) return; // a load is already waiting
+		std::swap(pending[slot], s);
 		samplePath[slot] = path;
-		pendingReady[slot] = true;
+		pendingState[slot] = 2;
 	}
 
 	void resetSample(int slot) {
+		int expected = 0;
+		if (!pendingState[slot].compare_exchange_strong(expected, 1)) return;
 		perun::makeDefaultSample(slot, pending[slot]);
 		samplePath[slot] = "";
-		pendingReady[slot] = true;
+		pendingState[slot] = 2;
 	}
 
 	float cvAdd(int i) { return inputs[CV_INPUT + i].getVoltage(); }
@@ -245,9 +251,9 @@ struct Perun : Module {
 	void process(const ProcessArgs& args) override {
 		engine.setSampleRate(args.sampleRate);
 		for (int i = 0; i < 3; i++)
-			if (pendingReady[i]) {
+			if (pendingState[i] == 2) {
 				std::swap(engine.samples[i], pending[i]);
-				pendingReady[i] = false;
+				pendingState[i] = 0;
 			}
 
 		// memories: STORE arms, a slot button then stores; otherwise slot buttons recall
@@ -287,9 +293,13 @@ struct Perun : Module {
 		if (chokeIn.process(inputs[CHOKE_INPUT].getVoltage(), 0.1f, 1.f)) engine.choke();
 		bool trig = trigIn.process(inputs[TRIG_INPUT].getVoltage(), 0.1f, 1.f);
 		bool button = hitButton.process(params[HIT_PARAM].getValue());
-		if (trig || button) {
-			float acc = trig ? clamp(inputs[ACC_INPUT].getVoltage() * 0.2f, 0.f, 1.f) : 0.f;
-			engine.hit(acc, ctl);
+		if (trig) hitDelay = 2;
+		if (button) {
+			engine.hit(0.f, ctl);
+			hitFlash = 1.f;
+		}
+		if (hitDelay > 0 && --hitDelay == 0) {
+			engine.hit(clamp(inputs[ACC_INPUT].getVoltage() * 0.2f, 0.f, 1.f), ctl);
 			hitFlash = 1.f;
 		}
 

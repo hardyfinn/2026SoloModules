@@ -19,7 +19,7 @@
 namespace perun {
 
 static const int NUM_ALGOS = 12;
-static const int MAX_HITS = 4;
+static const int MAX_HITS = 4; // sounding at once
 static const int KS_SIZE = 8192;
 static const float PI = 3.14159265f;
 static const float TWO_PI = 6.28318531f;
@@ -110,6 +110,34 @@ struct SVF {
 };
 inline float svfG(float hz, float sr) { return std::tan(PI * std::min(std::max(hz, 5.f), 0.45f * sr) / sr); }
 
+
+// ---- small DSP helpers ----
+// polyBLEP residual for a discontinuity at phase 0 (phase t in 0..1, increment dt)
+inline float polyblep(float t, float dt) {
+	if (dt <= 0.f) return 0.f;
+	if (t < dt) {
+		t /= dt;
+		return t + t - t * t - 1.f;
+	}
+	if (t > 1.f - dt) {
+		t = (t - 1.f) / dt;
+		return t * t + t + t + 1.f;
+	}
+	return 0.f;
+}
+// band-limited square (+1 for the first half) and rising saw (0 at phase 0, jump at phase 0.5)
+inline float blepSquare(float p, float dp) { return (p < 0.5f ? 1.f : -1.f) + polyblep(p, dp) - polyblep(wrap1(p + 0.5f), dp); }
+inline float blepSaw(float p, float dp) {
+	float q = wrap1(p + 0.5f);
+	return 2.f * q - 1.f - polyblep(q, dp);
+}
+// a one-pole coefficient designed at 48 kHz, made to behave the same at any sample rate
+inline float rateCoef(float a48, float sr) { return 1.f - std::pow(1.f - std::min(a48, 0.9999f), 48000.f / sr); }
+inline float logcosh(float x) {
+	float a = std::fabs(x);
+	return a + std::log1p(std::exp(-2.f * a)) - 0.69314718f;
+}
+
 struct AlgoState {
 	float ph[8];
 	float z[8];
@@ -118,7 +146,7 @@ struct AlgoState {
 	SVF f1, f2;
 	int ksW;
 	float ks[KS_SIZE];
-	void reset() {
+	void reset(bool clearKs) {
 		std::memset(ph, 0, sizeof(ph));
 		std::memset(z, 0, sizeof(z));
 		std::memset(ratio, 0, sizeof(ratio));
@@ -126,13 +154,14 @@ struct AlgoState {
 		f1.reset();
 		f2.reset();
 		ksW = 0;
-		std::memset(ks, 0, sizeof(ks));
+		if (clearKs) std::memset(ks, 0, sizeof(ks));
 	}
 };
 
 // Everything an algorithm needs for one sample
 struct Ctx {
 	float f, e, t, p1, p2, sr, dt, decayT;
+	float nsc; // white-noise scale so noisy sounds keep their level at any sample rate
 	int mode;
 	bool drone, first;
 	float accent;
@@ -157,30 +186,34 @@ inline float algoFold(AlgoState& s, const Ctx& c) {
 }
 
 inline float algoWavetable(AlgoState& s, const Ctx& c) {
-	s.ph[0] = wrap1(s.ph[0] + c.f * c.dt);
+	float dp = c.f * c.dt;
+	s.ph[0] = wrap1(s.ph[0] + dp);
 	float p = s.ph[0];
 	float pos = std::min(1.f, std::max(0.f, c.p1 + c.p2 * c.e * (1.f - c.p1)));
 	float y;
 	if (c.mode == 0) {
 		float sn = sinp(p);
 		float tr = p < 0.25f ? 4.f * p : p < 0.75f ? 2.f - 4.f * p : 4.f * p - 4.f;
-		float sw = p < 0.5f ? 2.f * p : 2.f * p - 2.f;
-		float sq = p < 0.5f ? 1.f : -1.f;
 		float x = pos * 3.f;
 		if (x < 1.f) y = sn + (tr - sn) * x;
-		else if (x < 2.f) y = tr + (sw - tr) * (x - 1.f);
-		else y = sw + (sq - sw) * (x - 2.f);
+		else if (x < 2.f) y = tr + (blepSaw(p, dp) - tr) * (x - 1.f);
+		else {
+			float sw = blepSaw(p, dp);
+			y = sw + (blepSquare(p, dp) - sw) * (x - 2.f);
+		}
 		y *= 0.9f;
 	}
 	else if (c.mode == 1) {
-		float cen = 1.f + pos * 9.f, sum = 0.f, wsum = 0.f;
+		// vocal: the formant also opens with the envelope, so it talks even with SURF at zero
+		float cen = 1.f + std::min(1.f, pos + 0.25f * c.e) * 9.f, sum = 0.f, wsum = 0.f;
 		for (int k = 1; k <= 10; k++) {
 			if (c.f * k > 0.45f * c.sr) break;
-			float w = std::exp(-(k - cen) * (k - cen) * 0.5f);
-			sum += sinp(p * k) * w;
+			float d = k - cen;
+			float w = d * d < 16.f ? 1.f / (1.f + 0.6f * d * d) : 0.f;
+			sum += sinp(wrap1(p * k)) * w;
 			wsum += w;
 		}
-		y = sum / std::max(wsum, 0.3f);
+		y = 1.3f * sum / std::max(wsum, 0.3f);
 	}
 	else {
 		float d = 0.5f - 0.45f * pos;
@@ -203,10 +236,10 @@ inline float algoResonant(AlgoState& s, const Ctx& c) {
 	// knock: a short pulse into the resonator and straight out
 	float knock = c.p1 * std::exp(-c.t / 0.0012f);
 	s.f1.process(knock * 0.6f, g, k);
-	if (c.mode == 1) s.f1.ic1 = std::tanh(s.f1.ic1 * 1.3f) / 1.3f;
 	float y = -s.f1.bp;
-	if (c.mode == 2) y = std::tanh(y * (2.f + 4.f * c.e)) * 0.7f;
 	s.prev = y;
+	if (c.mode == 1) y = std::tanh(y * (1.f + 3.f * c.e)) * 0.8f; // punch: drive follows the envelope
+	else if (c.mode == 2) y = std::tanh(y * (2.f + 4.f * c.e)) * 0.7f;
 	return y + knock * 0.5f;
 }
 
@@ -234,17 +267,26 @@ inline float algoComplex(AlgoState& s, const Ctx& c) {
 
 inline float algoSnare(AlgoState& s, const Ctx& c) {
 	static const float NM[3] = {0.55f, 1.f, 1.8f};
-	if (c.first) s.z[4] = 1.f;
+	if (c.first) {
+		s.z[4] = 1.f;
+		s.z[5] = std::exp(-c.dt / (c.decayT * NM[c.mode]));
+		s.z[6] = c.decayT;
+	}
+	if (s.z[6] != c.decayT) { // DECAY moved: recompute the noise envelope coefficient
+		s.z[5] = std::exp(-c.dt / (c.decayT * NM[c.mode]));
+		s.z[6] = c.decayT;
+	}
 	s.ph[0] = wrap1(s.ph[0] + c.f * c.dt);
 	s.ph[1] = wrap1(s.ph[1] + c.f * 1.62f * c.dt);
 	float body = sinp(s.ph[0]) + 0.5f * sinp(s.ph[1]);
-	s.z[4] *= c.drone ? 1.f : std::exp(-c.dt / (c.decayT * NM[c.mode]));
+	if (!c.drone) s.z[4] *= s.z[5];
 	float en = s.z[4];
 	if (c.mode == 2) en *= std::min(1.f, c.t / 0.004f);
-	float n = c.rng->bi();
+	float n = c.rng->bi() * c.nsc;
 	float cen = 800.f * std::pow(2.f, c.p1 * 3.3f);
 	s.f1.process(n, svfG(cen, c.sr), c.mode == 2 ? 1.6f : 1.1f);
-	float noise = s.f1.bp * 1.3f + (c.mode == 0 ? s.f1.hp * 0.3f : 0.f);
+	s.f2.process(n, svfG(5500.f, c.sr), 1.4f); // bright wire layer in every mode
+	float noise = s.f1.bp * 1.3f + s.f2.hp * (c.mode == 0 ? 0.45f : 0.3f);
 	return body * (1.f - 0.75f * c.p2) * c.e * c.e * 0.8f + noise * (0.3f + 0.9f * c.p2) * en;
 }
 
@@ -266,13 +308,16 @@ inline float algoSlap(AlgoState& s, const Ctx& c) {
 			float dt = c.t - s.ratio[i];
 			bool last = i == nb - 1;
 			float be = std::exp(-dt / 0.0035f) * (last ? 1.f : 0.85f);
-			if (last) be = std::max(be, 0.55f * c.e);
+			if (last) be = std::max(be, 0.7f * c.e);
 			env = std::max(env, be);
 		}
 	}
-	float cen = std::min(0.4f * c.sr, (600.f + c.p1 * 4400.f) * std::sqrt(std::max(c.f, 20.f) / 200.f));
-	s.f1.process(c.rng->bi(), svfG(cen, c.sr), 0.9f);
-	return s.f1.bp * env * 1.8f;
+	// two hand-cavity resonances in parallel
+	float cen = std::min(0.18f * c.sr, (500.f + c.p1 * 2000.f) * std::sqrt(std::max(c.f, 20.f) / 200.f));
+	float n = c.rng->bi() * c.nsc;
+	s.f1.process(n, svfG(cen, c.sr), 0.5f);
+	s.f2.process(n, svfG(cen * 2.4f, c.sr), 0.5f);
+	return (s.f1.bp + 0.7f * s.f2.bp) * env * 0.9f;
 }
 
 inline float algoTom(AlgoState& s, const Ctx& c) {
@@ -283,14 +328,14 @@ inline float algoTom(AlgoState& s, const Ctx& c) {
 	s.ph[1] = wrap1(s.ph[1] + f * OV[c.mode] * c.dt);
 	float y = sinp(s.ph[0]) + c.p1 * 0.6f * sinp(s.ph[1]) * c.e;
 	float skinT = c.mode == 1 ? 0.008f : 0.015f;
-	s.z[0] += (c.rng->bi() - s.z[0]) * 0.35f;
+	s.z[0] += (c.rng->bi() * c.nsc - s.z[0]) * rateCoef(0.35f, c.sr);
 	float skin = s.z[0] * std::exp(-c.t / skinT) * c.p2 * 1.2f;
 	return y * c.e * 0.85f + skin;
 }
 
 inline float algoNoiseHat(AlgoState& s, const Ctx& c) {
 	float n;
-	if (c.mode == 0) n = c.rng->bi();
+	if (c.mode == 0) n = c.rng->bi() * c.nsc;
 	else if (c.mode == 1) {
 		s.holdPh += c.f * 16.f * c.dt;
 		if (s.holdPh >= 1.f) {
@@ -300,8 +345,9 @@ inline float algoNoiseHat(AlgoState& s, const Ctx& c) {
 		n = s.holdV;
 	}
 	else {
+		// dust: sparse clicks, each scaled so the density sounds the same at any sample rate
 		float dens = (200.f + c.f * 20.f) * c.dt;
-		n = c.rng->uni() < dens ? c.rng->bi() * 3.f : 0.f;
+		n = c.rng->uni() < dens ? c.rng->bi() * 1.65f * (c.sr / 48000.f) : 0.f;
 	}
 	float cen = 2000.f * std::pow(2.f, c.p1 * 2.6f);
 	s.f1.process(n, svfG(cen, c.sr), 1.6f - 1.4f * c.p2);
@@ -318,22 +364,26 @@ inline float algoPulseHat(AlgoState& s, const Ctx& c) {
 	for (int i = 0; i < 6; i++) {
 		float r = c.mode == 0 ? R808[i] : c.mode == 1 ? RBELL[i] : s.ratio[i];
 		r = 1.f + (r - 1.f) * (0.3f + 1.4f * c.p1);
-		s.ph[i] = wrap1(s.ph[i] + c.f * r * c.dt);
-		sum += s.ph[i] < 0.5f ? 1.f : -1.f;
+		float dp = std::min(c.f * r * c.dt, 0.45f);
+		s.ph[i] = wrap1(s.ph[i] + dp);
+		sum += blepSquare(s.ph[i], dp);
 	}
 	float cen = 3000.f * std::pow(2.f, c.p2 * 2.f);
 	s.f1.process(sum * 0.25f, svfG(cen, c.sr), 0.8f);
 	s.f2.process(s.f1.bp, svfG(cen * 0.7f, c.sr), 1.4f);
-	return s.f2.hp * c.e * c.e * 1.6f;
+	return s.f2.hp * c.e * c.e * 2.4f;
 }
 
 inline float algoKarplus(AlgoState& s, const Ctx& c) {
 	float f = std::max(c.f, c.sr / (KS_SIZE - 8));
-	float D = c.sr / f;
+	float aDamp = rateCoef(1.f - 0.85f * c.p2, c.sr);
+	// loop length minus the delay the damping filter (and the metal allpass) adds, so it plays in tune
+	float D = c.sr / f - (1.f - aDamp) / aDamp - (c.mode == 2 ? 4.f : 0.f);
+	D = std::max(D, 2.f);
 	float in = 0.f;
 	if (c.t < 1.f / f) {
-		float a = 0.08f + 0.9f * c.p1;
-		s.z[0] += (c.rng->bi() - s.z[0]) * a;
+		float a = rateCoef(0.08f + 0.9f * c.p1, c.sr);
+		s.z[0] += (c.rng->bi() * c.nsc - s.z[0]) * a;
 		in = s.z[0] * 1.3f;
 	}
 	float rp = s.ksW - D;
@@ -341,7 +391,7 @@ inline float algoKarplus(AlgoState& s, const Ctx& c) {
 	int i0 = (int) rp;
 	float fr = rp - i0;
 	float x = s.ks[i0 % KS_SIZE] * (1.f - fr) + s.ks[(i0 + 1) % KS_SIZE] * fr;
-	s.ksLp += (x - s.ksLp) * (1.f - 0.85f * c.p2);
+	s.ksLp += (x - s.ksLp) * aDamp;
 	float loop = s.ksLp;
 	if (c.mode == 1 && c.rng->uni() < 0.5f) loop = -loop;
 	if (c.mode == 2) {
@@ -360,20 +410,25 @@ inline float algoKarplus(AlgoState& s, const Ctx& c) {
 inline float algoSample(AlgoState& s, const Ctx& c) {
 	const Sample& smp = c.samples[c.mode];
 	int len = (int) smp.data.size();
-	if (len < 2) return 0.f;
+	if (len < 4) return 0.f;
 	if (c.first) s.sPos = c.p1 * (len - 1);
 	float y = 0.f;
 	int i0 = (int) s.sPos;
 	if (i0 < len - 1) {
+		// 4-point Hermite interpolation
 		float fr = s.sPos - i0;
-		y = smp.data[i0] * (1.f - fr) + smp.data[i0 + 1] * fr;
+		float xm1 = smp.data[std::max(0, i0 - 1)], x0 = smp.data[i0], x1 = smp.data[i0 + 1], x2 = smp.data[std::min(len - 1, i0 + 2)];
+		float c1 = 0.5f * (x1 - xm1), c2 = xm1 - 2.5f * x0 + 2.f * x1 - 0.5f * x2, c3 = 0.5f * (x2 - xm1) + 1.5f * (x0 - x1);
+		y = ((c3 * fr + c2) * fr + c1) * fr + x0;
 		s.sPos += (c.f / 261.63f) * (smp.sr / c.sr);
 	}
 	else if (c.drone)
 		s.sPos = c.p1 * (len - 1);
-	float att = c.p2 * c.p2 * 0.1f;
-	float a = att > 0.0005f ? std::min(1.f, c.t / att) : 1.f;
-	return y * a * c.e;
+	// edge fades so a start point mid-waveform or the drone loop never clicks
+	float edge = std::min(1.f, (len - 1 - s.sPos) / (0.002f * smp.sr));
+	float att = c.p2 * c.p2 * c.p2 * 0.1f;
+	float a = std::min(1.f, c.t / std::max(att, c.p1 > 0.f ? 0.001f : 0.0002f));
+	return y * a * std::max(0.f, edge) * c.e;
 }
 
 inline float algoMetal(AlgoState& s, const Ctx& c) {
@@ -381,15 +436,18 @@ inline float algoMetal(AlgoState& s, const Ctx& c) {
 	static const float PLATE[6] = {1.f, 1.58f, 2.24f, 2.92f, 3.61f, 4.47f};
 	if (c.first)
 		for (int i = 0; i < 6; i++) s.ratio[i] = c.rng->bi();
-	float strike = c.rng->bi() * std::exp(-c.t / 0.002f) * c.p2 * 0.5f;
+	float strike = c.rng->bi() * c.nsc * std::exp(-c.t / 0.002f) * c.p2 * 0.5f;
 	if (c.mode == 0) {
 		float r = 1.482f + c.p1 * 0.4f;
-		s.ph[0] = wrap1(s.ph[0] + c.f * c.dt);
-		s.ph[1] = wrap1(s.ph[1] + c.f * r * c.dt);
-		float sq = (s.ph[0] < 0.5f ? 1.f : -1.f) + (s.ph[1] < 0.5f ? 1.f : -1.f);
-		s.f1.process(sq * 0.5f, svfG(c.f * (1.8f + c.p2 * 1.2f), c.sr), 0.6f);
+		float d0 = c.f * c.dt, d1 = std::min(c.f * r * c.dt, 0.45f);
+		s.ph[0] = wrap1(s.ph[0] + d0);
+		s.ph[1] = wrap1(s.ph[1] + d1);
+		float sq = blepSquare(s.ph[0], d0) + blepSquare(s.ph[1], d1);
+		float cen = c.f * (1.8f + c.p2 * 1.2f);
+		s.f1.process(sq * 0.5f, svfG(cen, c.sr), 0.6f);
+		s.f2.process(s.f1.bp, svfG(cen * 1.9f, c.sr), 1.2f);
 		float env = (0.6f * std::exp(-c.t / 0.012f) + 0.4f) * c.e;
-		return s.f1.bp * env * 1.4f + strike;
+		return (s.f1.bp * 0.75f + s.f2.bp * 0.35f) * env + strike;
 	}
 	float le = std::log(std::max(c.e, 1e-9f));
 	float sum = 0.f, norm = 0.f;
@@ -411,13 +469,13 @@ inline float runAlgo(int algo, AlgoState& s, const Ctx& c) {
 		case 2: return algoResonant(s, c);
 		case 3: return algoComplex(s, c);
 		case 4: return algoSnare(s, c);
-		case 5: return algoSlap(s, c);
+		case 5: return algoSlap(s, c) * 1.6f;
 		case 6: return algoTom(s, c);
-		case 7: return algoNoiseHat(s, c);
+		case 7: return algoNoiseHat(s, c) * (c.mode == 2 ? 0.55f : 1.f);
 		case 8: return algoPulseHat(s, c);
 		case 9: return algoKarplus(s, c);
-		case 10: return algoSample(s, c);
-		default: return algoMetal(s, c);
+		case 10: return algoSample(s, c) * 1.3f;
+		default: return algoMetal(s, c) * (c.mode == 0 ? 0.65f : 1.f);
 	}
 }
 
@@ -452,36 +510,49 @@ inline void makeDefaultSample(int slot, Sample& out) {
 	}
 }
 
+
+static const int NUM_SLOTS = 6; // 4 sounding hits + room for the oldest ones to fade out
+
 struct Hit {
-	bool active, choking;
+	bool active, choking, firstA, firstB;
+	int algoA, algoB, mode; // latched at the hit, so knob moves never garble a ringing tail
 	float t, e, pe, fade, accent;
 	float dTune, dDecay, dCut, dP1, dP2, gain;
+	float eCoefT, eCoef; // cached decay coefficient (for decayT == eCoefT)
 	SVF filter;
 	AlgoState a, b;
 	Rng rng;
-	bool first;
-	Hit() : active(false), choking(false), t(0), e(0), pe(0), fade(1), accent(0), dTune(0), dDecay(1), dCut(0), dP1(0), dP2(0), gain(1), first(false) {}
+	Hit() : active(false), choking(false), firstA(false), firstB(false), algoA(0), algoB(0), mode(0), t(0), e(0), pe(0), fade(1), accent(0),
+	        dTune(0), dDecay(1), dCut(0), dP1(0), dP2(0), gain(1), eCoefT(-1), eCoef(0) {}
 };
 
 struct Engine {
 	float sr, dt;
-	Hit hits[MAX_HITS];
+	Hit hits[NUM_SLOTS];
 	int lastHit;
 	Rng rng;
 	Sample samples[3];
 	// MUTATE offsets (shown on the screen)
 	float mutP1, mutP2, mutMorph;
 	int mutMode;
+	// smoothing (knob and CV steps never zipper)
+	float smCoef, smTimeCoef, sLevel, sCut, sDrive, sSend, sTime;
+	bool smInit;
 	// voice stage
-	float dcX, dcY, dc2X, dc2Y, toneLp;
+	float dcX, dcY, dc2X, dc2Y, toneLp, uPrev;
 	std::vector<float> dline;
 	int dW;
 	float dLp, dHp, wowPh;
+	// cached control maths
+	float cDecayIn, cDecay, cSweepIn, cSweepCoef, cBendIn, cBend, cToneIn, cToneCoef;
 	// outputs
 	float out, env, sendOut, meter;
 
-	Engine() : sr(48000.f), dt(1.f / 48000.f), lastHit(0), mutP1(0), mutP2(0), mutMorph(0), mutMode(0),
-	           dcX(0), dcY(0), dc2X(0), dc2Y(0), toneLp(0), dW(0), dLp(0), dHp(0), wowPh(0), out(0), env(0), sendOut(0), meter(0) {
+	Engine() : sr(0.f), dt(1.f / 48000.f), lastHit(0), mutP1(0), mutP2(0), mutMorph(0), mutMode(0),
+	           smCoef(0), smTimeCoef(0), sLevel(0), sCut(0), sDrive(0), sSend(0), sTime(0), smInit(false),
+	           dcX(0), dcY(0), dc2X(0), dc2Y(0), toneLp(0), uPrev(0), dW(0), dLp(0), dHp(0), wowPh(0),
+	           cDecayIn(-1), cDecay(0), cSweepIn(-1), cSweepCoef(0), cBendIn(-1), cBend(0), cToneIn(-1), cToneCoef(0),
+	           out(0), env(0), sendOut(0), meter(0) {
 		setSampleRate(48000.f);
 		makeDefaultSamples();
 	}
@@ -492,12 +563,17 @@ struct Engine {
 		dt = 1.f / s;
 		dline.assign((size_t) (s * 2.2f), 0.f);
 		dW = 0;
+		smCoef = 1.f - std::exp(-dt / 0.008f);
+		smTimeCoef = 1.f - std::exp(-dt / 0.08f);
+		cSweepIn = cToneIn = -1.f; // recompute rate-dependent caches
+		for (int i = 0; i < NUM_SLOTS; i++) hits[i].eCoefT = -1.f;
 	}
 
 	void reset() {
-		for (int i = 0; i < MAX_HITS; i++) hits[i].active = false;
+		for (int i = 0; i < NUM_SLOTS; i++) hits[i].active = false;
 		std::fill(dline.begin(), dline.end(), 0.f);
-		dcX = dcY = dc2X = dc2Y = toneLp = dLp = dHp = 0.f;
+		dcX = dcY = dc2X = dc2Y = toneLp = dLp = dHp = uPrev = 0.f;
+		smInit = false;
 		clearMutation();
 	}
 
@@ -516,7 +592,7 @@ struct Engine {
 	float effMorph(const Controls& c) const { return std::min(1.f, std::max(0.f, c.morph + mutMorph)); }
 
 	void choke() {
-		for (int i = 0; i < MAX_HITS; i++)
+		for (int i = 0; i < NUM_SLOTS; i++)
 			if (hits[i].active) hits[i].choking = true;
 	}
 
@@ -532,26 +608,33 @@ struct Engine {
 			}
 			if (rng.uni() < m * 0.15f) mutMode = (mutMode + 1) % 3;
 		}
-		bool drone = isDrone(c.decay);
-		if (drone) choke();
+		if (isDrone(c.decay)) choke();
+		// four sounding hits at most: a fifth fades the oldest out (3 ms) instead of cutting it
+		int sounding = 0, oldest = -1;
+		for (int i = 0; i < NUM_SLOTS; i++)
+			if (hits[i].active && !hits[i].choking) {
+				sounding++;
+				if (oldest < 0 || hits[i].t > hits[oldest].t) oldest = i;
+			}
+		if (sounding >= MAX_HITS && oldest >= 0) hits[oldest].choking = true;
 		int slot = -1;
-		for (int i = 0; i < MAX_HITS; i++)
+		for (int i = 0; i < NUM_SLOTS; i++)
 			if (!hits[i].active) {
 				slot = i;
 				break;
 			}
-		if (slot < 0) {
-			float oldest = -1.f;
-			for (int i = 0; i < MAX_HITS; i++)
-				if (hits[i].t > oldest) {
-					oldest = hits[i].t;
-					slot = i;
-				}
+		if (slot < 0) { // all busy: take the quietest fading one
+			for (int i = 0; i < NUM_SLOTS; i++)
+				if (hits[i].choking && (slot < 0 || hits[i].fade < hits[slot].fade)) slot = i;
+			if (slot < 0) slot = oldest >= 0 ? oldest : 0;
 		}
 		Hit& h = hits[slot];
 		h.active = true;
 		h.choking = false;
-		h.first = true;
+		h.firstA = h.firstB = true;
+		h.algoA = c.algoA;
+		h.algoB = c.algoB;
+		h.mode = effMode(c);
 		h.e = 1.f;
 		h.pe = 1.f;
 		h.fade = 1.f;
@@ -565,37 +648,70 @@ struct Engine {
 		h.gain = std::exp(rng.bi() * w * 0.25f);
 		h.t = -rng.uni() * w * 0.004f; // a hand is never quite on the grid
 		h.rng.s = rng.next() | 1u;
+		h.eCoefT = -1.f;
 		h.filter.reset();
-		h.a.reset();
-		h.b.reset();
+		h.a.reset(c.algoA == 9);
+		h.b.reset(c.algoB == 9);
 		lastHit = slot;
 	}
 
 	void process(const Controls& c) {
+		if (!smInit) {
+			sLevel = c.level;
+			sCut = c.cutoff;
+			sDrive = c.drive;
+			sSend = c.send;
+			sTime = delaySeconds(c.time);
+			smInit = true;
+		}
+		sLevel += (c.level - sLevel) * smCoef;
+		sCut += (c.cutoff - sCut) * smCoef;
+		sDrive += (c.drive - sDrive) * smCoef;
+		sSend += (c.send - sSend) * smCoef;
+		sTime += (delaySeconds(c.time) - sTime) * smTimeCoef;
+
 		float morph = effMorph(c);
-		int mode = effMode(c);
 		float p1 = effP1(c), p2 = effP2(c);
 		bool drone = isDrone(c.decay);
-		float baseDecay = decaySeconds(c.decay);
-		float sweepT = sweepSeconds(c.sweep);
-		float bendSemis = 48.f * std::pow(c.bend, 1.5f);
+		if (c.decay != cDecayIn) {
+			cDecayIn = c.decay;
+			cDecay = decaySeconds(c.decay);
+		}
+		if (c.sweep != cSweepIn) {
+			cSweepIn = c.sweep;
+			cSweepCoef = std::exp(-dt / sweepSeconds(c.sweep));
+		}
+		if (c.bend != cBendIn) {
+			cBendIn = c.bend;
+			cBend = 48.f * std::pow(c.bend, 1.5f);
+		}
 		float k = 2.f - 1.9f * c.res;
+		float resComp = 1.f / (1.f + 1.5f * c.res);
+		float cutBase = cutoffHz(sCut);
 		bool needA = morph < 0.999f, needB = morph > 0.001f;
-		float ga = std::cos(morph * PI * 0.5f), gb = std::sin(morph * PI * 0.5f);
+		// between linear and equal power: no hole in the middle, no +3 dB bump on similar sounds
+		float ga = 0.5f * ((1.f - morph) + std::cos(morph * PI * 0.5f));
+		float gb = 0.5f * (morph + std::sin(morph * PI * 0.5f));
+		float nsc = std::sqrt(sr / 48000.f);
 
 		float sum = 0.f;
 		env = 0.f;
-		for (int i = 0; i < MAX_HITS; i++) {
+		for (int i = 0; i < NUM_SLOTS; i++) {
 			Hit& h = hits[i];
 			if (!h.active) continue;
 			h.t += dt;
 			if (h.t < 0.f) continue;
-			float decayT = baseDecay * h.dDecay;
-			if (!h.first) {
-				if (!drone) h.e *= std::exp(-dt / decayT);
-				h.pe *= std::exp(-dt / sweepT);
+			float decayT = cDecay * h.dDecay;
+			if (decayT != h.eCoefT) {
+				h.eCoefT = decayT;
+				h.eCoef = std::exp(-dt / decayT);
 			}
-			float f = c.tuneHz * std::pow(2.f, (h.dTune + bendSemis * h.pe) / 12.f);
+			bool first = h.firstA && h.firstB;
+			if (!first) {
+				if (!drone) h.e *= h.eCoef;
+				h.pe *= cSweepCoef;
+			}
+			float f = c.tuneHz * std::exp2((h.dTune + cBend * h.pe) * (1.f / 12.f));
 			f = std::min(f, 0.45f * sr);
 			Ctx x;
 			x.f = f;
@@ -606,30 +722,38 @@ struct Engine {
 			x.sr = sr;
 			x.dt = dt;
 			x.decayT = decayT;
-			x.mode = mode;
+			x.nsc = nsc;
+			x.mode = h.mode;
 			x.drone = drone;
-			x.first = h.first;
 			x.accent = h.accent * c.accentAmt;
 			x.rng = &h.rng;
 			x.samples = samples;
 			float y = 0.f;
-			if (needA) y += ga * runAlgo(c.algoA, h.a, x);
-			if (needB) y += gb * runAlgo(c.algoB, h.b, x);
-			// click + noise
+			if (needA) {
+				x.first = h.firstA;
+				y += ga * runAlgo(h.algoA, h.a, x);
+				h.firstA = false;
+			}
+			if (needB) {
+				x.first = h.firstB;
+				y += gb * runAlgo(h.algoB, h.b, x);
+				h.firstB = false;
+			}
+			// click (a short pulse plus a noise tick) + noise
 			float clickEnv = std::exp(-h.t / 0.0015f);
-			float clk = (h.rng.bi() * 0.6f + (h.t < 0.0004f ? 1.f : 0.f)) * clickEnv * c.click * 1.5f;
-			float nz = h.rng.bi() * h.e * h.e * c.noise * 0.8f;
+			float clk = (h.rng.bi() * 0.6f * nsc + std::exp(-h.t / 0.0003f)) * clickEnv * c.click * 1.5f;
+			float nz = h.rng.bi() * nsc * h.e * h.e * c.noise * 0.8f;
 			y += clk + nz;
 			// filter
-			float fc = cutoffHz(c.cutoff) * std::pow(2.f, c.fenv * 6.f * h.e + h.dCut + x.accent);
+			float fc = cutBase * std::exp2(c.fenv * 6.f * h.e + h.dCut + x.accent);
 			h.filter.process(y, svfG(fc, sr), k);
 			float fy = c.vcf == 0 ? h.filter.hp : c.vcf == 1 ? h.filter.bp * k : h.filter.lp;
+			fy *= resComp;
 			if (h.choking) {
 				h.fade *= std::exp(-dt / 0.003f);
 				if (h.fade < 1e-3f) h.active = false;
 			}
 			sum += fy * h.fade * h.gain * (1.f + x.accent);
-			h.first = false;
 			if (!drone && h.e < 1e-4f) h.active = false;
 			if (i == lastHit) env = h.e * h.fade;
 		}
@@ -639,28 +763,37 @@ struct Engine {
 		dcY = sum - dcX + R * dcY;
 		dcX = sum;
 		float v = dcY;
-		// overdrive: DRIVE is the dry/wet of a fixed asymmetric overdrive, pushed harder by accents
-		float d = c.drive;
+		// overdrive: DRIVE is the dry/wet of an asymmetric overdrive (antiderivative anti-aliased tanh)
+		float d = sDrive;
 		float gain = 1.5f + d * d * 14.f;
-		float wet = std::tanh(gain * v + 0.25f) - std::tanh(0.25f);
+		float bias = std::min(0.25f * gain / 1.5f, 0.9f);
+		float u = gain * v + bias;
+		float du = u - uPrev;
+		float sat = std::fabs(du) > 1e-4f ? (logcosh(u) - logcosh(uPrev)) / du : std::tanh(0.5f * (u + uPrev));
+		uPrev = u;
+		float wet = sat - std::tanh(bias);
 		dc2Y = wet - dc2X + R * dc2Y;
 		dc2X = wet;
 		wet = dc2Y;
 		v = v * (1.f - d) + wet * d;
 		// TONE: one-pole low-pass 600 Hz .. 19 kHz
-		float tc = std::min(600.f * std::pow(2.f, c.tone * 5.f), 0.45f * sr);
-		toneLp += (v - toneLp) * (1.f - std::exp(-TWO_PI * tc / sr));
-		v = c.tone > 0.99f ? v : toneLp;
+		if (c.tone != cToneIn) {
+			cToneIn = c.tone;
+			float tc = std::min(600.f * std::pow(2.f, c.tone * 5.f), 0.45f * sr);
+			cToneCoef = 1.f - std::exp(-TWO_PI * tc / sr);
+		}
+		toneLp += (v - toneLp) * cToneCoef;
+		v = toneLp;
 
 		// FX: bucket-brigade style delay (internal unless SEND is patched)
-		float send = v * c.send;
+		float send = v * sSend;
 		sendOut = send * 5.f;
 		float ret = 0.f;
+		int N = (int) dline.size();
 		if (!c.sendPatched) {
 			wowPh = wrap1(wowPh + 0.43f * dt);
-			float dsec = delaySeconds(c.time) * (1.f + 0.003f * sinp(wowPh));
+			float dsec = sTime * (1.f + 0.003f * sinp(wowPh));
 			float rp = dW - dsec * sr;
-			int N = (int) dline.size();
 			while (rp < 0.f) rp += N;
 			int i0 = (int) rp;
 			float fr = rp - i0;
@@ -671,9 +804,11 @@ struct Engine {
 			ret = dLp - dHp;
 			float fb = c.fdbk * 1.05f;
 			dline[dW] = std::tanh(send + ret * fb + rng.bi() * 1e-5f);
-			dW = (dW + 1) % N;
 		}
-		float o = (v + ret * 0.8f) * c.level * 5.f;
+		else
+			dline[dW] = 0.f; // let the internal delay empty while it's bypassed
+		dW = (dW + 1) % N;
+		float o = (v + ret * 0.8f) * sLevel * 5.f;
 		out = 10.f * std::tanh(o * 0.1f);
 		meter = std::max(meter * 0.9995f, std::fabs(out) * 0.2f);
 	}
