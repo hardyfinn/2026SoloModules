@@ -13,3 +13,4 @@ extern Model* modelRim808;
 extern Model* modelClave808;
 extern Model* modelMaracas808;
 extern Model* modelCowbell808;
+extern Model* modelBench808;

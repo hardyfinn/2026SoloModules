@@ -12,4 +12,5 @@ void init(Plugin* p) {
 	p->addModel(modelClave808);
 	p->addModel(modelMaracas808);
 	p->addModel(modelCowbell808);
+	p->addModel(modelBench808);
 }

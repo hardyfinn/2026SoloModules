@@ -1,8 +1,8 @@
 {
   "slug": "Circuit808",
   "name": "808 Circuits",
-  "version": "2.2.0",
-  "license": "MIT",
+  "version": "2.3.0",
+  "license": "GPL-3.0-or-later",
   "brand": "Haer",
   "author": "Haer",
   "authorEmail": "",
@@ -25,7 +25,7 @@
     {
       "slug": "Snare808",
       "name": "808 Snare",
-      "description": "Circuit model of the TR-808 snare: two tuned bridged-T heads plus filtered noise (SNAPPY), with RATIO, BALANCE, SWEEP, SNAP DECAY, COLOUR and AGE",
+      "description": "Circuit model of the TR-808 snare: two tuned bridged-T heads plus filtered noise (SNAPPY), with TONE (shell balance), RATIO, HISS, SWEEP, SNAP DECAY, COLOUR and AGE",
       "tags": [
         "Drum",
         "Synth Voice"
@@ -83,6 +83,16 @@
       "tags": [
         "Drum",
         "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Bench808",
+      "name": "808 Circuit Bench",
+      "description": "All thirteen TR-808 voices in one module (808 Circuits engines plus 808 Metal hats and cymbal): a screen draws each voice's circuit, tap a block and four knobs edit it; trigger and output per voice, stereo mix, four kit memories",
+      "tags": [
+        "Drum",
+        "Mixer",
+        "Polyphonic"
       ]
     }
   ]
