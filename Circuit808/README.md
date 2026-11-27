@@ -4,7 +4,7 @@ Circuit models of the Roland TR-808's instruments, one module per instrument. Ea
 from a faithful model of the original voice, then puts the circuit's inner parts on the panel
 and takes them past their stock ranges. Hats and cymbal are the separate [808 Metal](https://github.com/hardyfinn/808Metal) plugin.
 
-Planned family: Kick (built), Snare, Tom/Conga, Rim, Clave, Clap, Maracas, Cowbell.
+Modules: **808 Kick, 808 Snare, 808 Clap, 808 Tom / Conga, 808 Rim, 808 Clave, 808 Maracas, 808 Cowbell** (all 28 HP).
 
 ![808 Kick](panel-preview.png)
 
@@ -55,10 +55,34 @@ V/OCT, DECAY, TONE, SWEEP, SIGH, TENSION and DRIVE (±5 V = full knob range), EN
 no component values, so the stock numbers are fitted to its reported behaviour; `make test`
 checks them (49.5 Hz, the sigh inside 48-58 Hz, attack jump, accent, bounded sustain, AGE).
 
+## The other seven voices
+
+All seven share one layout and one module template (`src/Voice808.hpp`); their knob tables live in
+`res/voices.py`, which draws the panels and writes `src/VoiceSpecs.hpp`. Every voice has a STOCK 808
+row (with ACCENT, LEVEL and AGE), its circuit controls, CV inputs, TRIG, ACCENT, ENV and OUT, the
+stock dots and *Reset to stock 808*, and the same AGE (serial number in the patch, part tolerances,
+per-hit drift, worn parts with a little hiss past 70 %). LEVEL and AGE are never randomized.
+
+| Module | Circuit | Controls beyond the stock 808 |
+|---|---|---|
+| 808 Snare | two bridged-T heads (about 180 and 330 Hz) + white noise through high-pass and low-pass into its own VCA | TUNE, RATIO, BALANCE, DECAY, SWEEP, STRIKE, SNAP DECAY, COLOUR, DRIVE |
+| 808 Clap | white noise -> band-pass -> VCA from a sawtooth that fires bursts, plus a reverb envelope | BAND, RES, TONE, BURSTS (1-8), SPREAD, SNAP, TAIL, MIX, DRIVE |
+| 808 Tom / Conga | one bridged-T with a downward bend; toms add pink noise. LOW/MID/HIGH and TOM/CONGA switches (toms about 90/130/180 Hz, congas 165/250/370 Hz) | TUNE, DECAY, BEND, STRIKE, MUTE, DOUBLE, TONE, SLAP, DRIVE |
+| 808 Rim | two high resonators (about 455 Hz and 1.67 kHz) through a fast, asymmetric transistor VCA and a high-pass | TUNE, RATIO, RING, GATE, SNAP, STRIKE, DRIVE |
+| 808 Clave | one bridged-T near 2.5 kHz, very short ring | TUNE, RING, STRIKE, BEND, OVERTONE, RATIO, DRIVE |
+| 808 Maracas | white noise -> high-pass -> short attack/decay VCA | LENGTH, CUT, GRAINS, SHAKE, ATTACK, DRIVE |
+| 808 Cowbell | two pulse oscillators (540 and 800 Hz, as in 808 Metal) -> band-pass -> two-stage VCA | TUNE, DECAY, INTERVAL, WIDTH, FILTER, RES, SHAPE, DRIVE |
+
+Stock values for these seven are the commonly published figures for the 808 voices, fitted by
+ear and by test, not read from component values (Werner, Abel and Smith's cowbell paper, AES 2014,
+is behind a paywall). `make test` checks levels, accent, 40 random and extreme settings per voice,
+AGE, the clap's burst count and the conga's stock SLAP.
+
 ## Build
 
 `make test` runs the offline checks and writes demo WAVs to `test/out/`.
-`python3 res/make_kick_panel.py` draws the panel; `python3 tools/preview.py out.png` renders a preview.
+`python3 res/make_kick_panel.py` and `python3 res/make_voice_panels.py` draw the panels;
+`python3 tools/preview.py out.png` and `python3 tools/preview_voices.py outdir` render previews.
 The repository's GitHub Action builds the plugin.
 
 MIT licence.
