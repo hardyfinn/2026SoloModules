@@ -45,7 +45,7 @@ pitch env, LFO 1, LFO 2, aftertouch, mod wheel, bend                            
 - **Never randomised:** output level, octave, bend range, aftertouch bend, pitch key-follow, key ranges, solo/legato/portamento.
 - **Coarse pitch** only lands on 0, ±12, +7, +19 or +24.
 - **Fine pitch** stays within ±15 cents.
-- **Pitch random, pitch-envelope depth and LFO pitch depth** are kept low.
+- **Pitch random, pitch-envelope depth and LFO pitch depth** are kept low, and MUTATE never moves pitch, including the pitch-envelope levels.
 - Right-click > **Allow wild pitch** lifts these limits.
 
 Ctrl+R does the same as RAND. Initialise (Ctrl+E) loads preset 1 and restores the 8 factory memories.

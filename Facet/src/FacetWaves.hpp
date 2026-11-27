@@ -110,7 +110,9 @@ inline void buildMips(const Harm& h, float* dst) {
 
 struct Rng {
 	uint32_t s;
-	explicit Rng(uint32_t seed) : s(seed * 2654435761u + 12345u) {}
+	explicit Rng(uint32_t seed) : s(seed * 2654435761u + 12345u) {
+		if (!s) s = 1u; // xorshift stays at 0 for ever
+	}
 	float uni() { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return (s >> 8) * (1.f / 16777216.f); }
 	float bi() { return uni() * 2.f - 1.f; }
 };
@@ -221,7 +223,9 @@ struct Rom {
 	static std::vector<float> karplus(double hz, double secs, double damp, double bright, uint32_t seed) {
 		Rng r(seed);
 		int n = (int) (SMP_SR * secs);
-		double dl = SMP_SR / hz;
+		// the two-point average in the loop delays by half a sample: take it off the line length,
+		// or every string wave sits about 5 cents flat against the other waves
+		double dl = SMP_SR / hz - 0.5;
 		int L = (int) dl + 2;
 		std::vector<double> buf(L, 0.0);
 		// noise burst, low-passed by 'bright'

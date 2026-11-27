@@ -9,6 +9,7 @@
 #include "FacetPresets.hpp"
 #include <osdialog.h>
 #include <atomic>
+#include <mutex>
 #include <fstream>
 
 using namespace facet;
@@ -47,9 +48,9 @@ struct Page {
 	bool tone;
 	std::vector<int> e; // tone-relative or common-relative parameter indices
 };
-static const std::vector<Page>& pages() {
-	static std::vector<Page> P;
-	if (P.empty()) {
+static std::vector<Page> makePages() {
+	std::vector<Page> P;
+	{
 		P.push_back({"WG", true, {T_WAVE, T_COARSE, T_FINE, T_PRAND, T_PKF, T_BENDSW, T_ATBEND, T_ON}});
 		P.push_back({"PITCH ENV", true, {T_PE_DEPTH, T_PE_VELO, T_PE_TVELO, T_PE_TKF, T_PE_L0, T_PE_T1, T_PE_L1, T_PE_T2, T_PE_T3, T_PE_L2}});
 		P.push_back({"TVF", true, {T_F_MODE, T_F_CUT, T_F_RES, T_F_KF, T_F_ENV, T_F_AT, T_MODCUT}});
@@ -74,6 +75,12 @@ static const std::vector<Page>& pages() {
 		P.push_back({"FX: EQ", false, {C_EQ_LOF, C_EQ_LOG, C_EQ_MIDF, C_EQ_MIDQ, C_EQ_MIDG, C_EQ_HIF, C_EQ_HIG}});
 		P.push_back({"COMMON", false, {C_LEVEL, C_OCT, C_BENDR, C_SOLO, C_LEGATO, C_PORTA, C_PTIME, C_DAC90}});
 	}
+	return P;
+}
+// built once, by whichever thread asks first (the screen and the audio thread both do):
+// a function-local static is initialised under a lock, a hand-rolled "if empty" is not
+static const std::vector<Page>& pages() {
+	static const std::vector<Page> P = makePages();
 	return P;
 }
 
@@ -133,7 +140,7 @@ static bool readWav(const std::string& path, Wave& out, std::string& err) {
 			}
 			else if (bits == 8) v = (b[q] - 128) / 128.f;
 			else if (bits == 16) v = (int16_t) u16(q) / 32768.f;
-			else if (bits == 24) v = ((int32_t) ((b[q] << 8) | (b[q + 1] << 16) | (b[q + 2] << 24)) >> 8) / 8388608.f;
+			else if (bits == 24) v = ((int32_t) (((uint32_t) b[q] << 8) | ((uint32_t) b[q + 1] << 16) | ((uint32_t) b[q + 2] << 24)) >> 8) / 8388608.f;
 			else if (bits == 32) v = (int32_t) u32(q) / 2147483648.f;
 			s += v;
 		}
@@ -210,6 +217,9 @@ struct Facet : Module {
 	bool saveArmed = false;
 	std::string flash;
 	float flashTime = 0.f;
+	// patchName, memName and flash are written by the audio thread (buttons) and by the UI thread
+	// (menus), and read by the screen and the autosave: every access takes this lock
+	std::mutex textMutex;
 	// mutation
 	float mut[NPV];
 	Rng rng{(uint32_t) random::u32()};
@@ -317,6 +327,7 @@ struct Facet : Module {
 		const auto& pr = factoryPresets();
 		for (int m = 0; m < 8; m++) {
 			std::copy(pr[DEFAULT_MEMS[m]].v.begin(), pr[DEFAULT_MEMS[m]].v.end(), mem[m]);
+			std::lock_guard<std::mutex> lk(textMutex);
 			memName[m] = pr[DEFAULT_MEMS[m]].name;
 		}
 	}
@@ -325,27 +336,41 @@ struct Facet : Module {
 		int n = (int) pr.size();
 		presetIdx = ((i % n) + n) % n;
 		writePatch(pr[presetIdx].v.data());
-		patchName = pr[presetIdx].name;
+		{
+			std::lock_guard<std::mutex> lk(textMutex);
+			patchName = pr[presetIdx].name;
+		}
 		currentMem = -1;
 		showFlash(string::f("P%02d %s  [%s]", presetIdx + 1, pr[presetIdx].name.c_str(), pr[presetIdx].cat.c_str()));
 	}
 	void recall(int m) {
 		writePatch(mem[m]);
-		patchName = memName[m];
+		std::string name;
+		{
+			std::lock_guard<std::mutex> lk(textMutex);
+			patchName = memName[m];
+			name = patchName;
+		}
 		currentMem = m;
-		showFlash(string::f("MEMORY %d  %s", m + 1, memName[m].c_str()));
+		showFlash(string::f("MEMORY %d  %s", m + 1, name.c_str()));
 	}
 	void store(int m) {
 		readPatch(mem[m]);
 		// keep what MUTATE has done
 		for (int i = 0; i < NPV; i++) mem[m][i] = clampTo(i, mem[m][i] + mut[i]);
-		memName[m] = patchName;
+		{
+			std::lock_guard<std::mutex> lk(textMutex);
+			memName[m] = patchName;
+		}
 		currentMem = m;
 		saveArmed = false;
 		showFlash(string::f("SAVED TO MEMORY %d", m + 1));
 	}
 	void showFlash(const std::string& s) {
-		flash = s;
+		{
+			std::lock_guard<std::mutex> lk(textMutex);
+			flash = s;
+		}
 		flashTime = 2.5f;
 	}
 	void randomizeNow() {
@@ -353,7 +378,10 @@ struct Facet : Module {
 		readPatch(v);
 		randomizePatch(v, params[RANDAMT_PARAM].getValue(), scope, wild, rng);
 		writePatch(v);
-		if (patchName.empty() || patchName.back() != '~') patchName += " ~";
+		{
+			std::lock_guard<std::mutex> lk(textMutex);
+			if (patchName.empty() || patchName.back() != '~') patchName += " ~";
+		}
 		randFlash = 1.f;
 		showFlash(string::f("RAND %d%% %s", (int) std::round(params[RANDAMT_PARAM].getValue() * 100.f), SCOPE_NAMES[scope]));
 	}
@@ -578,17 +606,38 @@ struct Facet : Module {
 			float x = params[i].getValue() + mut[i];
 			engine.v[i] = x;
 		}
+		float cvAdd[2] = {0.f, 0.f};
 		for (int k = 0; k < 2; k++) {
 			int t = cvTarget[k];
 			if (t < 0 || !inputs[CV1_INPUT + k].isConnected()) continue;
 			Def d = defOf(t);
-			engine.v[t] += inputs[CV1_INPUT + k].getVoltage() * 0.1f * params[CV1AMT_PARAM + k].getValue() * (d.max - d.min);
+			cvAdd[k] = inputs[CV1_INPUT + k].getVoltage() * 0.1f * params[CV1AMT_PARAM + k].getValue() * (d.max - d.min);
 		}
 		for (int i = 0; i < NPV; i++)
-			if (mut[i] != 0.f || i == cvTarget[0] || i == cvTarget[1]) engine.v[i] = clampTo(i, engine.v[i]);
+			if (mut[i] != 0.f) engine.v[i] = clampTo(i, engine.v[i]);
+		// a CV moves a continuous control smoothly (not in whole slider steps, which is about a
+		// semitone of cutoff per step); switches, waves and semitone/octave controls still step
+		for (int k = 0; k < 2; k++) {
+			int t = cvTarget[k];
+			if (t < 0 || cvAdd[k] == 0.f) continue;
+			Def d = defOf(t);
+			float x = std::max(d.min, std::min(d.max, engine.v[t] + cvAdd[k]));
+			engine.v[t] = cvStepped(t) ? std::round(x) : x;
+		}
 
 		touchedTime -= dt;
 		flashTime -= dt;
+	}
+
+	// controls that must stay on whole values when a CV drives them
+	static bool cvStepped(int i) {
+		if (defOf(i).choices >= 0) return true;
+		if (isTone(i)) {
+			int p = i % NT;
+			return p == T_WAVE || p == T_COARSE || p == T_BIASPT || p == T_KEYLO || p == T_KEYHI;
+		}
+		int p = i - NT * 4;
+		return p == C_OCT || p == C_BENDR || p == C_SP_WIDTH;
 	}
 
 	void linkSet(int p, float value) {
@@ -646,9 +695,15 @@ struct Facet : Module {
 	json_t* dataToJson() override {
 		json_t* root = json_object();
 		json_t* mems = json_array();
+		std::string names[8], pname;
+		{
+			std::lock_guard<std::mutex> lk(textMutex);
+			for (int m = 0; m < 8; m++) names[m] = memName[m];
+			pname = patchName;
+		}
 		for (int m = 0; m < 8; m++) {
 			json_t* o = json_object();
-			json_object_set_new(o, "name", json_string(memName[m].c_str()));
+			json_object_set_new(o, "name", json_string(names[m].c_str()));
 			json_t* vals = json_array();
 			for (int i = 0; i < NPV; i++) json_array_append_new(vals, json_real(mem[m][i]));
 			json_object_set_new(o, "values", vals);
@@ -657,7 +712,7 @@ struct Facet : Module {
 		json_object_set_new(root, "memories", mems);
 		json_object_set_new(root, "currentMem", json_integer(currentMem));
 		json_object_set_new(root, "presetIdx", json_integer(presetIdx));
-		json_object_set_new(root, "patchName", json_string(patchName.c_str()));
+		json_object_set_new(root, "patchName", json_string(pname.c_str()));
 		json_object_set_new(root, "selTone", json_integer(selTone));
 		json_object_set_new(root, "envSel", json_integer(envSel));
 		json_object_set_new(root, "lfoSel", json_integer(lfoSel));
@@ -687,9 +742,13 @@ struct Facet : Module {
 			for (int m = 0; m < 8 && m < (int) json_array_size(j); m++) {
 				json_t* o = json_array_get(j, m);
 				json_t* n = json_object_get(o, "name");
-				if (n) memName[m] = json_string_value(n);
+				if (json_is_string(n)) {
+					std::lock_guard<std::mutex> lk(textMutex);
+					memName[m] = json_string_value(n);
+				}
 				json_t* vals = json_object_get(o, "values");
-				for (int i = 0; vals && i < NPV && i < (int) json_array_size(vals); i++) mem[m][i] = json_number_value(json_array_get(vals, i));
+				// clamped: the engine indexes tables with some of these
+				for (int i = 0; vals && i < NPV && i < (int) json_array_size(vals); i++) mem[m][i] = clampTo(i, (float) json_number_value(json_array_get(vals, i)));
 			}
 		auto geti = [&](const char* k, int& dst, int lo, int hi) {
 			json_t* x = json_object_get(root, k);
@@ -705,7 +764,10 @@ struct Facet : Module {
 		geti("scope", scope, 0, NUM_SCOPES - 1);
 		geti("cvTarget1", cvTarget[0], -1, NPV - 1);
 		geti("cvTarget2", cvTarget[1], -1, NPV - 1);
-		if ((j = json_object_get(root, "patchName"))) patchName = json_string_value(j);
+		if (json_is_string(j = json_object_get(root, "patchName"))) {
+			std::lock_guard<std::mutex> lk(textMutex);
+			patchName = json_string_value(j);
+		}
 		if ((j = json_object_get(root, "wild"))) wild = json_boolean_value(j);
 		if ((j = json_object_get(root, "userWaves")))
 			for (int i = 0; i < NUM_USER && i < (int) json_array_size(j); i++) {
@@ -713,7 +775,7 @@ struct Facet : Module {
 				json_t* lp = json_object_get(o, "loop");
 				if (lp) userLoop[i] = json_boolean_value(lp);
 				json_t* p = json_object_get(o, "path");
-				std::string path = p ? json_string_value(p) : "";
+				std::string path = json_is_string(p) ? json_string_value(p) : "";
 				if (!path.empty()) loadUser(i, path);
 			}
 		if ((j = json_object_get(root, "mutation")))
@@ -795,6 +857,12 @@ struct FacetScreen : TransparentWidget {
 			return;
 		}
 		Facet* m = module;
+		std::string flashText, nameText;
+		{
+			std::lock_guard<std::mutex> lk(m->textMutex);
+			flashText = m->flash;
+			nameText = m->patchName;
+		}
 		const Page& pg = m->curPage();
 		int np = (int) pages().size();
 		std::string title = pg.tone ? string::f("TONE %c  %s", 'A' + m->selTone, pg.title) : std::string(pg.title);
@@ -838,7 +906,7 @@ struct FacetScreen : TransparentWidget {
 			c6 = amber;
 		}
 		else if (m->flashTime > 0.f) {
-			l6 = m->flash;
+			l6 = flashText;
 			c6 = amber;
 		}
 		else if (m->touchedTime > 0.f && m->touched >= 0)
@@ -846,7 +914,7 @@ struct FacetScreen : TransparentWidget {
 		text(args, x0, 4 + 5 * lh, l6, c6, W - 2 * x0);
 		// line 7: status
 		std::string st = m->currentMem >= 0 ? string::f("M%d ", m->currentMem + 1) : string::f("P%02d ", m->presetIdx + 1);
-		st += m->patchName;
+		st += nameText;
 		st += string::f(" | SEL %s", SCOPE_NAMES[m->scope]);
 		float mu = m->params[Facet::MUTATE_PARAM].getValue();
 		if (mu > 0.005f) st += string::f(" | MUT %d", (int) std::round(mu * 100.f));

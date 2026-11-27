@@ -6,6 +6,7 @@
 #pragma once
 #include "FacetParams.hpp"
 #include <vector>
+#include <algorithm>
 
 namespace facet {
 
@@ -67,6 +68,7 @@ struct DelayLine {
 		mask = n - 1;
 		w = 0;
 	}
+	void clear() { std::fill(buf.begin(), buf.end(), 0.f); }
 	inline void push(float x) {
 		buf[w] = x;
 		w = (w + 1) & mask;
@@ -86,6 +88,7 @@ struct Fx {
 	int ctr = 0;
 	float c[NC];
 	bool first = true;
+	bool chWas = false, rvWas = false; // was the chorus / reverb running on the last sample
 
 	// distortion
 	Biquad dsPre[2], dsPost[2];
@@ -397,10 +400,27 @@ struct Fx {
 				case 3: if (c[C_EH_ON] > 0.5f) enhancer(L, R); break;
 			}
 		}
-		if (c[C_CH_ON] > 0.5f) chorus(L, R);
+		// chorus and reverb do not run while they are off, so their lines still hold the sound from
+		// when they were last on: empty them on the way back in, or that old sound plays out again
+		bool chOn = c[C_CH_ON] > 0.5f, rvOn = c[C_RV_ON] > 0.5f;
+		if (chOn && !chWas) {
+			chL.clear();
+			chR.clear();
+		}
+		if (rvOn && !rvWas) {
+			rvPre.clear();
+			rvLong.clear();
+			for (int i = 0; i < 8; i++) rvLine[i].clear();
+			for (int i = 0; i < 4; i++) rvAp[i].clear();
+			for (int i = 0; i < 8; i++) rvLp[i] = 0.f;
+			rvGateEnv = rvGate = rvHold = 0.f;
+		}
+		chWas = chOn;
+		rvWas = rvOn;
+		if (chOn) chorus(L, R);
 		if (c[C_DL_ON] > 0.5f) delay(L, R);
 		else dl.push(0.f);
-		if (c[C_RV_ON] > 0.5f) reverb(L, R);
+		if (rvOn) reverb(L, R);
 		for (int b = 0; b < 3; b++) {
 			L = eq[0][b].process(L);
 			R = eq[1][b].process(R);

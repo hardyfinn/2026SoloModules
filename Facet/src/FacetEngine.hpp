@@ -148,6 +148,7 @@ struct ToneV {
 	float g = 0.1f, k = 2.f;
 	int fmode = 0;
 	float amp = 0.f, ampT = 0.f, panL = 0.707f, panR = 0.707f;
+	float lastX = 0.f, dck = 0.f; // sample waves: last raw sample, and the retrigger de-click offset
 };
 
 struct Voice {
@@ -180,11 +181,14 @@ struct Engine {
 	int noteOns = 0;
 	float outL = 0.f, outR = 0.f;
 	float glideK = 1.f;
+	float dckK = 0.993f; // decay per sample of the retrigger de-click offset (about 3 ms)
 	// 90s converter
 	float dacAcc = 0.f, dacL = 0.f, dacR = 0.f, dlp[4] = {0, 0, 0, 0};
 
 	Engine() {
 		patchDefaults(v);
+		// empty user slots must be USER waves: a default Wave is a LOOP with no table to read
+		for (int i = 0; i < NUM_USER; i++) user[i].kind = WK_USER;
 		setSampleRate(48000.f);
 	}
 
@@ -192,6 +196,7 @@ struct Engine {
 		if (s == sr && fx.sr == s) return;
 		sr = s;
 		isr = 1.f / s;
+		dckK = std::exp(-1.f / (0.003f * s));
 		fx.setSampleRate(s);
 	}
 
@@ -221,9 +226,15 @@ struct Engine {
 			tv.ae.v = 0.f;
 			tv.amp = 0.f;
 			tv.inc = 0.f;
+			tv.lastX = 0.f;
+			tv.dck = 0.f;
 		}
+		bool isSmp = w.kind != WK_LOOP && w.kind != WK_MOVING;
+		// a sample that restarts while the tone still sounds would jump from wherever it was to its
+		// first value: carry the difference as an offset that dies away in a few ms (no click)
+		if (was && isSmp) tv.dck = tv.lastX - (w.smp.empty() ? 0.f : w.smp[0]);
 		tv.spos = 0.0;
-		tv.smpDone = w.kind != WK_LOOP && w.kind != WK_MOVING && w.smp.empty();
+		tv.smpDone = isSmp && w.smp.size() < 2;
 		tv.rnd = rng.bi() * P(t, T_PRAND) * 0.012f;
 		// velocity scaling
 		float cv = velCurve((int) P(t, T_VCURVE), vel);
@@ -357,7 +368,11 @@ struct Engine {
 		semis += 0.6f * (P(t, T_MODLFO) * 0.01f) * curMod * tv.lfo[0].out; // mod wheel vibrato on LFO 1
 		semis = std::max(-96.f, std::min(84.f, semis));
 		float f = ROOT_HZ * fastExp2(semis / 12.f);
+		float hfGain = 1.f;
 		if (w.kind == WK_LOOP || w.kind == WK_MOVING) {
+			// a fundamental above about 0.45 x sample rate can only alias: fade it out and hold the rate
+			hfGain = std::max(0.f, std::min(1.f, (0.49f * sr - f) / (0.04f * sr)));
+			f = std::min(f, 0.49f * sr);
 			tv.incT = f * isr;
 			float lv = std::log2(std::max(1e-6f, MAXH * f / (0.45f * sr)));
 			lv = std::max(0.f, std::min((float) (NMIP - 1), lv));
@@ -384,7 +399,7 @@ struct Engine {
 
 		// ---- amp
 		float lvl = P(t, T_LEVEL) * 0.01f;
-		float a = lvl * lvl * tv.velAmp * tv.bias;
+		float a = lvl * lvl * tv.velAmp * tv.bias * hfGain;
 		a *= std::max(0.f, std::min(2.f, 1.f + (P(t, T_A_AT) / 50.f) * vo.press));
 		a *= std::max(0.f, 1.f + (P(t, T_L1_TVA) / 50.f) * l1 * 0.5f);
 		a *= std::max(0.f, 1.f + (P(t, T_L2_TVA) / 50.f) * l2 * 0.5f);
@@ -402,11 +417,13 @@ struct Engine {
 		float x = 0.f;
 		tv.inc += (tv.incT - tv.inc) * 0.25f;
 		if (w.kind == WK_LOOP || w.kind == WK_MOVING) {
+			if (w.tbl.empty()) return 0.f;
 			tv.phase += tv.inc;
 			if (tv.phase >= 1.0) tv.phase -= std::floor(tv.phase);
-			float idx = (float) tv.phase * TBL;
-			int i = (int) idx;
-			float fr = idx - i;
+			// in double: as a float a phase just under 1 rounds up to 1.0 and reads past the table
+			double idx = tv.phase * TBL;
+			int i = std::min(TBL - 1, (int) idx);
+			float fr = (float) (idx - i);
 			if (w.kind == WK_LOOP) {
 				const float* a = w.table(0, tv.m0);
 				const float* b = w.table(0, tv.m1);
@@ -437,21 +454,29 @@ struct Engine {
 				x = r[0] + (r[1] - r[0]) * ff;
 			}
 		}
-		else if (!tv.smpDone) {
+		else {
 			size_t n = w.smp.size();
-			if (n < 2) tv.smpDone = true;
-			else {
-				if (tv.spos >= n - 1) {
-					if (w.loop) tv.spos -= (double) (n - 1) * std::floor(tv.spos / (n - 1));
-					else tv.smpDone = true;
+			if (!tv.smpDone) {
+				if (n < 2) tv.smpDone = true;
+				else if (w.loop) {
+					// the loop is n samples long and the last one runs on into the first
+					if (tv.spos >= (double) n) tv.spos -= (double) n * std::floor(tv.spos / (double) n);
 				}
+				else if (tv.spos >= (double) (n - 1)) tv.smpDone = true;
 				if (!tv.smpDone) {
-					size_t i = (size_t) tv.spos;
-					float fr = (float) (tv.spos - i);
-					x = w.smp[i] + (w.smp[std::min(n - 1, i + 1)] - w.smp[i]) * fr;
+					size_t i = std::min(n - 1, (size_t) tv.spos);
+					float fr = (float) (tv.spos - (double) i);
+					size_t j = i + 1 < n ? i + 1 : (w.loop ? 0 : n - 1);
+					x = w.smp[i] + (w.smp[j] - w.smp[i]) * fr;
 					tv.spos += tv.inc;
 				}
 			}
+			if (tv.dck != 0.f) {
+				x += tv.dck;
+				tv.dck *= dckK;
+				if (std::fabs(tv.dck) < 1e-6f) tv.dck = 0.f;
+			}
+			tv.lastX = x;
 		}
 		// TVF: trapezoidal state-variable filter
 		float g = tv.g, k = tv.k;
