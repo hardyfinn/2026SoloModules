@@ -10,4 +10,5 @@ void init(Plugin* p) {
 	p->addModel(modelRim909);
 	p->addModel(modelClap909);
 	p->addModel(modelCymbals909);
+	p->addModel(modelBench909);
 }

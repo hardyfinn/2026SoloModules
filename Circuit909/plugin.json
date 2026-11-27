@@ -1,7 +1,7 @@
 {
   "slug": "Circuit909",
   "name": "909 Circuits",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "license": "MIT",
   "brand": "Haer",
   "author": "Haer",
@@ -64,6 +64,16 @@
       "description": "The TR-909's 6-bit hat, crash and ride path (clocked DAC, BITS, reconstruction filter, VCA, closed/open choke) around a built-in metal source or your own WAV",
       "tags": [
         "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Bench909",
+      "name": "909 Circuit Bench",
+      "description": "All eleven TR-909 voices in one 48 HP module: a screen with the selected voice's circuit, four edit knobs that follow the block you tap, four kit memories, CH chokes OH, own WAVs for hats/crash/ride, per-voice outs and a stereo mix",
+      "tags": [
+        "Drum",
+        "Drum Machine",
         "Synth Voice"
       ]
     }

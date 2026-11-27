@@ -428,7 +428,7 @@ struct CymbalsEngine : EngineBase {
 	OnePole hp1, hp2, srcHp1, srcHp2, srcLp;
 	float oph[6] = {0, 0, 0, 0, 0, 0};
 	float t = 1e9f, ve = 0.f, amp = 1.f, kv = 0.f;
-	bool open = false;
+	bool open = false, choked = false;
 	int type = 0;
 	size_t sPos = 0;
 	std::vector<float> user;   // already at CLOCK and normalised (see prepareSample)
@@ -476,12 +476,15 @@ struct CymbalsEngine : EngineBase {
 		float ag = k[AGE], worn = Age::worn(ag);
 		float wd = age.part(3, ag, 0.25f) * hitDecay * (1.f - 0.3f * worn);
 		float T = (type == 0 && !open) ? c[CHDECAY] * 1e-3f : natural(type) * c[DECAY] * age.part(2, ag, 0.15f);
-		kv = t60coef(T * wd);
+		kv = t60coef(choked ? 0.012f : T * wd);
 	}
+	// a closed hat on another voice (the Bench's CH) cuts this one short, over about 12 ms
+	void choke() { if (ve > 0.f) { choked = true; kv = t60coef(0.012f); } }
 	void start(float acc, const float* k, bool isOpen) {
 		using namespace cymbals;
 		type = typeOf(k);
 		open = isOpen || type > 0;
+		choked = false;
 		drifts(k[AGE]);
 		refresh(k); woke();
 		amp = accentGain(k[ACCENT], acc) * age.part(5, k[AGE], 0.1f);

@@ -71,6 +71,32 @@ Still to check against the service notes or a recording before moving any stock 
 sweep law and start pitch, the snare's noise paths and oscillator pitches, three oscillators
 per tom, rim ring and pitches, the cymbal clock rate and reconstruction filter.
 
+## 909 Circuit Bench (2.2.0)
+
+All eleven voices in one 48 HP module: BD, SD, LT, MT, HT, RS, CP, CH, OH, CR, RD. It
+works like the 808 Circuit Bench.
+
+- The screen draws the selected voice as its circuit (for the kick: TRIG, PITCH ENV,
+  CLICK, VCO + SHAPER, VCA, OUT). Tap a block, or turn SELECT, and the four EDIT knobs
+  take its values. You can also drag a value on the screen (shift = fine, double-click =
+  stock). A filled orange dot means the stock 909 setting; a ring means it has moved.
+- Tap a voice button to select it; SHIFT + voice hits it.
+- STOCK puts the block on screen back to the 909 (SHIFT + STOCK: the whole voice).
+- COPY, then tap another voice of the same kind, pastes (tom to tom, OH/CR/RD to each other).
+- KITS steps through four kit memories, all saved in the patch (SHIFT + KITS: stock kit).
+- Every voice has its own TRIG and OUT. Voices whose OUT is not patched go to the stereo
+  mix (PAN per voice, in the OUT block), 6 dB below the single outputs.
+- ACC: mono = all voices, poly = one channel per voice (BD first). POLY: one trigger
+  channel per voice (1 = BD ... 11 = RD).
+- CH chokes OH, as on the 909. The toms keep their LOW/MID/HIGH range and CH/OH/CR/RD
+  keep their type; the CH has CH DEC, the others have DECAY.
+- Right-click: own WAVs for the hats (CH and OH together), crash and ride, saved by path
+  in the patch; serial number for AGE; whole kit back to stock.
+
+The sound is the same engines as the single modules. Offline checks in `test/bench.cpp`
+(`make test`): levels and accent per voice, tom pitches, CH/OH lengths, the choke,
+random settings at 44.1/96 kHz, sleep, every parameter on screen exactly once.
+
 ## Build
 
 `make test` runs the offline checks (levels, accent, sample rates, 40 random and extreme
