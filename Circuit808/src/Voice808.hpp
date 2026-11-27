@@ -43,6 +43,10 @@ struct VoiceModule : Module {
 	dsp::ClockDivider lightDivider;
 	uint32_t serial = 808;
 	int nK = 0, nCv = 0;
+	// accent is read over 0.5 ms after a trigger (an accent through another module may
+	// arrive a sample or two late); every voice waits the same, so the kit stays aligned
+	int pending = -1;
+	float pendingAcc = 0.f;
 
 	int hitParam() const { return nK; }
 	int trigInput() const { return nCv; }
@@ -101,16 +105,21 @@ struct VoiceModule : Module {
 		for (int i = 0; i < nCv; i++) {
 			if (!inputs[i].isConnected()) continue;
 			int kn = s.cv[i].knob;
-			if (kn < 0) voct = inputs[i].getVoltage();
+			if (kn < 0) { float v = inputs[i].getVoltage(); voct = std::isfinite(v) ? clamp(v, -10.f, 10.f) : 0.f; }
 			else k[kn] = clamp(k[kn] + inputs[i].getVoltage() * 0.1f, 0.f, 1.f);
 		}
 		bool hit = trigIn.process(inputs[trigInput()].getVoltage(), 0.1f, 1.f);
 		hit |= hitButton.process(params[hitParam()].getValue());
-		if (hit) {
+		if (hit && pending < 0) { pending = (int)(0.0005f * args.sampleRate); pendingAcc = 0.f; }
+		if (pending >= 0) {
 			float acc = inputs[accentInput()].isConnected() ? clamp(inputs[accentInput()].getVoltage() / 5.f, 0.f, 1.f) : 0.f;
-			engine.hit(acc, k.data());
+			pendingAcc = std::max(pendingAcc, acc);
+			if (pending-- == 0) engine.hit(pendingAcc, k.data());
 		}
-		engine.process(k.data(), voct);
+		if (pending < 0 && engine.sleeping()) {
+			engine.out = 0.f; engine.env = 0.f;
+		}
+		else engine.process(k.data(), voct);
 		outputs[OUT_OUTPUT].setVoltage(engine.out);
 		outputs[ENV_OUTPUT].setVoltage(engine.env);
 		if (lightDivider.process()) {

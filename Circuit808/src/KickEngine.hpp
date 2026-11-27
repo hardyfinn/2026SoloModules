@@ -73,6 +73,29 @@ static inline float toneHz(float t) { return 150.f * std::pow(10000.f / 150.f, t
 static inline float sweepOct(float s) { return 2.5f * s; }                             // 0 .. 2.5 octaves
 static inline float bendMs(float b) { return std::pow(60.f, b); }                      // 1 .. 60 ms
 static inline float strikeMs(float s) { return 0.1f * std::pow(100.f, s); }            // 0.1 .. 10 ms
+// STRIKE: below 1 ms the trigger pulse gets shorter (harder); above 1 ms the pulse stays
+// 1 ms and its edges are rounded (soft mallet). Level is compensated either way.
+static inline float strikeWidthS(float s) { return std::min(strikeMs(s), 1.f) * 1e-3f; }
+static inline float strikeSoftS(float s) { return std::max(strikeMs(s) - 1.f, 0.f) * 1e-3f / 3.f; }
+// ring amplitude a rectangular pulse of width w gives a resonator at f (relative)
+// |X(f)| of the shaped trigger (pulse of A volts, width w, rounded edges soft, through the
+// shelf and D53), by a direct DFT over the pulse; worked out once per hit
+static inline float pulseRing(float A, float f, float w, float soft, float fs) {
+	const float dt = 1.f / fs, PI_ = 3.14159265f;
+	int n = (int)((w + 8.f * soft + 3e-3f) * fs);
+	float z = 0.f, lp = 0.f, c = 1.f, s = 0.f, cr = std::cos(2.f * PI_ * f * dt), sr = std::sin(2.f * PI_ * f * dt);
+	double re = 0.0, im = 0.0;
+	for (int i = 0; i < n; i++) {
+		float v = (i * dt < w) ? A : 0.f;
+		if (soft > 0.f) { z += (v - z) * (1.f - std::exp(-dt / soft)); v = z; }
+		lp += (v - lp) * (1.f - std::exp(-dt / 0.25e-3f));
+		float x = v - 0.7f * lp;
+		if (x < 0.f) x = -0.71f * std::tanh(-x / 0.71f);
+		re += x * c; im -= x * s;
+		float c2 = c * cr - s * sr; s = s * cr + c * sr; c = c2;
+	}
+	return std::max((float)std::sqrt(re * re + im * im) * dt, 1e-9f);
+}
 static inline float clickGain(float c) { return 2.f * c; }                              // 0 .. 2 (stock 1)
 
 // ---- AGE: the 808 was built with +-20 % capacitors and +-5 % resistors (Werner et al.),
@@ -112,6 +135,12 @@ struct Engine {
 	float toneZ = 0.f, hpZ = 0.f;
 	// outputs
 	float out = 0.f, env = 0.f;
+	float strikeGain = 1.f, softS = 0.f, softZ = 0.f;
+	float dcZ = 0.f, levelS = 1.f, driveS = 0.f;
+	int quiet = 0;
+	// control-rate cache (every 16 samples)
+	int ctr = 0;
+	float cT60 = 0.4f, cToneG = 0.1f;
 	// AGE
 	Age age;
 	float hitPitch = 1.f, hitDecay = 1.f, hitLevel = 1.f;
@@ -122,7 +151,9 @@ struct Engine {
 	static constexpr float SIGH_NODE = 3.f, SIGH_K = 0.5f;   // fitted: 808 sigh lands in 48-58 Hz
 
 	void setSampleRate(float sr) { fs = sr; }
-	void reset() { ic1 = ic2 = bp = lp = shLp = toneZ = hpZ = 0.f; t = 1e9f; jump = 0.f; out = env = 0.f; }
+	void reset() { ic1 = ic2 = bp = lp = shLp = toneZ = hpZ = softZ = dcZ = 0.f; t = 1e9f; jump = 0.f; out = env = 0.f; }
+	// silent for 0.1 s with no hiss: the module may skip process() until the next hit
+	bool sleeping() const { return quiet > (int)(0.1f * fs); }
 
 	// accentIn 0..1 (gate or velocity). Latches STRIKE and BEND for this hit.
 	void hit(float accentIn, const Controls& c) {
@@ -132,8 +163,23 @@ struct Engine {
 		hitDecay = 1.f + 0.06f * ag * age.uniform();
 		hitLevel = 1.f + 0.06f * ag * age.uniform();
 		A *= 1.f + 0.1f * ag * age.u[5];   // trigger level trimmer
-		widthS = strikeMs(c.strike) * 1e-3f;
+		widthS = strikeWidthS(c.strike);
+		softS = strikeSoftS(c.strike);
 		holdS = std::max(bendMs(c.bend) * 1e-3f, widthS);
+		// level compensation for STRIKE and tuning: the pulse rings the resonator (which is
+		// jumped up while the pulse is on) by |sin(pi f w)|. Over the TUNE knob's range the
+		// kick is already level, so only STRIKE is compensated there; above it (V/OCT past
+		// 220 Hz) the ring is held at the level of the top of the knob
+		const float PI_ = 3.14159265f;
+		float jumpMul = std::exp2(sweepOct(c.sweep));
+		float fJ = clampf(c.tuneHz, 5.f, 2000.f) * jumpMul;
+		float fTop = std::min(fJ, 220.f * jumpMul);
+		(void)PI_;
+		float hard = pulseRing(A, fJ, widthS, 0.f, fs);
+		float act = softS > 0.f ? pulseRing(A, fJ, widthS, softS, fs) : hard;
+		float keep = std::max(std::pow(act / hard, 0.3f), 0.6f);   // soft mallet: at most ~4.4 dB quieter
+		strikeGain = clampf(pulseRing(A, fTop, 1e-3f, 0.f, fs) / act * keep, 0.05f, 50.f);
+		quiet = 0;
 		// retrigger pulse (C39/R161/D52): small and right after the jump at the stock
 		// setting; turned up it grows and moves later into a flammed second hit
 		float r = clampf(c.retrig, 0.f, 1.f);
@@ -149,15 +195,22 @@ struct Engine {
 		// trigger pulse and pulse shaper: y = x - (1-d) * LP(x), d = R162/(R162+R163)
 		float vtrig = (t < widthS) ? A : 0.f;
 		if (t >= retrigAt && t < retrigAt + 0.5e-3f) vtrig += retrigA;
+		if (softS > 0.f) { softZ += (vtrig - softZ) * (1.f - std::exp(-dt / softS)); vtrig = softZ; }
 		const float d = 0.3f, tauS = 0.25e-3f;
 		shLp += (vtrig - shLp) * (1.f - std::exp(-dt / tauS));
 		float x = vtrig - (1.f - d) * shLp;
 		// D53: the negative swing is held to about one diode drop
 		if (x < 0.f) x = -0.71f * std::tanh(-x / 0.71f);
 
-		// attack jump envelope (Q42 collector): up fast, holds, then falls in ~0.7 ms
-		if (t < holdS) jump += (1.f - jump) * (1.f - std::exp(-dt / 0.1e-3f));
-		else jump *= std::exp(-dt / 0.7e-3f);
+		// attack jump: Q43 follows the decaying envelope on C38 through a soft threshold,
+		// so the pitch glides down and the jump is over at BEND (6 ms at stock)
+		{
+			float tau = holdS / 1.386f;
+			float e = std::exp(-t / tau);
+			float u = clampf((e - 0.25f) / 0.5f, 0.f, 1.f);
+			float target = u * u * (3.f - 2.f * u);
+			jump += (target - jump) * (1.f - std::exp(-dt / 0.1e-3f));
+		}
 		t += dt;
 
 		// pitch
@@ -169,7 +222,9 @@ struct Engine {
 		const float alpha = 14.315f, V0 = 0.556f;
 		float vneg = -bp * SIGH_NODE;
 		float leak = (alpha * (vneg - V0) > 20.f) ? (vneg - V0) : std::log1p(std::exp(alpha * (vneg - V0))) / alpha;
-		float sighK = 4.f * c.sigh * (1.f + 0.3f * ag * age.u[2]) * SIGH_K * std::tanh(leak);               // fraction of R_eff shorted
+		// fade the sigh out as DECAY reaches sustain, so a sustained kick sits on TUNE
+		float sighFade = clampf((0.95f - c.decay) / 0.05f, 0.f, 1.f);
+		float sighK = sighFade * 4.f * c.sigh * (1.f + 0.3f * ag * age.u[2]) * SIGH_K * std::tanh(leak);               // fraction of R_eff shorted
 		m *= 1.f / std::sqrt(1.f - clampf(sighK, 0.f, 0.85f));  // f ~ 1/sqrt(R)
 		// tension: smooth amplitude -> pitch (like a skin), at all levels
 		float amp = std::sqrt(bp * bp + lp * lp);
@@ -182,10 +237,14 @@ struct Engine {
 		// damping from the ring time; Q rises with the jump so the decay rate holds
 		float k;
 		float dk = clampf(c.decay, 0.f, 1.f);
+		if ((ctr++ & 15) == 0) {
+			cT60 = decayT60(dk) * (1.f + 0.25f * ag * age.u[3]) * hitDecay * (1.f - 0.3f * worn);
+			cToneG = std::tan(PI * std::min(toneHz(c.tone) * (1.f + 0.2f * ag * age.u[4]), 0.45f * fs) * dt);
+		}
 		if (dk <= 0.95f) {
 			// SHELF: the feedback buffer's high shelf. Stock: the same decay rate at any pitch;
 			// up: raised pitches (jump, sigh, tension) die faster; down: they ring on
-			k = 13.8155f / (w * decayT60(dk) * (1.f + 0.25f * ag * age.u[3]) * hitDecay * (1.f - 0.3f * worn)) * std::pow(m, 3.f * (clampf(c.shelf, 0.f, 1.f) - Stock::SHELF));
+			k = 13.8155f / (w * cT60) * std::pow(m, 3.f * (clampf(c.shelf, 0.f, 1.f) - Stock::SHELF));
 		} else {
 			float s = (dk - 0.95f) / 0.05f;  // loop gain above one, soft limit holds the level
 			k = -0.004f - 0.03f * s + 0.08f * (amp * amp) / (1.3f * 1.3f);
@@ -193,7 +252,7 @@ struct Engine {
 		k = clampf(k, -0.2f, 2.f);
 
 		// resonator, excited with a constant-level drive across tunings
-		float u = x * (W_STOCK / w0);
+		float u = x * strikeGain * (W_STOCK / w0);
 		float a1 = 1.f / (1.f + g * (g + k));
 		float a2 = g * a1, a3 = g * a2;
 		float v3 = u - ic2;
@@ -203,12 +262,13 @@ struct Engine {
 		ic2 = 2.f * v2 - ic2;
 		bp = v1; lp = v2;
 		if (!std::isfinite(bp) || !std::isfinite(lp)) { ic1 = ic2 = bp = lp = 0.f; }
+		if (std::fabs(ic1) < 1e-20f && std::fabs(ic2) < 1e-20f) ic1 = ic2 = 0.f;   // no denormals
 
 		// bridged-T output = input (click) + ring
 		float y = clickGain(c.click) * x * 0.35f + BODY_GAIN * bp;
 
 		// tone: one-pole low-pass (TPT)
-		float gt = std::tan(PI * std::min(toneHz(c.tone) * (1.f + 0.2f * ag * age.u[4]), 0.45f * fs) * dt);
+		float gt = cToneG;
 		float vt = (y - toneZ) * gt / (1.f + gt);
 		float lpOut = vt + toneZ;
 		toneZ = lpOut + vt;
@@ -219,14 +279,22 @@ struct Engine {
 		hpZ = hpLow + vh;
 		float o = lpOut - hpLow;
 
-		// output op-amp: DRIVE pushes into the rails (about +-10.5 V)
-		float pre = 1.f + 11.f * c.drive * c.drive;
-		o = 10.5f * std::tanh(o * pre / 10.5f) / (1.f + 0.6f * c.drive);
-		if (worn > 0.f) {   // worn parts: a little hiss
+		if (worn > 0.f) {   // worn parts: a little hiss, from the parts ahead of the output amp
 			noiseState ^= noiseState << 13; noiseState ^= noiseState >> 17; noiseState ^= noiseState << 5;
 			o += worn * 0.006f * ((noiseState & 0xffff) / 32768.f - 1.f);
 		}
-		out = o * c.level * hitLevel * (1.f + 0.1f * ag * age.u[6]);
+		// output op-amp: DRIVE pushes into the rails (about +-10.5 V); DRIVE and LEVEL are
+		// smoothed (5 ms) and a 10 Hz DC blocker follows the drive
+		float sm = 1.f - std::exp(-dt / 0.005f);
+		driveS += (c.drive - driveS) * sm;
+		levelS += (c.level - levelS) * sm;
+		float pre = 1.f + 11.f * driveS * driveS;
+		o = 10.5f * std::tanh(o * pre / 10.5f) / (1.f + 0.6f * driveS);
+		dcZ += (o - dcZ) * (1.f - std::exp(-dt * 2.f * PI * 10.f));
+		o -= dcZ;
+		out = o * levelS * hitLevel * (1.f + 0.1f * ag * age.u[6]);
+		quiet = (std::fabs(out) < 1e-5f && amp < 1e-6f && worn == 0.f && t > widthS + 0.05f) ? quiet + 1 : 0;
+		if (std::fabs(dcZ) < 1e-20f) dcZ = 0.f;
 		env = clampf(BODY_GAIN * amp * 1.6f, 0.f, 10.f);
 	}
 };

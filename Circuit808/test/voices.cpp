@@ -31,12 +31,42 @@ static std::vector<float> stockKnobs() {
 }
 
 template <class E>
-static std::vector<float> render(const std::vector<float>& k, float acc, float sec, uint32_t serial = 808, float voct = 0.f) {
-	E e; e.setSampleRate(FS); e.age.setSerial(serial);
+static std::vector<float> render(const std::vector<float>& k, float acc, float sec, uint32_t serial = 808, float voct = 0.f, float fs = FS) {
+	E e; e.setSampleRate(fs); e.age.setSerial(serial);
 	std::vector<float> o;
+	e.process(k.data(), voct);   // settle the output stage
 	e.hit(acc, k.data());
-	for (int i = 0; i < sec * FS; i++) { e.process(k.data(), voct); o.push_back(e.out); }
+	for (int i = 0; i < sec * fs; i++) { e.process(k.data(), voct); o.push_back(e.out); }
 	return o;
+}
+static float rms(const std::vector<float>& s, float t0, float t1, float fs = FS) {
+	double a = 0; int n = 0;
+	for (int i = (int)(t0 * fs); i < (int)(t1 * fs) && i < (int)s.size(); i++) { a += s[i] * s[i]; n++; }
+	return n ? std::sqrt(a / n) : 0.f;
+}
+static float db(float a, float b) { return 20.f * std::log10(std::max(a, 1e-9f) / std::max(b, 1e-9f)); }
+// mean loudness over 16 hits of one unit (noise voices vary hit to hit)
+template <class E>
+static float loud(std::vector<float> k, float sec, float acc = 0.f, float fs = FS, float voct = 0.f, bool usePeak = false) {
+	E e; e.setSampleRate(fs); e.age.setSerial(808);
+	double a = 0;
+	for (int h = 0; h < 16; h++) {
+		e.hit(acc, k.data());
+		double s2 = 0; float p = 0.f; int n = (int)(sec * fs);
+		for (int i = 0; i < n; i++) { e.process(k.data(), voct); s2 += e.out * e.out; p = std::max(p, std::fabs(e.out)); }
+		a += usePeak ? p : std::sqrt(s2 / n);
+		for (int i = 0; i < (int)(0.3f * fs); i++) e.process(k.data(), voct);
+	}
+	return a / 16;
+}
+template <class E>
+static float spreadDb(const char* id, int steps, float sec, float acc = 0.f) {
+	auto k = stockKnobs<E>();
+	int ki = -1;
+	for (int i = 0; i < E::spec().nKnobs; i++) if (std::string(E::spec().knobs[i].id) == id) ki = i;
+	float lo = 1e9f, hi = 0.f;
+	for (int j = 0; j <= steps; j++) { k[ki] = j / (float)steps; float l = loud<E>(k, sec, acc); lo = std::min(lo, l); hi = std::max(hi, l); }
+	return db(hi, lo);
 }
 
 static float peak(const std::vector<float>& s) { float p = 0; for (float v : s) p = std::max(p, std::fabs(v)); return p; }
@@ -129,13 +159,134 @@ int main(int argc, char** argv) {
 		check(TomEngine::stockFor(knobIndex<TomEngine>("SLAP"), k.data()) == 0.f, "conga: stock SLAP is 0");
 	}
 
+	// --- regressions for the 2.2.0 DSP review ---
+	printf("review checks\n");
+	{   // clave stock = 2.5 kHz: count zero crossings over the ring
+		auto s = render<ClaveEngine>(stockKnobs<ClaveEngine>(), 0.f, 0.02f);
+		int zc = 0; for (size_t i = 49; i + 1 < 0.012f * FS; i++) if (s[i] <= 0.f && s[i + 1] > 0.f) zc++;
+		float hz = zc / (0.012f - 49 / FS);
+		printf("  clave stock pitch about %.0f Hz\n", hz);
+		check(std::fabs(hz / 2500.f - 1.f) < 0.05f, "clave stock near 2.5 kHz");
+	}
+	{   // snare: noise about as loud as the heads over the first 60 ms at stock SNAPPY
+		auto k = stockKnobs<SnareEngine>();
+		auto h = k; h[knobIndex<SnareEngine>("SNAPPY")] = 0.f;
+		auto n = k; n[knobIndex<SnareEngine>("TONE")] = 0.f;
+		float heads = rms(render<SnareEngine>(h, 0.f, 0.06f), 0.f, 0.06f);
+		float full = loud<SnareEngine>(k, 0.06f);
+		float noise = std::sqrt(std::max(0.f, full * full - heads * heads));
+		printf("  snare first 60 ms: heads %.2f V, noise %.2f V RMS (%.1f dB)\n", heads, noise, db(noise, heads));
+		check(std::fabs(db(noise, heads)) < 4.f, "snare noise within 4 dB of the heads");
+	}
+	{   // noise voices: same loudness at 48 and 96 kHz
+		float c48 = loud<ClapEngine>(stockKnobs<ClapEngine>(), 0.2f, 0.f, 48000.f), c96 = loud<ClapEngine>(stockKnobs<ClapEngine>(), 0.2f, 0.f, 96000.f);
+		float m48 = loud<MaracasEngine>(stockKnobs<MaracasEngine>(), 0.1f, 0.f, 48000.f), m96 = loud<MaracasEngine>(stockKnobs<MaracasEngine>(), 0.1f, 0.f, 96000.f);
+		float s48 = loud<SnareEngine>(stockKnobs<SnareEngine>(), 0.2f, 0.f, 48000.f), s96 = loud<SnareEngine>(stockKnobs<SnareEngine>(), 0.2f, 0.f, 96000.f);
+		printf("  96 vs 48 kHz: clap %+.1f dB, maracas %+.1f dB, snare %+.1f dB\n", db(c96, c48), db(m96, m48), db(s96, s48));
+		check(std::fabs(db(c96, c48)) < 1.f && std::fabs(db(m96, m48)) < 1.5f && std::fabs(db(s96, s48)) < 1.f, "noise level holds at 96 kHz");
+	}
+	{   // STRIKE and tuning no longer volume knobs
+		float tS = spreadDb<TomEngine>("STRIKE", 10, 0.3f), sS = spreadDb<SnareEngine>("STRIKE", 10, 0.1f);
+		float cS = spreadDb<ClaveEngine>("STRIKE", 10, 0.03f), cT = spreadDb<ClaveEngine>("TUNE", 12, 0.03f);
+		float rS = spreadDb<RimEngine>("STRIKE", 10, 0.03f);
+		printf("  STRIKE level spread: tom %.1f, snare %.1f, clave %.1f, rim %.1f dB; clave TUNE %.1f dB\n", tS, sS, cS, rS, cT);
+		check(tS < 6.f && sS < 6.f && cS < 6.f && rS < 6.f, "STRIKE moves level by under 6 dB");
+		check(cT < 6.f, "clave TUNE moves level by under 6 dB");
+		auto k = stockKnobs<ClaveEngine>();
+		float lo = 1e9f, hi = 0.f;
+		for (int st = -12; st <= 12; st++) { float l = loud<ClaveEngine>(k, 0.03f, 0.f, FS, st / 12.f); lo = std::min(lo, l); hi = std::max(hi, l); }
+		printf("  clave over two octaves of V/OCT: %.1f dB spread\n", db(hi, lo));
+		check(db(hi, lo) < 4.f, "clave plays evenly over V/OCT");
+	}
+	{   // accent depth similar on every voice
+		float a[7];
+		a[0] = db(loud<SnareEngine>(stockKnobs<SnareEngine>(), 0.2f, 1.f), loud<SnareEngine>(stockKnobs<SnareEngine>(), 0.2f));
+		a[1] = db(loud<ClapEngine>(stockKnobs<ClapEngine>(), 0.2f, 1.f), loud<ClapEngine>(stockKnobs<ClapEngine>(), 0.2f));
+		a[2] = db(loud<TomEngine>(stockKnobs<TomEngine>(), 0.2f, 1.f), loud<TomEngine>(stockKnobs<TomEngine>(), 0.2f));
+		a[3] = db(loud<RimEngine>(stockKnobs<RimEngine>(), 0.05f, 1.f), loud<RimEngine>(stockKnobs<RimEngine>(), 0.05f));
+		a[4] = db(loud<ClaveEngine>(stockKnobs<ClaveEngine>(), 0.03f, 1.f), loud<ClaveEngine>(stockKnobs<ClaveEngine>(), 0.03f));
+		a[5] = db(loud<MaracasEngine>(stockKnobs<MaracasEngine>(), 0.06f, 1.f), loud<MaracasEngine>(stockKnobs<MaracasEngine>(), 0.06f));
+		a[6] = db(loud<CowbellEngine>(stockKnobs<CowbellEngine>(), 0.2f, 1.f), loud<CowbellEngine>(stockKnobs<CowbellEngine>(), 0.2f));
+		printf("  accent gain dB: snare %.1f clap %.1f tom %.1f rim %.1f clave %.1f maracas %.1f cowbell %.1f\n", a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
+		bool ok = true; for (float v : a) if (v < 3.f || v > 6.5f) ok = false;
+		check(ok, "accent adds 3-6.5 dB on every voice");
+	}
+	{   // level knobs that should not be volume knobs
+		float cb = spreadDb<ClapEngine>("BAND", 6, 0.2f), cr = spreadDb<ClapEngine>("RES", 6, 0.2f), wr = spreadDb<CowbellEngine>("RES", 6, 0.2f);
+		printf("  level spread: clap BAND %.1f, clap RES %.1f, cowbell RES %.1f dB\n", cb, cr, wr);
+		check(cb < 5.f && cr < 5.f && wr < 7.f, "clap BAND/RES and cowbell RES hold the level");
+		auto k = stockKnobs<TomEngine>();
+		float lo = 1e9f, hi = 0.f;
+		for (int m = 0; m < 2; m++) for (int r = 0; r < 3; r++) {
+			k[knobIndex<TomEngine>("MODE")] = m; k[knobIndex<TomEngine>("RANGE")] = r; k[knobIndex<TomEngine>("SLAP")] = 0.f;
+			float l = loud<TomEngine>(k, 0.2f, 0.f, FS, 0.f, true); lo = std::min(lo, l); hi = std::max(hi, l);
+			printf("    %s %s: %.2f V peak\n", m ? "conga" : "tom", r == 0 ? "low" : r == 1 ? "mid" : "high", l);
+		}
+		printf("  tom/conga sizes: %.1f dB peak spread\n", db(hi, lo));
+		check(db(hi, lo) < 4.f, "tom and conga sizes within 4 dB");
+	}
+	{   // maracas GRAINS at max: no silent hits, same density at 96 kHz
+		auto k = stockKnobs<MaracasEngine>(); k[knobIndex<MaracasEngine>("GRAINS")] = 1.f;
+		int silent = 0;
+		for (int i = 0; i < 100; i++) { auto s = render<MaracasEngine>(k, 0.f, 0.06f, 808 + i); if (peak(s) < 0.3f) silent++; }
+		printf("  maracas GRAINS 1: %d silent hits in 100\n", silent);
+		check(silent <= 2, "maracas GRAINS 1 has beads in every hit");
+		k[knobIndex<MaracasEngine>("GRAINS")] = 0.8f;
+		float l48 = loud<MaracasEngine>(k, 0.06f, 0.f, 48000.f), l96 = loud<MaracasEngine>(k, 0.06f, 0.f, 96000.f);
+		printf("  maracas GRAINS 0.8 96 vs 48 kHz: %+.1f dB\n", db(l96, l48));
+		check(std::fabs(db(l96, l48)) < 2.f, "bead density per second, not per sample");
+	}
+	{   // cowbell: no click at the hit
+		float worst = 0.f, steady = 0.f;
+		for (int i = 0; i < 50; i++) {
+			CowbellEngine e; e.setSampleRate(FS); e.age.setSerial(808);
+			auto k = stockKnobs<CowbellEngine>();
+			for (int j = 0; j < 37 * i + 5; j++) e.process(k.data(), 0.f);
+			e.hit(0.f, k.data());
+			float prev = e.out;
+			for (int j = 0; j < 0.1f * FS; j++) {
+				e.process(k.data(), 0.f);
+				float d = std::fabs(e.out - prev); prev = e.out;
+				if (j < 0.003f * FS) worst = std::max(worst, d); else if (j < 0.05f * FS) steady = std::max(steady, d);
+			}
+		}
+		printf("  cowbell largest step: onset %.2f V, ringing %.2f V\n", worst, steady);
+		check(worst < steady * 1.5f, "cowbell onset no sharper than the ring");
+	}
+	{   // NaN on V/OCT: recovers on the next hit
+		CowbellEngine e; e.setSampleRate(FS);
+		auto k = stockKnobs<CowbellEngine>();
+		for (int j = 0; j < 10; j++) e.process(k.data(), NAN);
+		e.hit(0.f, k.data());
+		float p = 0.f; for (int j = 0; j < 0.1f * FS; j++) { e.process(k.data(), 0.f); p = std::max(p, std::fabs(e.out)); }
+		check(std::isfinite(p) && p > 3.f, "cowbell recovers after NaN on V/OCT");
+	}
+	{   // DRIVE leaves no DC
+		auto k = stockKnobs<TomEngine>(); k[knobIndex<TomEngine>("DRIVE")] = 1.f;
+		auto s = render<TomEngine>(k, 1.f, 1.f);
+		double m = 0; for (size_t i = (size_t)(0.5f * FS); i < s.size(); i++) m += s[i];
+		m /= s.size() - (size_t)(0.5f * FS);
+		printf("  tom DRIVE 1 mean 0.5-1 s: %.4f V\n", m);
+		check(std::fabs(m) < 0.01, "no DC after DRIVE");
+	}
+	{   // silent voices go to sleep, and wake on a hit
+		ClapEngine e; e.setSampleRate(FS);
+		auto k = stockKnobs<ClapEngine>();
+		e.hit(0.f, k.data());
+		int n = 0; while (!e.sleeping() && n < 10 * FS) { e.process(k.data(), 0.f); n++; }
+		printf("  clap asleep after %.2f s\n", n / FS);
+		check(e.sleeping() && n < 6 * FS, "silent voice sleeps");
+		e.hit(0.f, k.data());
+		check(!e.sleeping(), "hit wakes it");
+	}
+
 	// demos
 	{
 		auto k = stockKnobs<SnareEngine>();
 		demo<SnareEngine>(dir, "snare-01-stock", k, {4, 12});
 		auto b = k; b[knobIndex<SnareEngine>("SNAPPY")] = 0.9f; b[knobIndex<SnareEngine>("SNAPDECAY")] = 0.8f; b[knobIndex<SnareEngine>("NOISECOL")] = 0.25f;
 		demo<SnareEngine>(dir, "snare-02-long-brush", b, {4, 12});
-		auto m = k; m[knobIndex<SnareEngine>("RATIO")] = 0.85f; m[knobIndex<SnareEngine>("BALANCE")] = 0.8f; m[knobIndex<SnareEngine>("DECAY")] = 0.65f; m[knobIndex<SnareEngine>("SNAPPY")] = 0.2f;
+		auto m = k; m[knobIndex<SnareEngine>("RATIO")] = 0.85f; m[knobIndex<SnareEngine>("TONE")] = 0.8f; m[knobIndex<SnareEngine>("DECAY")] = 0.65f; m[knobIndex<SnareEngine>("SNAPPY")] = 0.2f;
 		demo<SnareEngine>(dir, "snare-03-metallic-heads", m, {4, 12, 14});
 	}
 	{

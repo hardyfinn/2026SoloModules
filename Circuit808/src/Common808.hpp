@@ -18,6 +18,8 @@ struct Rng {
 	uint32_t next() { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return s; }
 	float bi() { return (next() & 0xffffff) / float(0x7fffff) - 1.f; }   // -1..1
 	float uni() { return (next() & 0xffffff) / float(0xffffff); }        // 0..1
+	// white noise with the same in-band level at any sample rate (scaled to 48 kHz)
+	float noise(float fs) { return bi() * std::sqrt(fs / 48000.f); }
 };
 
 // AGE: the 808 used +-20 % capacitors and +-5 % resistors, so every unit differed.
@@ -38,13 +40,22 @@ struct Age {
 	float hiss(float age) { float w = worn(age); return w > 0.f ? w * 0.006f * rng.bi() : 0.f; }
 };
 
-// The 808 trigger: a pulse of A volts (4 V, up to 14 V accented) and width w seconds,
+// STRIKE (in ms, stock 1): below 1 ms the trigger pulse gets shorter (harder); above,
+// the pulse stays 1 ms and its edges are rounded (soft mallet).
+static inline float strikeWidth(float ms) { return std::min(ms, 1.f) * 1e-3f; }
+static inline float strikeSoft(float ms) { return std::max(ms - 1.f, 0.f) * 1e-3f / 3.f; }
+// One accent law for every voice: +5 dB at stock ACCENT (trigger 4 V -> 10 V).
+static inline float accentLaw(float A) { return std::pow(A / 4.f, 0.628f); }
+
+// The 808 trigger: a pulse of A volts and width w seconds, optionally with rounded edges,
 // through the low-shelf pulse shaper (R/R/C) with a diode clamping the negative edge.
 struct PulseShaper {
-	float lp = 0.f, t = 1e9f, A = 0.f, w = 0.001f;
-	void fire(float amp, float width) { A = amp; w = width; t = 0.f; }
+	float lp = 0.f, t = 1e9f, A = 0.f, w = 0.001f, soft = 0.f, sz = 0.f;
+	void fire(float amp, float strikeMs) { A = amp; w = strikeWidth(strikeMs); soft = strikeSoft(strikeMs); t = 0.f; }
 	float process(float dt) {
 		float v = (t < w) ? A : 0.f;
+		if (soft > 0.f) { sz += (v - sz) * (1.f - std::exp(-dt / soft)); v = sz; }
+		else sz = v;
 		t += dt;
 		lp += (v - lp) * (1.f - std::exp(-dt / 0.25e-3f));
 		float x = v - 0.7f * lp;
@@ -52,6 +63,36 @@ struct PulseShaper {
 		return x;
 	}
 };
+
+// How hard the shaped trigger rings a resonator at f: |X(f)| of the pulse (after the
+// shaper and its diode), by a direct DFT over the pulse. Worked out once per hit.
+static inline float shapedPulseMag(float A, float strikeMs, float f, float fs, bool soft) {
+	PulseShaper p;
+	p.fire(A, strikeMs);
+	if (!soft) p.soft = 0.f;
+	const float dt = 1.f / fs;
+	int n = (int)((p.w + 8.f * p.soft + 3e-3f) * fs);
+	float w = 2.f * PI * f * dt, cr = std::cos(w), sr = std::sin(w), c = 1.f, s = 0.f;
+	double re = 0.0, im = 0.0;
+	for (int i = 0; i < n; i++) {
+		float x = p.process(dt);
+		re += x * c; im -= x * s;
+		float c2 = c * cr - s * sr; s = s * cr + c * sr; c = c2;
+	}
+	return (float)std::sqrt(re * re + im * im) * dt;
+}
+// STRIKE and tuning hold the ring level: the gain that brings this hit's pulse (height A,
+// STRIKE ms, resonator at f) to the ring a stock 1 ms pulse gives at fStock. Use with the
+// resonator's wRef = 2 pi fStock. Rounded edges (STRIKE above 1 ms) get half their loss
+// mostly made up, so a soft mallet is darker and only a little quieter.
+static inline float strikeComp(float A, float strikeMs, float f, float fStock, float fs) {
+	float st = shapedPulseMag(A, 1.f, fStock, fs, false);
+	float hard = shapedPulseMag(A, strikeMs, f, fs, false);
+	float act = strikeMs > 1.f ? shapedPulseMag(A, strikeMs, f, fs, true) : hard;
+	float loss = std::max(act, 1e-9f) / std::max(hard, 1e-9f);
+	float keep = std::max(std::pow(loss, 0.3f), 0.6f);   // at most about 4.4 dB quieter
+	return clampf(st / std::max(act, 1e-9f) * keep, 0.05f, 50.f);
+}
 
 // Bridged-T resonator as a trapezoidal state-variable filter. Excite with the shaped
 // pulse; ring() returns the band-pass ring. T60 sets the ring time; T60 <= 0 gives a
@@ -76,6 +117,7 @@ struct Resonator {
 		ic1 = 2.f * v1 - ic1; ic2 = 2.f * v2 - ic2;
 		bp = v1; lp = v2;
 		if (!std::isfinite(bp) || !std::isfinite(lp)) reset();
+		if (std::fabs(ic1) < 1e-20f && std::fabs(ic2) < 1e-20f) ic1 = ic2 = 0.f;   // no denormals
 		return bp;
 	}
 };
@@ -93,6 +135,7 @@ struct Svf {
 		ic1 = 2.f * v1 - ic1; ic2 = 2.f * v2 - ic2;
 		lp = v2; bp = v1; hp = x - k * v1 - v2;
 		if (!std::isfinite(lp)) { ic1 = ic2 = lp = bp = hp = 0.f; }
+		if (std::fabs(ic1) < 1e-20f && std::fabs(ic2) < 1e-20f) ic1 = ic2 = 0.f;
 	}
 };
 
@@ -102,7 +145,9 @@ struct OnePole {
 	float lp(float x, float hz, float fs) {
 		float g = std::tan(PI * clampf(hz, 1.f, 0.45f * fs) / fs);
 		float v = (x - z) * g / (1.f + g);
-		float y = v + z; z = y + v; return y;
+		float y = v + z; z = y + v;
+		if (std::fabs(z) < 1e-20f) z = 0.f;
+		return y;
 	}
 	float hp(float x, float hz, float fs) { return x - lp(x, hz, fs); }
 };
@@ -124,7 +169,7 @@ static inline float opamp(float x, float drive) {
 	return 10.5f * std::tanh(x * pre / 10.5f) / (1.f + 0.6f * drive);
 }
 
-// Accent: trigger height 4 V, up to 14 V when accented (VR3)
+// Accent: trigger height 4 V, up to 14 V when accented (VR3); see accentLaw()
 static inline float triggerVolts(float accentKnob, float accentIn) {
 	return 4.f + 10.f * clampf(accentKnob, 0.f, 1.f) * clampf(accentIn, 0.f, 1.f);
 }

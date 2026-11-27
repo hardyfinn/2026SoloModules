@@ -97,6 +97,26 @@ int main(int argc, char** argv) {
 	printf("tuned up an octave: peak %.2f V\n", peak(sh));
 	check(peak(sh) > peak(s) * 0.6f && peak(sh) < peak(s) * 1.6f, "level roughly constant across tune");
 
+	// 2.2.0 review: STRIKE and V/OCT above the knob hold the level; sustain sits on TUNE; sleeps
+	{
+		float lo = 1e9f, hi2 = 0.f;
+		for (int j = 0; j <= 10; j++) { Controls c = stock; c.strike = j / 10.f; float p = peak(render(c, 0.f, 0.5f)); lo = std::min(lo, p); hi2 = std::max(hi2, p); }
+		printf("STRIKE 0-1: peak %.2f to %.2f V\n", lo, hi2);
+		check(hi2 / lo < 2.f, "STRIKE moves the peak by under 6 dB");
+		Controls c = stock; c.tuneHz = 880.f; float p880 = peak(render(c, 0.f, 0.5f));
+		c.tuneHz = 440.f; float p440 = peak(render(c, 0.f, 0.5f));
+		printf("V/OCT up: 440 Hz %.2f V, 880 Hz %.2f V\n", p440, p880);
+		check(p440 > peak(s) * 0.5f && p880 > peak(s) * 0.5f, "level held above the TUNE range");
+		Controls su = stock; su.decay = 1.f; std::vector<float> body; render(su, 0.f, 3.f, &body);
+		float f = freqBetween(body, 2.f, 3.f);
+		printf("sustain pitch %.2f Hz (TUNE 49.5)\n", f);
+		check(std::fabs(f / 49.5f - 1.f) < 0.02f, "sustain within 2 %% of TUNE");
+		Engine e; e.setSampleRate(FS); e.hit(0.f, stock);
+		int n = 0; while (!e.sleeping() && n < 10 * FS) { e.process(stock); n++; }
+		printf("kick asleep after %.2f s\n", n / FS);
+		check(e.sleeping() && n < 8 * FS, "silent kick sleeps");
+	}
+
 	// AGE: two serials differ, AGE 0 identical
 	{
 		Controls a = stock; a.age = 1.f; Engine e1, e2; e1.setSampleRate(FS); e2.setSampleRate(FS);

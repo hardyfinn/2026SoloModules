@@ -5,23 +5,23 @@
 namespace c808 {
 
 namespace snare {
-enum Knob { TUNE, TONE, SNAPPY, ACCENT, LEVEL, AGE, RATIO, BALANCE, DECAY, SWEEP, STRIKE, SNAPDECAY, NOISECOL, DRIVE, NUM_KNOBS };
+enum Knob { TUNE, TONE, SNAPPY, ACCENT, LEVEL, AGE, RATIO, HISS, DECAY, SWEEP, STRIKE, SNAPDECAY, NOISECOL, DRIVE, NUM_KNOBS };
 inline const VoiceSpec& spec() {
 	static const KnobDef knobs[] = {
 		{"TUNE", "TUNE", "Tune (low head; the 808 sits near 180 Hz)", 0.500000f, DISP_EXP, 90.0f, 360.0f, " Hz", 0, 0, 0, false},
-		{"TONE", "TONE", "Tone (low-pass on the snappy noise)", 0.500000f, DISP_EXP, 1000.0f, 12000.0f, " Hz", 0, 1, 0, false},
+		{"TONE", "TONE", "Tone (balance of the two shells, as on the 808: low <-> high)", 0.500000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 1, 0, false},
 		{"SNAPPY", "SNAPPY", "Snappy (noise level)", 0.500000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 2, 0, false},
 		{"ACCENT", "ACCENT", "Accent level (how far an accented hit goes from 4 V towards 14 V)", 0.600000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 3, 0, false},
 		{"LEVEL", "LEVEL", "Level", 1.000000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 4, 0, true},
 		{"AGE", "AGE", "Age (0 = new unit on spec; up = this unit's part tolerances, hit-to-hit drift, worn caps at the top)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 5, 0, true},
-		{"RATIO", "RATIO", "Ratio (high head / low head; stock about 1.83)", 0.351852f, DISP_LIN, 1.2f, 3.0f, "x", 1, 0, 0, false},
-		{"BALANCE", "BALANCE", "Balance (low head <-> high head)", 0.500000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 1, 0, false},
-		{"DECAY", "DECAY", "Decay (head ring time)", 0.435771f, DISP_EXP, 40.0f, 2000.0f, " ms", 1, 2, 0, false},
-		{"SWEEP", "SWEEP", "Sweep (attack pitch jump of the heads)", 0.150000f, DISP_LIN, 0.0f, 2.0f, " oct", 1, 3, 0, false},
-		{"STRIKE", "STRIKE", "Strike (trigger pulse width; wide = softer)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 4, 0, false},
+		{"RATIO", "RATIO", "Ratio (high shell / low shell; stock about 1.83)", 0.351852f, DISP_LIN, 1.2f, 3.0f, "x", 1, 0, 0, false},
+		{"HISS", "HISS", "Hiss (low-pass on the snappy noise)", 0.500000f, DISP_EXP, 1000.0f, 12000.0f, " Hz", 2, 2, 0, false},
+		{"DECAY", "DECAY", "Decay (shell ring time)", 0.435771f, DISP_EXP, 40.0f, 2000.0f, " ms", 1, 1, 0, false},
+		{"SWEEP", "SWEEP", "Sweep (attack pitch jump of the shells; not on the 808)", 0.000000f, DISP_LIN, 0.0f, 2.0f, " oct", 1, 2, 0, false},
+		{"STRIKE", "STRIKE", "Strike (below 1 ms: shorter, harder pulse; above: rounded edges, softer; level held)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 3, 0, false},
 		{"SNAPDECAY", "SNAP DEC", "Snap decay (length of the noise)", 0.541986f, DISP_EXP, 30.0f, 1500.0f, " ms", 2, 0, 0, false},
 		{"NOISECOL", "COLOUR", "Noise colour (high-pass corner on the noise)", 0.436295f, DISP_EXP, 200.0f, 8000.0f, " Hz", 2, 1, 0, false},
-		{"DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 2, 2, 0, false},
+		{"DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 4, 0, false},
 	};
 	static const CvDef cvs[] = {
 		{"V/OCT", -1},
@@ -30,7 +30,7 @@ inline const VoiceSpec& spec() {
 		{"RATIO", 6},
 		{"DECAY", 8},
 		{"SNAP DEC", 11},
-		{"COLOUR", 12},
+		{"HISS", 7},
 	};
 	static const VoiceSpec s = {"Snare808", "808 Snare", NUM_KNOBS, knobs, 7, cvs};
 	return s;
@@ -79,7 +79,7 @@ inline const VoiceSpec& spec() {
 		{"AGE", "AGE", "Age (0 = new unit on spec; up = this unit's part tolerances, hit-to-hit drift, worn caps at the top)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 5, 0, true},
 		{"DECAY", "DECAY", "Decay (times the 808's ring for this drum)", 0.500000f, DISP_EXP, 0.2f, 5.0f, "x", 1, 0, 0, false},
 		{"BEND", "BEND", "Bend (downward pitch sweep: tom drop <-> Syndrum zap)", 0.050000f, DISP_LIN, 0.0f, 2.0f, " oct", 1, 1, 0, false},
-		{"STRIKE", "STRIKE", "Strike (trigger pulse width; wide = softer)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 2, 0, false},
+		{"STRIKE", "STRIKE", "Strike (below 1 ms: shorter, harder pulse; above: rounded edges, softer; level held)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 2, 0, false},
 		{"MUTE", "MUTE", "Mute (a hand resting on the head)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 3, 0, false},
 		{"DOUBLE", "DOUBLE", "Double (second, detuned head: beating)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 4, 0, false},
 		{"TONE", "TONE", "Tone (output low-pass)", 0.700000f, DISP_EXP, 300.0f, 12000.0f, " Hz", 1, 5, 0, false},
@@ -112,7 +112,7 @@ inline const VoiceSpec& spec() {
 		{"RING", "RING", "Ring (resonator decay)", 0.409728f, DISP_EXP, 5.0f, 800.0f, " ms", 1, 1, 0, false},
 		{"GATE", "GATE", "Gate (how long the VCA stays open)", 0.451545f, DISP_EXP, 1.0f, 100.0f, " ms", 1, 2, 0, false},
 		{"SNAP", "SNAP", "Snap (high-pass corner on the crack)", 0.588592f, DISP_EXP, 100.0f, 5000.0f, " Hz", 1, 3, 0, false},
-		{"STRIKE", "STRIKE", "Strike (trigger pulse width; wide = softer)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 4, 0, false},
+		{"STRIKE", "STRIKE", "Strike (below 1 ms: shorter, harder pulse; above: rounded edges, softer; level held)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 4, 0, false},
 		{"DRIVE", "DRIVE", "Drive (VCA and op-amp into saturation)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 5, 0, false},
 	};
 	static const CvDef cvs[] = {
@@ -132,12 +132,12 @@ namespace clave {
 enum Knob { TUNE, ACCENT, LEVEL, AGE, RING, STRIKE, BEND, OVERTONE, RATIO, DRIVE, NUM_KNOBS };
 inline const VoiceSpec& spec() {
 	static const KnobDef knobs[] = {
-		{"TUNE", "TUNE", "Tune (the 808 sits near 2.5 kHz)", 0.500000f, DISP_LIN, -2.0f, 1.0f, " oct", 0, 0, 0, false},
+		{"TUNE", "TUNE", "Tune (the 808 sits near 2.5 kHz)", 0.666667f, DISP_LIN, -2.0f, 1.0f, " oct", 0, 0, 0, false},
 		{"ACCENT", "ACCENT", "Accent level (how far an accented hit goes from 4 V towards 14 V)", 0.600000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 1, 0, false},
 		{"LEVEL", "LEVEL", "Level", 1.000000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 2, 0, true},
 		{"AGE", "AGE", "Age (0 = new unit on spec; up = this unit's part tolerances, hit-to-hit drift, worn caps at the top)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 3, 0, true},
 		{"RING", "RING", "Ring (decay, far past the stock click)", 0.314135f, DISP_EXP, 5.0f, 1500.0f, " ms", 1, 0, 0, false},
-		{"STRIKE", "STRIKE", "Strike (hard stick <-> soft mallet)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 1, 0, false},
+		{"STRIKE", "STRIKE", "Strike (hard stick <-> soft mallet: rounded pulse edges; level held)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 1, 0, false},
 		{"BEND", "BEND", "Bend (downward pitch drop: log drum, water drop)", 0.000000f, DISP_LIN, 0.0f, 2.0f, " oct", 1, 2, 0, false},
 		{"OVERTONE", "OVERTONE", "Overtone (level of a second resonator)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 3, 0, false},
 		{"RATIO", "RATIO", "Ratio (overtone / fundamental)", 0.250000f, DISP_LIN, 1.2f, 6.0f, "x", 1, 4, 0, false},

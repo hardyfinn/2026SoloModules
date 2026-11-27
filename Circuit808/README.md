@@ -15,7 +15,8 @@ Circuit-Bendable, Digital Model of the Roland TR-808 Bass Drum Circuit", DAFx-14
 a 1 ms trigger pulse (4 V, up to 14 V when accented) goes through a pulse shaper with a diode
 clamp into a **bridged-T resonator** at 49.5 Hz. There is no VCA: the ring time comes from a
 feedback buffer around the bridged-T. For about 6 ms after the hit a transistor (Q43) shorts
-part of the bridged-T, so the first cycle runs more than an octave high (the "attack jump").
+part of the bridged-T, so the first cycle runs more than an octave high (the "attack jump");
+Q43 lets go as its drive decays, so the pitch glides back down over those 6 ms.
 On big negative swings the same transistor leaks, so loud early cycles run sharp and settle
 back (the "pitch sigh", roughly 58 to 49.5 Hz). Then a one-pole tone filter and the output stage.
 
@@ -25,14 +26,14 @@ puts every knob back (LEVEL is left alone).
 | Knob | What it is in the circuit | Stock | Range |
 |---|---|---|---|
 | TUNE | bridged-T centre (a trimmer on the 808) | 49.5 Hz | 20-220 Hz, + V/OCT |
-| DECAY | feedback buffer (the 808's DECAY pot) | 0.43 s ring | 80 ms - 1.6 s stock range, then to 8 s, then SUSTAIN (self-oscillation) |
+| DECAY | feedback buffer (the 808's DECAY pot) | 0.43 s ring | 80 ms - 1.6 s stock range, then to 8 s, then SUSTAIN (self-oscillation, on TUNE: the sigh fades out) |
 | TONE | output low-pass | 1.2 kHz | 150 Hz - 10 kHz |
 | ACCENT | global accent level (VR3) | 60 % | accented hit 4-14 V |
 | LEVEL | output level | | (not randomized) |
 | AGE | part tolerances + drift + wear | 0 (new) | see below (not randomized) |
 | SWEEP | size of the attack jump | 1.1 oct | 0-2.5 oct |
 | BEND | how long the jump lasts | 6 ms | 1-60 ms (long = zaps) |
-| STRIKE | trigger pulse width | 1 ms | 0.1-10 ms (wide = softer) |
+| STRIKE | trigger pulse | 1 ms | below 1 ms a shorter, harder pulse; above, rounded edges (soft mallet). The ring level is held |
 | CLICK | shaped pulse straight through the bridged-T | 1x | 0-2x |
 | RETRIG | second pulse into the bridged-T | small, right after the jump | up = louder and later: a flam |
 | SIGH | Q43 leak: loud cycles sharp | 808 amount | off to a deep boom drop |
@@ -44,7 +45,7 @@ puts every knob back (LEVEL is left alone).
 same. Every 808 Kick has a serial number (saved with the patch, shown and re-rollable in the
 right-click menu) that fixes where its parts sit inside those tolerances; AGE scales how far
 they are off (pitch about ±12 %, decay ±25 %, tone ±20 %, sigh, jump and level). Each hit also
-drifts a little. Past about 70 % the capacitors are worn: shorter ring and a little hiss (halved in 2.0.1).
+drifts a little. Past about 70 % the capacitors are worn: shorter ring and a little hiss.
 At 0 every unit is exactly the stock 808.
 
 **Jacks.** TRIG, ACCENT (gate = accented; 0-5 V = how much, read at each hit), CV for
@@ -65,18 +66,46 @@ per-hit drift, worn parts with a little hiss past 70 %). LEVEL and AGE are never
 
 | Module | Circuit | Controls beyond the stock 808 |
 |---|---|---|
-| 808 Snare | two bridged-T heads (about 180 and 330 Hz) + white noise through high-pass and low-pass into its own VCA | TUNE, RATIO, BALANCE, DECAY, SWEEP, STRIKE, SNAP DECAY, COLOUR, DRIVE |
-| 808 Clap | white noise -> band-pass -> VCA from a sawtooth that fires bursts, plus a reverb envelope | BAND, RES, TONE, BURSTS (1-8), SPREAD, SNAP, TAIL, MIX, DRIVE |
+| 808 Snare | two bridged-T shells (about 180 and 330 Hz), balanced by TONE as on the 808, + white noise through high-pass (COLOUR) and low-pass (HISS) into its own VCA (SNAPPY) | TUNE, RATIO, HISS, DECAY, SWEEP, STRIKE, SNAP DECAY, COLOUR, DRIVE |
+| 808 Clap | white noise -> band-pass -> VCA from a sawtooth that fires evenly spaced bursts (the last rings longer), plus a reverb envelope | BAND, RES, TONE, BURSTS (1-8), SPREAD, SNAP, TAIL, MIX, DRIVE |
 | 808 Tom / Conga | one bridged-T with a downward bend; toms add pink noise. LOW/MID/HIGH and TOM/CONGA switches (toms about 90/130/180 Hz, congas 165/250/370 Hz) | TUNE, DECAY, BEND, STRIKE, MUTE, DOUBLE, TONE, SLAP, DRIVE |
 | 808 Rim | two high resonators (about 455 Hz and 1.67 kHz) through a fast, asymmetric transistor VCA and a high-pass | TUNE, RATIO, RING, GATE, SNAP, STRIKE, DRIVE |
 | 808 Clave | one bridged-T near 2.5 kHz, very short ring | TUNE, RING, STRIKE, BEND, OVERTONE, RATIO, DRIVE |
 | 808 Maracas | white noise -> high-pass -> short attack/decay VCA | LENGTH, CUT, GRAINS, SHAKE, ATTACK, DRIVE |
-| 808 Cowbell | two pulse oscillators (540 and 800 Hz, as in 808 Metal) -> band-pass -> two-stage VCA | TUNE, DECAY, INTERVAL, WIDTH, FILTER, RES, SHAPE, DRIVE |
+| 808 Cowbell | two pulse oscillators (540 and 800 Hz, as in 808 Metal) -> two-stage VCA -> band-pass | TUNE, DECAY, INTERVAL, WIDTH, FILTER, RES, SHAPE, DRIVE |
 
 Stock values for these seven are the commonly published figures for the 808 voices, fitted by
 ear and by test, not read from component values (Werner, Abel and Smith's cowbell paper, AES 2014,
 is behind a paywall). `make test` checks levels, accent, 40 random and extreme settings per voice,
-AGE, the clap's burst count and the conga's stock SLAP.
+AGE, the clap's burst count and the conga's stock SLAP, plus the 2.2.0 review checks below.
+
+## How all eight behave (2.2.0)
+
+- **STRIKE** is the trigger pulse. Below 1 ms it gets shorter and harder; above 1 ms it stays 1 ms
+  with rounded edges (a soft mallet: darker, at most about 4 dB quieter). The ring level is held:
+  each hit works out how hard its pulse rings the resonator at the current tuning and makes up
+  the difference, so neither STRIKE nor TUNE / V/OCT is a hidden volume knob.
+- **Accent** follows one law on every voice: the trigger rises from 4 V towards 14 V and the
+  sound grows by about +5 dB at the stock ACCENT setting. Accent is read over the first 0.5 ms
+  after a trigger, so an accent that arrives a sample or two late (through a mult or logic
+  module) still counts; every voice waits the same 0.5 ms, so a kit stays in time.
+- **Noise** has the same level at any sample rate (44.1 to 192 kHz). All noise voices share
+  one noise sequence, as the real 808 has one noise generator feeding snare, clap and maracas;
+  two copies of the same voice layered together therefore sound like one louder copy.
+- **Output stage.** DRIVE and LEVEL are smoothed (5 ms), a 10 Hz DC blocker follows the drive,
+  and worn-part hiss sits ahead of the output amp on every voice.
+- **CPU.** Knob curves are worked out every 16 samples, and a voice that has been silent for
+  0.1 s (with AGE hiss off) is skipped until its next trigger.
+- **V/OCT** ignores NaN and is limited to ±10 V.
+
+2.2.0 also fixes the clave's stock pitch (2.5 kHz; it was 1.77 kHz), makes the snare's
+noise as loud as its shells at stock SNAPPY, moves the snare's shell balance onto the stock row
+as TONE (the noise low-pass is now HISS), sets the snare's stock SWEEP to 0, gives maracas
+GRAINS beads on every hit at a rate per second, levels the six tom/conga sizes, holds the level
+across clap BAND/RES and cowbell RES, and puts the cowbell's envelope before its band-pass as in
+the circuit (no click). The kick's attack-jump size is unchanged until it is checked against the
+schematic.
+
 
 ## Build
 

@@ -29,6 +29,10 @@ struct Kick808 : Module {
 	dsp::SchmittTrigger trigIn, hitButton;
 	dsp::ClockDivider lightDivider;
 	uint32_t serial = 808;
+	// accent is read over 0.5 ms after a trigger, so an accent that arrives a sample or
+	// two late (through other modules) still counts; every hit waits the same 0.5 ms
+	int pending = -1;
+	float pendingAcc = 0.f;
 
 	struct DecayQuantity : ParamQuantity {
 		std::string getDisplayValueString() override {
@@ -67,7 +71,7 @@ struct Kick808 : Module {
 		configButton(HIT_PARAM, "Hit");
 		mapped(SWEEP_PARAM, Stock::SWEEP, "Sweep (attack jump: Q43 shorts part of the bridged-T)", kick808::sweepOct, " oct");
 		mapped(BEND_PARAM, Stock::BEND, "Bend (attack jump time)", kick808::bendMs, " ms");
-		mapped(STRIKE_PARAM, Stock::STRIKE, "Strike (trigger pulse width)", kick808::strikeMs, " ms");
+		mapped(STRIKE_PARAM, Stock::STRIKE, "Strike (below 1 ms: shorter, harder pulse; above: rounded edges, softer; level held)", kick808::strikeMs, " ms");
 		mapped(CLICK_PARAM, Stock::CLICK, "Click (shaped pulse straight through the bridged-T)", kick808::clickGain, "x");
 		knob(RETRIG_PARAM, Stock::RETRIG, "Retrig (second pulse: small at stock, up = louder and later, a flam)");
 		knob(SIGH_PARAM, Stock::SIGH, "Sigh (Q43 leak: loud cycles run sharp, then settle)");
@@ -111,7 +115,9 @@ struct Kick808 : Module {
 
 	void process(const ProcessArgs& args) override {
 		engine.setSampleRate(args.sampleRate);
-		ctl.tuneHz = std::exp2(params[TUNE_PARAM].getValue() + inputs[VOCT_INPUT].getVoltage());
+		float voct = inputs[VOCT_INPUT].getVoltage();
+		voct = std::isfinite(voct) ? clamp(voct, -10.f, 10.f) : 0.f;
+		ctl.tuneHz = std::exp2(params[TUNE_PARAM].getValue() + voct);
 		ctl.decay = knobCv(DECAY_PARAM, DECAY_INPUT);
 		ctl.tone = knobCv(TONE_PARAM, TONE_INPUT);
 		ctl.accent = params[ACCENT_PARAM].getValue();
@@ -129,13 +135,21 @@ struct Kick808 : Module {
 
 		bool hit = trigIn.process(inputs[TRIG_INPUT].getVoltage(), 0.1f, 1.f);
 		hit |= hitButton.process(params[HIT_PARAM].getValue());
-		if (hit) {
-			float acc = inputs[ACCENT_INPUT].isConnected() ? clamp(inputs[ACCENT_INPUT].getVoltage() / 5.f, 0.f, 1.f) : 0.f;
-			engine.hit(acc, ctl);
+		float acc = inputs[ACCENT_INPUT].isConnected() ? clamp(inputs[ACCENT_INPUT].getVoltage() / 5.f, 0.f, 1.f) : 0.f;
+		if (hit && pending < 0) { pending = (int)(0.0005f * args.sampleRate); pendingAcc = 0.f; }
+		if (pending >= 0) {
+			pendingAcc = std::max(pendingAcc, acc);
+			if (pending-- == 0) engine.hit(pendingAcc, ctl);
 		}
-		engine.process(ctl);
-		outputs[OUT_OUTPUT].setVoltage(engine.out);
-		outputs[ENV_OUTPUT].setVoltage(engine.env);
+		if (pending < 0 && engine.sleeping()) {
+			outputs[OUT_OUTPUT].setVoltage(0.f);
+			outputs[ENV_OUTPUT].setVoltage(0.f);
+		}
+		else {
+			engine.process(ctl);
+			outputs[OUT_OUTPUT].setVoltage(engine.out);
+			outputs[ENV_OUTPUT].setVoltage(engine.env);
+		}
 
 		if (lightDivider.process()) {
 			float dt = args.sampleTime * lightDivider.getDivision();
