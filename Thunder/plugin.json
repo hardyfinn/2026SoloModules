@@ -1,0 +1,39 @@
+{
+  "slug": "Thunder",
+  "name": "Thunder",
+  "version": "2.4.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Thunder",
+      "name": "Thunder",
+      "description": "Drum voice in the Perkons style: 15 algorithms with A/B MORPH, multimode filter, overdrive and bucket-brigade delay, two learnable CV inputs, WEAR and MUTATE for hits that never repeat exactly, 8 memories",
+      "tags": [
+        "Drum",
+        "Synth voice",
+        "Filter",
+        "Distortion",
+        "Delay"
+      ]
+    },
+    {
+      "slug": "Lightning",
+      "name": "Lightning",
+      "description": "Four-slot hit catcher for Thunder: KEEP grabs the last whole hit already trimmed, SEND puts its knob settings back on Thunder; also takes any audio on IN. Per-slot TUNE, DECAY, LEVEL, 4 outs + MIX, sounds saved in the patch",
+      "tags": [
+        "Sampler",
+        "Drum",
+        "Expander"
+      ]
+    }
+  ]
+}

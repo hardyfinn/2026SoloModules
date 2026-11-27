@@ -4,5 +4,6 @@ Plugin* pluginInstance;
 
 void init(Plugin* p) {
 	pluginInstance = p;
-	p->addModel(modelPerun);
+	p->addModel(modelThunder);
+	p->addModel(modelLightning);
 }

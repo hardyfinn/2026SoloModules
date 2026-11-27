@@ -1,14 +1,14 @@
-// Offline checks for the Perun engine + demo WAVs. No Rack needed.
+// Offline checks for the Thunder engine + demo WAVs. No Rack needed.
 //   make test   (prints the checks, writes test/out/*.wav)
-#include "../src/PerunEngine.hpp"
-#include "../src/PerunPresets.hpp"
+#include "../src/ThunderEngine.hpp"
+#include "../src/ThunderPresets.hpp"
 #include <cstdio>
 #include <string>
 #include <vector>
 #include <chrono>
 #include <cstring>
 
-using namespace perun;
+using namespace thunder;
 static float SR = 48000.f;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { std::printf("FAIL: "); fails++; } else std::printf("ok:   "); std::printf(__VA_ARGS__); std::printf("\n"); } while (0)
@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
 		for (int m = 0; m < 3; m++) { c.mode = m; c.p1 = 0.6f; c.p2 = 0.4f; std::vector<float> x = pattern(e, c, "x.xX.x.xx.x.X.xx", 124.f, 2); o.insert(o.end(), x.begin(), x.end()); }
 		writeWav(dir + "/chaos-logistic-feedback-lorenz.wav", o);
 	}
-	// groove: three Peruns summed (kick, snare, hat)
+	// groove: three Thunders summed (kick, snare, hat)
 	{
 		Engine k, s, h; Controls ck = fromPreset(0), cs = fromPreset(4), ch = fromPreset(6);
 		ch.level = 0.5f; cs.level = 0.7f;
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
 			if (ph[i16] != '.') h.hit(ph[i16] == 'X', ch);
 			for (int i = 0; i < stepLen; i++) { k.process(ck); s.process(cs); h.process(ch); o.push_back(k.out + s.out + h.out); }
 		}
-		writeWav(dir + "/groove-three-peruns.wav", o, 0.07f);
+		writeWav(dir + "/groove-three-thunders.wav", o, 0.07f);
 	}
 	std::printf("%s (%d failed)\n", fails ? "SOME CHECKS FAILED" : "all checks passed", fails);
 	return fails ? 1 : 0;

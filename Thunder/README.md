@@ -1,7 +1,7 @@
-# Perun
+# Thunder
 
-One thunder drum voice for VCV Rack, 26 HP. Perun is the Slavic cousin of Pērkons, the Latvian
-thunder god, and the module follows the idea of Erica Synths' Perkons voices: a digital sound
+A drum voice for VCV Rack, 26 HP, with a companion sampler, Lightning (below). Thunder follows
+the idea of Erica Synths' Perkons voices (Pērkons is the Latvian thunder god): a digital sound
 engine, then a multimode filter, then an overdrive, with DECAY fully up turning any sound into a
 drone. Every sound model here is our own; nothing comes from Erica's firmware or samples.
 
@@ -53,3 +53,26 @@ ALGO B ──┘                                                ┘
 `test/out/` without Rack. `python3 res/make_panel.py` redraws the panel.
 
 MIT licence.
+
+# Lightning
+
+A 4-slot hit catcher for Thunder, 22 HP. Put it directly to the right of Thunder (the green LINK
+light comes on). Randomise or play Thunder until a hit sounds right, press **KEEP 1**, find the next
+one, press **KEEP 2**, and so on. Nothing to trim: Thunder tells Lightning exactly when each hit
+starts, and Lightning cuts the end where the sound (including delay echoes) has died away.
+
+![panel](panel-preview-lightning.png)
+
+- **KEEP n:** keeps the last whole hit. If a hit is still ringing, KEEP waits for it to finish (the
+  slot shows WAIT) and takes that one. Press again to cancel.
+- **SEND n:** puts the knob settings that made slot n's hit back on Thunder (including where MUTATE
+  had wandered to; MUTATE's wander is cleared and LOCK turned on so the sound stays put). Lit when the
+  slot came from Thunder and Thunder is linked.
+- **Waveforms:** click one to hear that slot. **T** marks a sound kept from Thunder.
+- **TUNE** (+-24 semitones, right-click for semitone steps), **DECAY** (fully up = the whole hit,
+  lower fades it sooner), **LEVEL**, per slot.
+- **TRIG 1-4**, **OUT 1-4** and **MIX**. A patched OUT leaves the mix (right-click to keep it in).
+- **IN** + **SENS:** with IN patched, Lightning listens to any audio instead of Thunder and finds hits
+  by level (it also catches a hit that lands on the tail of the one before).
+- The four sounds are saved inside the patch. Right-click a slot to save it as a WAV, load a WAV, or
+  clear it.

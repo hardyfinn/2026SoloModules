@@ -1,8 +1,9 @@
-// Perun: one thunder drum voice in the Perkons style (all models our own).
-// The sound engine is in PerunEngine.hpp; factory memories in PerunPresets.hpp.
+// Thunder: one drum voice in the Perkons style (all models our own).
+// The sound engine is in ThunderEngine.hpp; factory memories in ThunderPresets.hpp.
 #include "plugin.hpp"
-#include "PerunEngine.hpp"
-#include "PerunPresets.hpp"
+#include "ThunderEngine.hpp"
+#include "ThunderPresets.hpp"
+#include "Wav.hpp"
 #include <osdialog.h>
 #include <atomic>
 #include <fstream>
@@ -23,85 +24,14 @@ static const char* const TARGET_NAMES[NUM_TARGETS] = {
 	"ALGO A", "ALGO B", "MORPH", "MODE", "TUNE", "BEND", "SWEEP", "CLICK", "DECAY", "P1", "P2", "NOISE",
 	"CUTOFF", "RES", "ENV", "VCF", "DRIVE", "TONE", "SEND", "TIME", "FDBK", "ACCENT", "WEAR", "MUTATE", "LEVEL"};
 
-static const char* const ALGO_NAMES[perun::NUM_ALGOS] = {
+static const char* const ALGO_NAMES[thunder::NUM_ALGOS] = {
 	"Fold BD", "Wavetable BD", "Resonant BD", "Complex (FM)", "Res Snare", "Slap",
 	"Tom", "Noise Hat", "Pulse Hat", "Karplus", "Sample", "Metal", "Particles", "Circuit 909", "Chaos"};
 
-// Minimal WAV reader: PCM 8/16/24/32 bit or float, any channel count (mixed to mono), up to 20 s.
-static bool readWav(const std::string& path, perun::Sample& out, std::string& err) {
-	std::ifstream f(path, std::ios::binary);
-	if (!f) {
-		err = "could not open file";
-		return false;
-	}
-	std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-	auto u16 = [&](size_t i) { return (uint32_t) b[i] | ((uint32_t) b[i + 1] << 8); };
-	auto u32 = [&](size_t i) { return u16(i) | (u16(i + 2) << 16); };
-	if (b.size() < 44 || std::memcmp(&b[0], "RIFF", 4) || std::memcmp(&b[8], "WAVE", 4)) {
-		err = "not a WAV file";
-		return false;
-	}
-	int fmt = 0, ch = 0, bits = 0;
-	uint32_t rate = 0;
-	size_t dataPos = 0, dataLen = 0;
-	size_t p = 12;
-	while (p + 8 <= b.size()) {
-		uint32_t len = u32(p + 4);
-		if (!std::memcmp(&b[p], "fmt ", 4) && p + 24 <= b.size()) {
-			fmt = u16(p + 8);
-			ch = u16(p + 10);
-			rate = u32(p + 12);
-			bits = u16(p + 22);
-			if (fmt == 0xFFFE && p + 34 <= b.size()) fmt = u16(p + 32);
-		}
-		else if (!std::memcmp(&b[p], "data", 4)) {
-			dataPos = p + 8;
-			dataLen = std::min((size_t) len, b.size() - dataPos);
-		}
-		p += 8 + len + (len & 1);
-	}
-	if (!dataPos || ch < 1 || rate < 1000 || !(fmt == 1 || fmt == 3)) {
-		err = "unsupported WAV format";
-		return false;
-	}
-	int bps = bits / 8;
-	if (bps < 1 || (fmt == 3 && bits != 32)) {
-		err = "unsupported bit depth";
-		return false;
-	}
-	size_t frames = dataLen / (bps * ch);
-	frames = std::min(frames, (size_t) rate * 20);
-	out.data.assign(frames, 0.f);
-	out.sr = (float) rate;
-	for (size_t i = 0; i < frames; i++) {
-		float s = 0.f;
-		for (int c = 0; c < ch; c++) {
-			size_t q = dataPos + (i * ch + c) * bps;
-			float v = 0.f;
-			if (fmt == 3) {
-				uint32_t w = u32(q);
-				std::memcpy(&v, &w, 4);
-			}
-			else if (bits == 8)
-				v = (b[q] - 128) / 128.f;
-			else if (bits == 16)
-				v = (int16_t) u16(q) / 32768.f;
-			else if (bits == 24) {
-				int32_t w = (int32_t) ((b[q] << 8) | (b[q + 1] << 16) | (b[q + 2] << 24)) >> 8;
-				v = w / 8388608.f;
-			}
-			else if (bits == 32)
-				v = (int32_t) u32(q) / 2147483648.f;
-			s += v;
-		}
-		out.data[i] = s / ch;
-	}
-	return true;
-}
 
-struct Perun : Module {
+struct Thunder : Module, ThunderLink {
 	enum ParamIds {
-		// the 24 values a memory holds, in PerunPresets.hpp order
+		// the 24 values a memory holds, in ThunderPresets.hpp order
 		ALGOA_PARAM, ALGOB_PARAM, MORPH_PARAM, MODE_PARAM, TUNE_PARAM, BEND_PARAM, SWEEP_PARAM, CLICK_PARAM,
 		DECAY_PARAM, P1_PARAM, P2_PARAM, NOISE_PARAM, CUTOFF_PARAM, RES_PARAM, FENV_PARAM, VCF_PARAM,
 		DRIVE_PARAM, TONE_PARAM, SEND_PARAM, TIME_PARAM, FDBK_PARAM, ACCENT_PARAM, WEAR_PARAM, MUTATE_PARAM,
@@ -117,8 +47,8 @@ struct Perun : Module {
 	enum OutputIds { ENV_OUTPUT, SEND_OUTPUT, OUT_OUTPUT, NUM_OUTPUTS };
 	enum LightIds { LOCK_LIGHT, HIT_LIGHT, STORE_LIGHT, ENUMS(MEM_LIGHT, 8), LEARNA_LIGHT, LEARNB_LIGHT, NUM_LIGHTS };
 
-	perun::Engine engine;
-	perun::Controls ctl;
+	thunder::Engine engine;
+	thunder::Controls ctl;
 	dsp::SchmittTrigger trigIn, chokeIn, hitButton, storeButton, memButton[8], learnButton[2];
 	// CV A / CV B: learned target (-1 = none); LEARN arms, the next knob you move becomes the target
 	int cvTarget[2] = {12, 2};
@@ -126,7 +56,7 @@ struct Perun : Module {
 	float learnSnap[NUM_TARGETS];
 	int learnCheck = 0;
 	dsp::ClockDivider lightDivider;
-	float mem[8][perun::NUM_MEM_VALUES];
+	float mem[8][thunder::NUM_MEM_VALUES];
 	std::string memName[8];
 	int currentMem = 0;
 	int lastPatch = -1;
@@ -136,13 +66,13 @@ struct Perun : Module {
 	// samples (loaded on the UI thread, swapped in by process())
 	std::string samplePath[3];
 	// 0 = empty, 1 = UI thread writing, 2 = ready for the audio thread
-	perun::Sample pending[3];
+	thunder::Sample pending[3];
 	std::atomic<int> pendingState[3];
 	int hitDelay = 0; // fire 2 samples after the trigger edge so ACC and CVs sent alongside are in
 
-	Perun() {
+	Thunder() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		std::vector<std::string> algos(ALGO_NAMES, ALGO_NAMES + perun::NUM_ALGOS);
+		std::vector<std::string> algos(ALGO_NAMES, ALGO_NAMES + thunder::NUM_ALGOS);
 		configSwitch(ALGOA_PARAM, 0.f, 14.f, 0.f, "Algorithm A", algos);
 		configSwitch(ALGOB_PARAM, 0.f, 14.f, 2.f, "Algorithm B", algos);
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.15f, "Morph (A <-> B)", "%", 0.f, 100.f);
@@ -196,20 +126,20 @@ struct Perun : Module {
 
 	void restoreFactory() {
 		for (int m = 0; m < 8; m++) {
-			const perun::Preset& p = perun::factoryPreset(m);
-			for (int i = 0; i < perun::NUM_MEM_VALUES; i++) mem[m][i] = p.v[i];
+			const thunder::Preset& p = thunder::factoryPreset(m);
+			for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) mem[m][i] = p.v[i];
 			memName[m] = p.name;
 		}
 	}
 
 	void recall(int m) {
-		for (int i = 0; i < perun::NUM_MEM_VALUES; i++) params[i].setValue(mem[m][i]);
+		for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) params[i].setValue(mem[m][i]);
 		currentMem = m;
 		engine.clearMutation();
 	}
 
 	void store(int m) {
-		for (int i = 0; i < perun::NUM_MEM_VALUES; i++) mem[m][i] = params[i].getValue();
+		for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) mem[m][i] = params[i].getValue();
 		memName[m] = string::f("Stored %d", m + 1);
 		currentMem = m;
 		storeArmed = false;
@@ -228,10 +158,10 @@ struct Perun : Module {
 	}
 
 	void loadSample(int slot, const std::string& path) {
-		perun::Sample s;
+		thunder::Sample s;
 		std::string err;
 		if (!readWav(path, s, err)) {
-			WARN("Perun: %s: %s", path.c_str(), err.c_str());
+			WARN("Thunder: %s: %s", path.c_str(), err.c_str());
 			return;
 		}
 		int expected = 0;
@@ -244,7 +174,7 @@ struct Perun : Module {
 	void resetSample(int slot) {
 		int expected = 0;
 		if (!pendingState[slot].compare_exchange_strong(expected, 1)) return;
-		perun::makeDefaultSample(slot, pending[slot]);
+		thunder::makeDefaultSample(slot, pending[slot]);
 		samplePath[slot] = "";
 		pendingState[slot] = 2;
 	}
@@ -268,6 +198,17 @@ struct Perun : Module {
 		else v[t] = clamp(v[t] + cv * 0.1f, 0.f, 1.f);
 	}
 
+	// what this hit actually used (knobs + CV + MUTATE's offsets), for Lightning
+	void noteHit(const float* v) {
+		for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) hitVals[i] = v[i];
+		hitVals[TUNE_PARAM] = clamp(hitVals[TUNE_PARAM], 0.f, 1.f);
+		hitVals[P1_PARAM] = engine.effP1(ctl);
+		hitVals[P2_PARAM] = engine.effP2(ctl);
+		hitVals[MORPH_PARAM] = engine.effMorph(ctl);
+		hitVals[MODE_PARAM] = (float) engine.effMode(ctl);
+		hitCount++;
+	}
+
 	void process(const ProcessArgs& args) override {
 		engine.setSampleRate(args.sampleRate);
 		for (int i = 0; i < 3; i++)
@@ -275,6 +216,17 @@ struct Perun : Module {
 				std::swap(engine.samples[i], pending[i]);
 				pendingState[i] = 0;
 			}
+
+		// Lightning sent a stored sound back: set the knobs, clear MUTATE's wander, LOCK if MUTATE is up
+		if (sendState == 2) {
+			for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) {
+				ParamQuantity* q = paramQuantities[i];
+				params[i].setValue(clamp(sendVals[i], q->getMinValue(), q->getMaxValue()));
+			}
+			engine.clearMutation();
+			if (params[MUTATE_PARAM].getValue() > 0.f) params[LOCK_PARAM].setValue(1.f);
+			sendState = 0;
+		}
 
 		// memories: STORE arms, a slot button then stores; otherwise slot buttons recall
 		if (storeButton.process(params[STORE_PARAM].getValue())) storeArmed = !storeArmed;
@@ -305,14 +257,14 @@ struct Perun : Module {
 				}
 		}
 
-		float v[perun::NUM_MEM_VALUES];
-		for (int i = 0; i < perun::NUM_MEM_VALUES; i++) v[i] = params[i].getValue();
+		float v[thunder::NUM_MEM_VALUES];
+		for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) v[i] = params[i].getValue();
 		float level = params[LEVEL_PARAM].getValue();
 		if (inputs[VOCT_INPUT].isConnected()) v[TUNE_PARAM] += inputs[VOCT_INPUT].getVoltage() / 7.f;
 		for (int k = 0; k < 2; k++)
 			if (inputs[CVA_INPUT + k].isConnected())
 				applyCv(v, level, cvTarget[k], inputs[CVA_INPUT + k].getVoltage() * params[CVA_AMT_PARAM + k].getValue());
-		perun::valuesToControls(v, ctl);
+		thunder::valuesToControls(v, ctl);
 		ctl.level = level;
 		ctl.lock = params[LOCK_PARAM].getValue() > 0.5f || inputs[LOCK_INPUT].getVoltage() > 1.f;
 		ctl.sendPatched = outputs[SEND_OUTPUT].isConnected();
@@ -324,13 +276,16 @@ struct Perun : Module {
 		if (button) {
 			engine.hit(0.f, ctl);
 			hitFlash = 1.f;
+			noteHit(v);
 		}
 		if (hitDelay > 0 && --hitDelay == 0) {
 			engine.hit(clamp(inputs[ACC_INPUT].getVoltage() * 0.2f, 0.f, 1.f), ctl);
 			hitFlash = 1.f;
+			noteHit(v);
 		}
 
 		engine.process(ctl);
+		linkOut = engine.out;
 		outputs[OUT_OUTPUT].setVoltage(engine.out);
 		outputs[ENV_OUTPUT].setVoltage(engine.env * 10.f);
 		outputs[SEND_OUTPUT].setVoltage(engine.sendOut);
@@ -359,7 +314,7 @@ struct Perun : Module {
 			json_t* o = json_object();
 			json_object_set_new(o, "name", json_string(memName[m].c_str()));
 			json_t* vals = json_array();
-			for (int i = 0; i < perun::NUM_MEM_VALUES; i++) json_array_append_new(vals, json_real(mem[m][i]));
+			for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) json_array_append_new(vals, json_real(mem[m][i]));
 			json_object_set_new(o, "values", vals);
 			json_array_append_new(mems, o);
 		}
@@ -385,7 +340,7 @@ struct Perun : Module {
 				json_t* n = json_object_get(o, "name");
 				if (n) memName[m] = json_string_value(n);
 				json_t* vals = json_object_get(o, "values");
-				for (int i = 0; vals && i < perun::NUM_MEM_VALUES && i < (int) json_array_size(vals); i++)
+				for (int i = 0; vals && i < thunder::NUM_MEM_VALUES && i < (int) json_array_size(vals); i++)
 					mem[m][i] = json_number_value(json_array_get(vals, i));
 			}
 		json_t* ta = json_object_get(root, "cvTargetA");
@@ -408,8 +363,8 @@ struct Perun : Module {
 };
 
 // ---- the screen ----
-struct PerunScreen : TransparentWidget {
-	Perun* module = nullptr;
+struct ThunderScreen : TransparentWidget {
+	Thunder* module = nullptr;
 
 	void draw(const DrawArgs& args) override {
 		nvgBeginPath(args.vg);
@@ -432,14 +387,14 @@ struct PerunScreen : TransparentWidget {
 			l3 = "MEM 1 Thunder Kick | A>CUTOFF";
 		}
 		else {
-			Perun* m = module;
-			perun::Controls& c = m->ctl;
-			perun::Engine& e = m->engine;
+			Thunder* m = module;
+			thunder::Controls& c = m->ctl;
+			thunder::Engine& e = m->engine;
 			float morph = e.effMorph(c);
 			int mode = e.effMode(c);
-			const perun::AlgoInfo& a = perun::algoInfo(c.algoA);
-			const perun::AlgoInfo& b = perun::algoInfo(c.algoB);
-			const perun::AlgoInfo& cur = morph < 0.5f ? a : b;
+			const thunder::AlgoInfo& a = thunder::algoInfo(c.algoA);
+			const thunder::AlgoInfo& b = thunder::algoInfo(c.algoB);
+			const thunder::AlgoInfo& cur = morph < 0.5f ? a : b;
 			if (morph < 0.005f) l1 = string::f("A %02d %s", c.algoA + 1, a.name);
 			else if (morph > 0.995f) l1 = string::f("B %02d %s", c.algoB + 1, b.name);
 			else l1 = string::f("A %02d %s > %d%% > B %02d %s", c.algoA + 1, a.name, (int) std::round(morph * 100.f), c.algoB + 1, b.name);
@@ -449,12 +404,12 @@ struct PerunScreen : TransparentWidget {
 			else if (m->storeArmed) l3 = "STORE: press a memory 1-8";
 			else {
 				l3 = string::f("MEM %d %s", m->currentMem + 1, m->memName[m->currentMem].c_str());
-				if (perun::isDrone(c.decay)) l3 += " | DRONE";
+				if (thunder::isDrone(c.decay)) l3 += " | DRONE";
 				if (c.wear > 0.005f) l3 += string::f(" | WEAR %d", (int) std::round(c.wear * 100.f));
 				if (c.mutate > 0.005f) l3 += string::f(" | MUT %d", (int) std::round(c.mutate * 100.f));
 				if (c.lock) l3 += " | LOCK";
 				for (int k = 0; k < 2; k++)
-					if (m->inputs[Perun::CVA_INPUT + k].isConnected() && m->cvTarget[k] >= 0)
+					if (m->inputs[Thunder::CVA_INPUT + k].isConnected() && m->cvTarget[k] >= 0)
 						l3 += string::f(" | %c>%s", 'A' + k, TARGET_NAMES[m->cvTarget[k]]);
 			}
 		}
@@ -478,22 +433,22 @@ struct PerunScreen : TransparentWidget {
 	}
 };
 
-struct PerunWidget : ModuleWidget {
-	PerunWidget(Perun* module) {
+struct ThunderWidget : ModuleWidget {
+	ThunderWidget(Thunder* module) {
 		setModule(module);
-		setPanel(createPanel(asset::plugin(pluginInstance, "res/Perun.svg")));
+		setPanel(createPanel(asset::plugin(pluginInstance, "res/Thunder.svg")));
 
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		PerunScreen* screen = createWidget<PerunScreen>(mm2px(Vec(SCREEN_X, SCREEN_Y)));
+		ThunderScreen* screen = createWidget<ThunderScreen>(mm2px(Vec(SCREEN_X, SCREEN_Y)));
 		screen->box.size = mm2px(Vec(SCREEN_W, SCREEN_H));
 		screen->module = module;
 		addChild(screen);
 
-		typedef Perun P;
+		typedef Thunder P;
 		const int rows[4][7] = {
 			{P::ALGOA_PARAM, P::ALGOB_PARAM, P::MORPH_PARAM, P::MODE_PARAM, P::TUNE_PARAM, P::BEND_PARAM, P::SWEEP_PARAM},
 			{P::DECAY_PARAM, P::P1_PARAM, P::P2_PARAM, P::CLICK_PARAM, P::NOISE_PARAM, P::WEAR_PARAM, P::MUTATE_PARAM},
@@ -526,7 +481,7 @@ struct PerunWidget : ModuleWidget {
 	}
 
 	void appendContextMenu(Menu* menu) override {
-		Perun* m = dynamic_cast<Perun*>(this->module);
+		Thunder* m = dynamic_cast<Thunder*>(this->module);
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createMenuLabel("Memories"));
@@ -566,4 +521,4 @@ struct PerunWidget : ModuleWidget {
 	}
 };
 
-Model* modelPerun = createModel<Perun, PerunWidget>("Perun");
+Model* modelThunder = createModel<Thunder, ThunderWidget>("Thunder");

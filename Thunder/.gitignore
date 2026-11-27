@@ -6,3 +6,4 @@ dist/
 test/render
 test/out/
 __pycache__/
+test/lightning

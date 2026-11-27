@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Draws res/Perun.svg. Rack can't draw SVG <text>, so labels become paths.
-# Positions are in mm; the LAYOUT block numbers are shared with src/Perun.cpp.
+# Draws res/Thunder.svg. Rack can't draw SVG <text>, so labels become paths.
+# Positions are in mm; the LAYOUT block numbers are shared with src/Thunder.cpp.
 #   pip install fonttools ; python3 res/make_panel.py
 import os
 from fontTools.ttLib import TTFont
@@ -20,7 +20,7 @@ SOFT = "#9A9890"
 AMBER = "#FFB233"
 IOBG = "#2E2A22"
 
-# ---- LAYOUT (same numbers in src/Perun.cpp) ----
+# ---- LAYOUT (same numbers in src/Thunder.cpp) ----
 COL = [12.0, 29.8, 47.6, 65.4, 83.2, 101.0, 118.8]
 ROW = [31.0, 50.5, 70.0, 89.5]
 TRIM_DX, LEARN_DX, LEARN_DY = -2.5, 5.0, 4.0
@@ -62,8 +62,8 @@ add = parts.append
 add(f'<rect width="{W}" height="{H}" fill="{BG}"/>')
 
 # ---- header
-add(text("PERUN", 4.2, 11.0, 5.0, FONT_BOLD, AMBER, anchor="start", spacing=0.12))
-add(text("thunder drum voice", 4.4, 16.0, 2.0, FONT_MED, SOFT, anchor="start"))
+add(text("THUNDER", 4.2, 11.0, 5.0, FONT_BOLD, AMBER, anchor="start", spacing=0.12))
+add(text("drum + synth voice", 4.4, 16.0, 2.0, FONT_MED, SOFT, anchor="start"))
 sx, sy, sw, sh = SCREEN
 add(f'<rect x="{sx - 0.6}" y="{sy - 0.6}" width="{sw + 1.2}" height="{sh + 1.2}" rx="1.2" fill="#000"/>')
 add(text("STORE", STORE_X, STORE_Y + 7.4, SMALL, FONT_BOLD, AMBER))
@@ -110,11 +110,11 @@ for x, n, rad, col in zip(COL[2:], ["LOCK", "HIT", "ENV", "SEND", "OUT"], [R_JAC
 
 svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}mm" height="{H}mm" viewBox="0 0 {W} {H}">\n'
        + "\n".join(p for p in parts if p) + "\n</svg>\n")
-open(os.path.join(HERE, "Perun.svg"), "w").write(svg)
+open(os.path.join(HERE, "Thunder.svg"), "w").write(svg)
 print("ok")
 
 # --- Haer maker logo (res/haer_logo.py) on the bottom rail
 import sys as _sys
 _sys.path.insert(0, HERE)
 import haer_logo
-haer_logo.add_to_file(os.path.join(HERE, "Perun.svg"), x=20.0, y=118.0, cap=3.0, bg=BG)
+haer_logo.add_to_file(os.path.join(HERE, "Thunder.svg"), x=20.0, y=118.0, cap=3.0, bg=BG)

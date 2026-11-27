@@ -1,14 +1,14 @@
-// Perun factory memories (what slots 1-8 hold on a fresh module).
-// Values are knob positions, in this order (MEM_* in Perun.cpp):
+// Thunder factory memories (what slots 1-8 hold on a fresh module).
+// Values are knob positions, in this order (MEM_* in Thunder.cpp):
 //   algoA algoB morph mode tune bend sweep click decay p1 p2 noise
 //   cutoff res fenv vcf drive tone send time fdbk accent wear mutate
 // tune: 0..1 = 20 Hz .. 2560 Hz (20 * 128^x). decay: 0..1 = 12 ms .. 4.8 s, top 3 % = drone.
 // cutoff: 0..1 = 20 Hz .. 20 kHz. vcf: 0 HP, 1 BP, 2 LP.
 #pragma once
-#include "PerunEngine.hpp"
+#include "ThunderEngine.hpp"
 #include <cmath>
 
-namespace perun {
+namespace thunder {
 
 static const int NUM_MEM_VALUES = 24;
 static const int NUM_MEMORIES = 8;
@@ -61,4 +61,4 @@ inline void valuesToControls(const float* v, Controls& c) {
 	c.mutate = v[23];
 }
 
-} // namespace perun
+} // namespace thunder

@@ -1,4 +1,4 @@
-// Perun engine: one thunder drum voice, no Rack dependency (so test/render.cpp can use it).
+// Thunder engine: one thunder drum voice, no Rack dependency (so test/render.cpp can use it).
 //
 // Signal path (after the Perkons idea, all models our own):
 //   per hit:  algorithm A --+
@@ -16,7 +16,7 @@
 #include <vector>
 #include <algorithm>
 
-namespace perun {
+namespace thunder {
 
 static const int NUM_ALGOS = 15;
 static const int MAX_HITS = 4; // sounding at once
@@ -943,4 +943,4 @@ struct Engine {
 	}
 };
 
-} // namespace perun
+} // namespace thunder

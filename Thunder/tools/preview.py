@@ -5,7 +5,7 @@ import os, sys, re, base64, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "preview.png")
 LIB = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/Rack-src/res/ComponentLibrary")
-svg = open(os.path.join(HERE, "..", "res", "Perun.svg")).read()
+svg = open(os.path.join(HERE, "..", "res", "Thunder.svg")).read()
 L = {}
 src = open(os.path.join(HERE, "..", "res", "make_panel.py")).read()
 exec(src.split("# ---- LAYOUT")[1].split("CONTROL =")[0].split("\n", 1)[1], L)
