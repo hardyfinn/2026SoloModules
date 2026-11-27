@@ -44,7 +44,7 @@ puts every knob back (LEVEL is left alone).
 same. Every 808 Kick has a serial number (saved with the patch, shown and re-rollable in the
 right-click menu) that fixes where its parts sit inside those tolerances; AGE scales how far
 they are off (pitch about ±12 %, decay ±25 %, tone ±20 %, sigh, jump and level). Each hit also
-drifts a little. Past about 70 % the capacitors are worn: shorter ring and a little hiss.
+drifts a little. Past about 70 % the capacitors are worn: shorter ring and a little hiss (halved in 2.0.1).
 At 0 every unit is exactly the stock 808.
 
 **Jacks.** TRIG, ACCENT (gate = accented; 0-5 V = how much, read at each hit), CV for

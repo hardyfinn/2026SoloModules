@@ -224,7 +224,7 @@ struct Engine {
 		o = 10.5f * std::tanh(o * pre / 10.5f) / (1.f + 0.6f * c.drive);
 		if (worn > 0.f) {   // worn parts: a little hiss
 			noiseState ^= noiseState << 13; noiseState ^= noiseState >> 17; noiseState ^= noiseState << 5;
-			o += worn * 0.012f * ((noiseState & 0xffff) / 32768.f - 1.f);
+			o += worn * 0.006f * ((noiseState & 0xffff) / 32768.f - 1.f);
 		}
 		out = o * c.level * hitLevel * (1.f + 0.1f * ag * age.u[6]);
 		env = clampf(BODY_GAIN * amp * 1.6f, 0.f, 10.f);
