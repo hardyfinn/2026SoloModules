@@ -1,7 +1,7 @@
 {
   "slug": "Thunder",
   "name": "Thunder",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "license": "MIT",
   "brand": "Haer",
   "author": "Haer",
@@ -28,7 +28,7 @@
     {
       "slug": "Lightning",
       "name": "Lightning",
-      "description": "Four-slot hit catcher for Thunder: KEEP grabs the last whole hit already trimmed, SEND puts its knob settings back on Thunder; also takes any audio on IN. Per-slot TUNE, DECAY, LEVEL, 4 outs + MIX, sounds saved in the patch",
+      "description": "Six-slot hit catcher for Thunder: KEEP has Thunder render the last hit start to finish (full decay, already trimmed), SEND puts its knob settings back on Thunder; also takes any audio on IN. Per-slot TUNE, DECAY, LEVEL, 6 outs + MIX, sounds saved in the patch",
       "tags": [
         "Sampler",
         "Drum",

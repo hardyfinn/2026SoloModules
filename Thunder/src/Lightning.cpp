@@ -1,32 +1,32 @@
-// Lightning: a 4-slot hit catcher for Thunder. Sits to the right of Thunder (or takes any audio
+// Lightning: a 6-slot hit catcher for Thunder. Sits to the right of Thunder (or takes any audio
 // on IN), keeps whole hits with one button, already trimmed, and can send a kept sound's knob
 // settings back to Thunder.
 #include "plugin.hpp"
 #include "LightningCore.hpp"
 #include "Wav.hpp"
+using namespace lightning;
 #include <osdialog.h>
 #include <atomic>
 
-// ---- LAYOUT (same numbers in res/make_lightning_panel.py) ---- 22 HP
-static const float L_COL[4] = {13.f, 32.f, 51.f, 70.f};
-static const float L_C5 = 94.5f;
+// ---- LAYOUT (same numbers in res/make_lightning_panel.py) ---- 28 HP
+static const float L_COL[6] = {13.f, 32.f, 51.f, 70.f, 89.f, 108.f};
+static const float L_C5 = 129.5f;
 static const float L_DISP_Y = 19.5f, L_DISP_W = 16.5f, L_DISP_H = 13.f;
 static const float L_KEEP_DX = -4.8f, L_SEND_DX = 5.f, L_BTN_Y = 43.f;
 static const float L_ROW[3] = {58.f, 73.f, 88.f};
 static const float L_IO_TOP = 104.f, L_IO_BOT = 118.f;
 
-using namespace lightning;
 
 struct Lightning : Module {
 	enum ParamIds {
-		ENUMS(TUNE_PARAM, 4), ENUMS(DECAY_PARAM, 4), ENUMS(LEVEL_PARAM, 4),
-		ENUMS(KEEP_PARAM, 4), ENUMS(SEND_PARAM, 4),
+		ENUMS(TUNE_PARAM, NUM_SLOTS), ENUMS(DECAY_PARAM, NUM_SLOTS), ENUMS(LEVEL_PARAM, NUM_SLOTS),
+		ENUMS(KEEP_PARAM, NUM_SLOTS), ENUMS(SEND_PARAM, NUM_SLOTS),
 		SENS_PARAM, MIX_PARAM,
 		NUM_PARAMS
 	};
-	enum InputIds { ENUMS(TRIG_INPUT, 4), IN_INPUT, NUM_INPUTS };
-	enum OutputIds { ENUMS(OUT_OUTPUT, 4), MIX_OUTPUT, NUM_OUTPUTS };
-	enum LightIds { ENUMS(KEEP_LIGHT, 4), ENUMS(SEND_LIGHT, 4), LINK_LIGHT, NUM_LIGHTS };
+	enum InputIds { ENUMS(TRIG_INPUT, NUM_SLOTS), IN_INPUT, NUM_INPUTS };
+	enum OutputIds { ENUMS(OUT_OUTPUT, NUM_SLOTS), MIX_OUTPUT, NUM_OUTPUTS };
+	enum LightIds { ENUMS(KEEP_LIGHT, NUM_SLOTS), ENUMS(SEND_LIGHT, NUM_SLOTS), LINK_LIGHT, NUM_LIGHTS };
 
 	Recorder rec;
 	Clip clips[NUM_SLOTS][2]; // double buffer per slot: play one, fill the other
@@ -48,6 +48,12 @@ struct Lightning : Module {
 	float blink = 0.f;
 	float sendFlash[NUM_SLOTS];
 	float keepFlash[NUM_SLOTS];
+	// full-length hits rendered by Thunder
+	bool keepFull = true;
+	bool wantRender[NUM_SLOTS];
+	bool rendering[NUM_SLOTS];
+	float renderReq[NUM_SLOTS][NUM_VALS];
+	uint32_t armedStart[NUM_SLOTS];
 	bool outsFeedMix = false;
 	bool semitones = false;
 	float sr = 48000.f;
@@ -70,6 +76,9 @@ struct Lightning : Module {
 			armed[s] = false;
 			armedSerial[s] = 0;
 			sendFlash[s] = keepFlash[s] = 0.f;
+			wantRender[s] = rendering[s] = false;
+			armedStart[s] = 0;
+			std::fill(renderReq[s], renderReq[s] + NUM_VALS, 0.f);
 			std::fill(vals[s], vals[s] + NUM_VALS, 0.f);
 		}
 		configParam(SENS_PARAM, 0.f, 1.f, 0.5f, "IN sensitivity (how loud a hit must be to count)", "%", 0.f, 100.f);
@@ -187,21 +196,78 @@ struct Lightning : Module {
 		float thresh = 3.f * std::pow(0.005f, params[SENS_PARAM].getValue());
 		rec.push(x, useIn, thresh);
 
-		// ---- KEEP: the last whole hit. If one is still sounding, wait for it to end.
+		// collect a finished render, then ask for the next one
+		if (link && link->renderState == 3 && link->renderOwner == this) {
+			int s = link->renderSlot;
+			if (rendering[s] && link->renderLen > 0) {
+				int target = 1 - active[s];
+				player[s].stopBuffer(target);
+				Clip& c = clips[s][target];
+				std::swap(c.data, link->renderOut);
+				c.len = link->renderLen;
+				c.rate = link->renderSr;
+				fromThunder[s] = true;
+				std::copy(link->renderVals, link->renderVals + NUM_VALS, vals[s]);
+				active[s] = target;
+				version[s]++;
+				keepFlash[s] = 1.f;
+			}
+			rendering[s] = false;
+			link->renderState = 0;
+		}
+		if (!link)
+			for (int s = 0; s < NUM_SLOTS; s++) rendering[s] = false;
+		if (link && link->renderState == 0) {
+			for (int s = 0; s < NUM_SLOTS; s++)
+				if (wantRender[s]) {
+					link->renderOwner = this;
+					link->renderSlot = s;
+					std::copy(renderReq[s], renderReq[s] + NUM_VALS, link->renderVals);
+					link->renderSr = sr;
+					wantRender[s] = false;
+					rendering[s] = true;
+					link->renderState = 1;
+					break;
+				}
+		}
+
+		// ---- KEEP. From Thunder (default): Thunder renders the last hit start to finish from its
+		// settings, so nothing is cut short. Otherwise: the last whole hit as heard.
+		bool full = keepFull && link && !useIn;
 		for (int s = 0; s < NUM_SLOTS; s++) {
 			if (keepBtn[s].process(params[KEEP_PARAM + s].getValue())) {
-				if (armed[s])
-					armed[s] = false;
+				if (armed[s] || wantRender[s])
+					armed[s] = wantRender[s] = false;
+				else if (full) {
+					const float* src = (rec.inHit && rec.curExact) ? rec.curVals : (rec.haveDone && rec.doneExact) ? rec.doneVals : nullptr;
+					if (src) {
+						std::copy(src, src + NUM_VALS, renderReq[s]);
+						wantRender[s] = true;
+					}
+					else { // nothing played yet: take the next hit
+						armed[s] = true;
+						armedStart[s] = rec.startCount;
+						armedSerial[s] = rec.doneSerial;
+					}
+				}
 				else if (!rec.inHit && rec.haveDone)
 					capture(s);
 				else {
 					armed[s] = true;
+					armedStart[s] = rec.startCount;
 					armedSerial[s] = rec.doneSerial;
 				}
 			}
-			if (armed[s] && rec.doneSerial != armedSerial[s]) {
-				armed[s] = false;
-				capture(s);
+			if (armed[s]) {
+				if (full && rec.startCount != armedStart[s] && rec.inHit && rec.curExact) {
+					armed[s] = false;
+					std::copy(rec.curVals, rec.curVals + NUM_VALS, renderReq[s]);
+					wantRender[s] = true;
+				}
+				else if (!full && rec.doneSerial != armedSerial[s]) {
+					armed[s] = false;
+					capture(s);
+				}
 			}
 			// SEND: back onto Thunder's knobs
 			if (sendBtn[s].process(params[SEND_PARAM + s].getValue()) && link && fromThunder[s]) {
@@ -235,7 +301,7 @@ struct Lightning : Module {
 				keepFlash[s] = std::max(0.f, keepFlash[s] - dt * 3.f);
 				sendFlash[s] = std::max(0.f, sendFlash[s] - dt * 3.f);
 				float k = clips[s][active[s]].len > 0 ? 0.35f : 0.f;
-				if (armed[s]) k = blink < 0.5f ? 1.f : 0.1f;
+				if (armed[s] || wantRender[s] || rendering[s]) k = blink < 0.5f ? 1.f : 0.1f;
 				lights[KEEP_LIGHT + s].setBrightness(std::max(k, keepFlash[s]));
 				float sl = (link && fromThunder[s]) ? 0.3f : 0.f;
 				lights[SEND_LIGHT + s].setBrightness(std::max(sl, sendFlash[s]));
@@ -279,6 +345,7 @@ struct Lightning : Module {
 		}
 		json_object_set_new(root, "slots", slots);
 		json_object_set_new(root, "outsFeedMix", json_boolean(outsFeedMix));
+		json_object_set_new(root, "keepFull", json_boolean(keepFull));
 		json_object_set_new(root, "semitones", json_boolean(semitones));
 		return root;
 	}
@@ -302,6 +369,7 @@ struct Lightning : Module {
 		}
 		json_t* j;
 		if ((j = json_object_get(root, "outsFeedMix"))) outsFeedMix = json_is_true(j);
+		if ((j = json_object_get(root, "keepFull"))) keepFull = json_is_true(j);
 		if ((j = json_object_get(root, "semitones"))) setSemitones(json_is_true(j));
 	}
 };
@@ -359,7 +427,7 @@ struct LightningDisplay : OpaqueWidget {
 				seen = v;
 				rebuild();
 			}
-			armed = module->armed[slot];
+			armed = module->armed[slot] || module->wantRender[slot] || module->rendering[slot];
 			thunderTag = module->fromThunder[slot];
 			pos = module->player[slot].lastPos;
 		}
@@ -442,6 +510,8 @@ struct LightningWidget : ModuleWidget {
 		Lightning* m = dynamic_cast<Lightning*>(this->module);
 		if (!m) return;
 		menu->addChild(new MenuSeparator);
+		menu->addChild(createBoolPtrMenuItem("KEEP from Thunder: full hit (Thunder renders it to the end)", "", &m->keepFull));
+		menu->addChild(createMenuLabel("  (off: keep what you heard, cut where the next hit began)"));
 		menu->addChild(createBoolPtrMenuItem("Patched slot outs also feed MIX", "", &m->outsFeedMix));
 		menu->addChild(createBoolMenuItem("TUNE in semitones", "", [=]() { return m->semitones; }, [=](bool on) { m->setSemitones(on); }));
 		menu->addChild(new MenuSeparator);

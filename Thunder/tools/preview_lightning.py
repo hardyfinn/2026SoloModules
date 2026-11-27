@@ -9,7 +9,7 @@ svg = open(os.path.join(HERE, "..", "res", "Lightning.svg")).read()
 L = {}
 src = open(os.path.join(HERE, "..", "res", "make_lightning_panel.py")).read()
 exec(src.split("# ---- LAYOUT")[1].split("CONTROL =")[0].split("\n", 1)[1], L)
-W, H = 111.76, 128.5
+W, H = 142.24, 128.5
 PX = 25.4 / 75.0
 g = []
 
@@ -28,11 +28,11 @@ def knob(x, y, v):
     comp("RoundBlackKnob", x, y, -135 + 270 * v)
 
 
-vals = [[0.5, 1.0, 0.8], [0.6, 0.7, 0.8], [0.42, 1.0, 0.8], [0.5, 0.4, 0.8]]
+vals = [[0.5, 1.0, 0.8], [0.6, 0.7, 0.8], [0.42, 1.0, 0.8], [0.5, 0.4, 0.8], [0.45, 1.0, 0.8], [0.55, 0.6, 0.8]]
 for s, x in enumerate(L["COL"]):
     dx, dy, dw, dh = x - L["DISP_W"] / 2, L["DISP_Y"], L["DISP_W"], L["DISP_H"]
     g.append(f'<rect x="{dx}" y="{dy}" width="{dw}" height="{dh}" rx="0.7" fill="#0c1a12"/>')
-    if s < 3:
+    if s != 3:
         mid, amp = dy + dh * 0.55, dh * 0.38
         d = ""
         for i in range(64):

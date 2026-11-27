@@ -1,4 +1,4 @@
-// Lightning core: catches whole hits from a mono signal and plays them back from 4 slots.
+// Lightning core: catches whole hits from a mono signal and plays them back from 6 slots.
 // No Rack code here, so test/lightning.cpp can run it offline.
 #pragma once
 #include <algorithm>
@@ -8,9 +8,9 @@
 
 namespace lightning {
 
-static const int NUM_SLOTS = 4;
+static const int NUM_SLOTS = 6;
 static const float MAX_SEC = 8.f;    // longest hit a slot keeps
-static const int NUM_VALS = 24;      // Thunder memory values
+static const int NUM_VALS = 26;      // Thunder's 24 memory values + accent + level
 
 // ---- the recorder: a ring of the last few seconds plus where each hit started and ended ----
 struct Recorder {

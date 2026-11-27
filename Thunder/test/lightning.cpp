@@ -3,6 +3,8 @@
 #include "../src/ThunderEngine.hpp"
 #include "../src/ThunderPresets.hpp"
 #include "../src/LightningCore.hpp"
+#include "../src/ThunderRender.hpp"
+#include <chrono>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -30,7 +32,11 @@ static Controls preset(int i, float* vals = nullptr) {
 	Controls c;
 	valuesToControls(factoryPreset(i).v, c);
 	c.level = 0.8f;
-	if (vals) for (int k = 0; k < NUM_VALS; k++) vals[k] = factoryPreset(i).v[k];
+	if (vals) {
+		for (int k = 0; k < 24; k++) vals[k] = factoryPreset(i).v[k];
+		vals[24] = 0.f;   // accent
+		vals[25] = 0.8f;  // level
+	}
 	return c;
 }
 
@@ -247,6 +253,80 @@ int main(int argc, char** argv) {
 			}
 		}
 		wav(dir + "/lightning-2-kept-kit-groove.wav", o, 0.08f);
+	}
+
+	// 6. full hits rendered by Thunder: same sound as live, never cut short, drone capped at 8 s
+	{
+		Sample smp[3];
+		for (int k = 0; k < 3; k++) makeDefaultSample(k, smp[k]);
+		for (int p : {0, 2, 3, 7}) {
+			float v[NUM_VALS];
+			Controls c = preset(p, v);
+			c.wear = 0.f;
+			c.mutate = 0.f;
+			c.lock = true;
+			std::vector<float> out;
+			auto t0 = std::chrono::steady_clock::now();
+			int len = renderHit(v, smp, SR, out);
+			double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+			// live, the same hit left to ring out
+			Engine e;
+			e.setSampleRate(SR);
+			e.hit(0.f, c);
+			std::vector<float> live;
+			for (int i = 0; i < (int) (SR * 8); i++) { e.process(c); live.push_back(e.out); }
+			float err = 0.f, pk = 0.f;
+			for (int i = 0; i < len; i++) { err = std::max(err, std::fabs(out[i] - live[i])); pk = std::max(pk, std::fabs(live[i])); }
+			int fade = (int) (0.002f * SR);
+			float errBody = 0.f;
+			for (int i = 0; i < len - fade; i++) errBody = std::max(errBody, std::fabs(out[i] - live[i]));
+			double eL = energy(live), eR = energy(out, len);
+			CHECK(errBody < pk * 1e-4f, "%-12s rendered = played (max diff %.2g of peak)", factoryPreset(p).name, errBody / pk);
+			CHECK(eR / eL > 0.999, "%-12s rendered %.0f ms, %.3f%% of the energy, in %.0f ms", factoryPreset(p).name, len * 1000.f / SR, 100.0 * eR / eL, ms);
+		}
+		// fast pattern: heard copies are cut at the next hit, renders are whole
+		{
+			float v[NUM_VALS];
+			Controls c = preset(2, v); // Boom
+			Engine e;
+			e.setSampleRate(SR);
+			Recorder r;
+			r.setSampleRate(SR);
+			for (int h = 0; h < 3; h++) {
+				e.hit(0.f, c);
+				r.startHit(r.w, true, v, quietForThunder(v));
+				for (int i = 0; i < (int) (0.12f * SR); i++) { e.process(c); r.push(e.out, false, 0.f); }
+			}
+			std::vector<float> heard((size_t) (MAX_SEC * SR)), full;
+			int hl = r.copyDone(heard);
+			int fl = renderHit(r.curVals, smp, SR, full);
+			CHECK(fl > hl * 5, "fast pattern: what you heard %.0f ms, full hit %.0f ms", hl * 1000.f / SR, fl * 1000.f / SR);
+		}
+		{
+			float v[NUM_VALS];
+			preset(7, v);
+			v[8] = 1.f; // DECAY fully up: drone
+			std::vector<float> out;
+			int len = renderHit(v, smp, SR, out);
+			CHECK(std::abs(len - (int) (MAX_SEC * SR)) < 200, "drone renders 8 s with a fade (%.2f s)", len / SR);
+			float last = 0.f;
+			for (int i = len - 20; i < len; i++) last = std::max(last, std::fabs(out[i]));
+			CHECK(last < 0.05f, "drone's end fades to silence (%.3f V)", last);
+		}
+		// accent and level are part of the copy
+		{
+			float v[NUM_VALS];
+			preset(4, v);
+			std::vector<float> a, b;
+			int la = renderHit(v, smp, SR, a);
+			v[24] = 1.f;
+			v[25] = 0.4f;
+			int lb = renderHit(v, smp, SR, b);
+			float pa = 0.f, pb = 0.f;
+			for (int i = 0; i < la; i++) pa = std::max(pa, std::fabs(a[i]));
+			for (int i = 0; i < lb; i++) pb = std::max(pb, std::fabs(b[i]));
+			CHECK(pb < pa * 0.8f && pb > pa * 0.3f, "LEVEL and ACCENT come along (peak %.2f V vs %.2f V)", pb, pa);
+		}
 	}
 
 	std::printf(fails ? "%d checks FAILED\n" : "all Lightning checks passed (0 failed)\n", fails);

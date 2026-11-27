@@ -17,7 +17,7 @@ ALGO B ──┘                                                ┘
                                           └ SEND ─ delay ─┘   (or SEND output when patched)
 ```
 
-## The 15 algorithms (MODE switch = 3 variants of each; P1 and P2 change meaning, shown on the screen)
+## The 15 algorithms (MODE switch = 3 variants of each; P1 and P2 change meaning; hover over a knob to see what it does now)
 
 | # | Algorithm | P1 | P2 | MODE A / B / C |
 |---|---|---|---|---|
@@ -44,7 +44,7 @@ ALGO B ──┘                                                ┘
 - **Drive + FX:** DRIVE, TONE, SEND, TIME, FDBK (bucket-brigade style delay: dark repeats, slight wow), ACCENT (how much the ACC input adds level, brightness and drive), LEVEL (left out of randomize).
 - **Move:** WEAR (every hit slightly different in pitch, decay, brightness, level and timing), MUTATE (P1, P2, MORPH and MODE wander from hit to hit; left out of randomize so Ctrl+R never switches it on), LOCK (freeze where MUTATE got to; also a gate input).
 - **Memories:** 8 slots with factory sounds. Press a slot to recall it. Press STORE, then a slot, to save. PATCH CV (0-10 V) picks the slot, so a sequencer can change the sound per step.
-- **CV A / CV B:** two assignable CV inputs, each with an amount trim (attenuverter). Press LEARN, then move the knob it should control (or pick a target from the right-click menu). +-5 V = full range of that knob. Defaults: CV A = CUTOFF, CV B = MORPH. The screen shows the current target.
+- **CV A / CV B:** two assignable CV inputs, each with an amount trim (attenuverter). Press LEARN, then move the knob it should control (or pick a target from the right-click menu). +-5 V = full range of that knob. Defaults: CV A = CUTOFF, CV B = MORPH. Hover over a CV trim to see its target; the LEARN light blinks while it waits for a knob. The screen shows the names of ALGO A and ALGO B.
 - **Jacks:** TRIG, V/OCT, ACC (5 V = full accent), CHOKE, PATCH, CV A, CV B, LOCK gate; outputs ENV (0-10 V), SEND (patching it bypasses the built-in delay), OUT.
 
 ## Building
@@ -56,22 +56,27 @@ MIT licence.
 
 # Lightning
 
-A 4-slot hit catcher for Thunder, 22 HP. Put it directly to the right of Thunder (the green LINK
+A 6-slot hit catcher for Thunder, 28 HP. Put it directly to the right of Thunder (the green LINK
 light comes on). Randomise or play Thunder until a hit sounds right, press **KEEP 1**, find the next
-one, press **KEEP 2**, and so on. Nothing to trim: Thunder tells Lightning exactly when each hit
-starts, and Lightning cuts the end where the sound (including delay echoes) has died away.
+one, press **KEEP 2**, and so on. Nothing to trim, and nothing cut short: Thunder plays the kept hit
+again in the background, start to finish, from the exact settings it used (where MUTATE had
+wandered to, the accent, the level), so a slot always holds the full decay and the delay echoes,
+even if the next hit or a CHOKE cut it off live. It takes a moment (about half a second for a long
+kick), and the slot blinks meanwhile. WEAR's per-hit wobble is left out, so the copy is clean.
+A drone (DECAY fully up) stops at 8 seconds with a short fade.
+Right-click to turn this off and keep what you heard instead (cut where the next hit began).
 
 ![panel](panel-preview-lightning.png)
 
-- **KEEP n:** keeps the last whole hit. If a hit is still ringing, KEEP waits for it to finish (the
-  slot shows WAIT) and takes that one. Press again to cancel.
+- **KEEP n:** keeps the last hit Thunder played (or the next one, if nothing has played yet; the slot
+  shows WAIT). Press again to cancel.
 - **SEND n:** puts the knob settings that made slot n's hit back on Thunder (including where MUTATE
   had wandered to; MUTATE's wander is cleared and LOCK turned on so the sound stays put). Lit when the
   slot came from Thunder and Thunder is linked.
 - **Waveforms:** click one to hear that slot. **T** marks a sound kept from Thunder.
 - **TUNE** (+-24 semitones, right-click for semitone steps), **DECAY** (fully up = the whole hit,
   lower fades it sooner), **LEVEL**, per slot.
-- **TRIG 1-4**, **OUT 1-4** and **MIX**. A patched OUT leaves the mix (right-click to keep it in).
+- **TRIG 1-6**, **OUT 1-6** and **MIX**. A patched OUT leaves the mix (right-click to keep it in).
 - **IN** + **SENS:** with IN patched, Lightning listens to any audio instead of Thunder and finds hits
   by level (it also catches a hit that lands on the tail of the one before).
 - The four sounds are saved inside the patch. Right-click a slot to save it as a WAV, load a WAV, or

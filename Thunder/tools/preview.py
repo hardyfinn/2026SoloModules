@@ -52,8 +52,8 @@ for i in range(8):
 comp("VCVBezel", L["STORE_X"], L["STORE_Y"])
 sx, sy, sw, sh = L["SCREEN"]
 g.append(f'<rect x="{sx}" y="{sy}" width="{sw}" height="{sh}" rx="1" fill="#0c1a12" stroke="#33363a" stroke-width="0.3"/>')
-for i, t in enumerate(["A 01 FOLD BD &gt; 15% &gt; B 03 RESONANT BD", "MODE A sine | P1 fold 35 | P2 sym 50", "MEM 1 Thunder Kick | A&gt;CUTOFF"]):
-    g.append(f'<text x="{sx + 1.6}" y="{sy + 4.4 + i * 5.1}" font-family="monospace" font-size="2.6" fill="#66ff77">{t}</text>')
+for i, t in enumerate(["A  FOLD BD", "B  RESONANT BD"]):
+    g.append(f'<text x="{sx + 2.0}" y="{sy + 5.0 + i * 5.0}" font-family="monospace" font-size="3.6" fill="#66ff77">{t}</text>')
 for x in (5.08, W - 2 * 5.08):
     for y in (0.0, 128.5 - 5.08):
         comp("ScrewSilver", x + 2.54, y + 2.54)

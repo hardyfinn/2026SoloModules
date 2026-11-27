@@ -4,6 +4,9 @@
 #include "ThunderEngine.hpp"
 #include "ThunderPresets.hpp"
 #include "Wav.hpp"
+#include "ThunderRender.hpp"
+#include <thread>
+#include <chrono>
 #include <osdialog.h>
 #include <atomic>
 #include <fstream>
@@ -16,7 +19,7 @@ static const float IO_TOP = 106.f, IO_BOT = 118.6f;
 static const float MEMX[4] = {96.5f, 103.5f, 110.5f, 117.5f};
 static const float MEMY[2] = {9.5f, 16.8f};
 static const float STORE_X = 125.6f, STORE_Y = 12.8f;
-static const float SCREEN_X = 27.5f, SCREEN_Y = 3.f, SCREEN_W = 62.5f, SCREEN_H = 16.5f;
+static const float SCREEN_X = 36.f, SCREEN_Y = 5.5f, SCREEN_W = 53.f, SCREEN_H = 12.f;
 
 // what CV A / CV B can be learned onto (the 24 memory values + LEVEL)
 static const int NUM_TARGETS = 25;
@@ -28,6 +31,25 @@ static const char* const ALGO_NAMES[thunder::NUM_ALGOS] = {
 	"Fold BD", "Wavetable BD", "Resonant BD", "Complex (FM)", "Res Snare", "Slap",
 	"Tom", "Noise Hat", "Pulse Hat", "Karplus", "Sample", "Metal", "Particles", "Circuit 909", "Chaos"};
 
+
+struct Thunder;
+static std::string thunderLabel(Module* mod, int which);
+
+// knob tooltips that say what they do right now (P1/P2 per algorithm, CV trims per target)
+struct ThunderLabelQuantity : ParamQuantity {
+	int which = 0; // 0 P1, 1 P2, 2 MODE, 3 CV A, 4 CV B
+	std::string getLabel() override {
+		std::string s = module ? thunderLabel(module, which) : "";
+		return s.empty() ? ParamQuantity::getLabel() : s;
+	}
+};
+
+struct ThunderModeQuantity : SwitchQuantity {
+	std::string getLabel() override {
+		std::string s = module ? thunderLabel(module, 2) : "";
+		return s.empty() ? SwitchQuantity::getLabel() : s;
+	}
+};
 
 struct Thunder : Module, ThunderLink {
 	enum ParamIds {
@@ -69,21 +91,43 @@ struct Thunder : Module, ThunderLink {
 	thunder::Sample pending[3];
 	std::atomic<int> pendingState[3];
 	int hitDelay = 0; // fire 2 samples after the trigger edge so ACC and CVs sent alongside are in
+	int renderUnclaimed = 0;
+	std::atomic<bool> running{true};
+	std::thread renderThread;
+
+	// background thread: renders a kept hit start to finish for Lightning
+	void renderLoop() {
+		while (running) {
+			int expected = 1;
+			if (renderState.compare_exchange_strong(expected, 2)) {
+				renderLen = thunder::renderHit(renderVals, engine.samples, renderSr, renderOut);
+				renderState = 3;
+			}
+			else
+				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		}
+	}
+
+	~Thunder() {
+		running = false;
+		if (renderThread.joinable()) renderThread.join();
+	}
 
 	Thunder() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+		renderThread = std::thread([this]() { renderLoop(); });
 		std::vector<std::string> algos(ALGO_NAMES, ALGO_NAMES + thunder::NUM_ALGOS);
 		configSwitch(ALGOA_PARAM, 0.f, 14.f, 0.f, "Algorithm A", algos);
 		configSwitch(ALGOB_PARAM, 0.f, 14.f, 2.f, "Algorithm B", algos);
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.15f, "Morph (A <-> B)", "%", 0.f, 100.f);
-		configSwitch(MODE_PARAM, 0.f, 2.f, 0.f, "Mode (variant of each algorithm)", {"A", "B", "C"});
+		configSwitch<ThunderModeQuantity>(MODE_PARAM, 0.f, 2.f, 0.f, "Mode", {"A", "B", "C"});
 		configParam(TUNE_PARAM, 0.f, 1.f, 0.189f, "Tune", " Hz", 128.f, 20.f);
 		configParam(BEND_PARAM, 0.f, 1.f, 0.45f, "Bend (pitch envelope amount, up to 4 octaves)", "%", 0.f, 100.f);
 		configParam(SWEEP_PARAM, 0.f, 1.f, 0.3f, "Sweep (pitch envelope time)", " ms", 100.f, 4.f);
 		configParam(CLICK_PARAM, 0.f, 1.f, 0.35f, "Click (attack transient)", "%", 0.f, 100.f);
 		configParam(DECAY_PARAM, 0.f, 1.f, 0.56f, "Decay (fully up = drone)", " s", 400.f, 0.012f);
-		configParam(P1_PARAM, 0.f, 1.f, 0.35f, "Parameter 1 (depends on the algorithm, see the screen)", "%", 0.f, 100.f);
-		configParam(P2_PARAM, 0.f, 1.f, 0.5f, "Parameter 2 (depends on the algorithm, see the screen)", "%", 0.f, 100.f);
+		configParam<ThunderLabelQuantity>(P1_PARAM, 0.f, 1.f, 0.35f, "Parameter 1", "%", 0.f, 100.f)->which = 0;
+		configParam<ThunderLabelQuantity>(P2_PARAM, 0.f, 1.f, 0.5f, "Parameter 2", "%", 0.f, 100.f)->which = 1;
 		configParam(NOISE_PARAM, 0.f, 1.f, 0.f, "Noise", "%", 0.f, 100.f);
 		configParam(CUTOFF_PARAM, 0.f, 1.f, 1.f, "Cutoff (LP opens clockwise, HP opens anticlockwise)", " Hz", 1000.f, 20.f);
 		configParam(RES_PARAM, 0.f, 1.f, 0.1f, "Resonance", "%", 0.f, 100.f);
@@ -103,8 +147,8 @@ struct Thunder : Module, ThunderLink {
 		configButton(STORE_PARAM, "Store (then press a memory)");
 		for (int i = 0; i < 8; i++) configButton(MEM_PARAM + i, string::f("Memory %d", i + 1));
 
-		configParam(CVA_AMT_PARAM, -1.f, 1.f, 1.f, "CV A amount (attenuverter)", "%", 0.f, 100.f);
-		configParam(CVB_AMT_PARAM, -1.f, 1.f, 1.f, "CV B amount (attenuverter)", "%", 0.f, 100.f);
+		configParam<ThunderLabelQuantity>(CVA_AMT_PARAM, -1.f, 1.f, 1.f, "CV A amount", "%", 0.f, 100.f)->which = 3;
+		configParam<ThunderLabelQuantity>(CVB_AMT_PARAM, -1.f, 1.f, 1.f, "CV B amount", "%", 0.f, 100.f)->which = 4;
 		configButton(LEARNA_PARAM, "Learn CV A (press, then move the knob it should control)");
 		configButton(LEARNB_PARAM, "Learn CV B (press, then move the knob it should control)");
 		configInput(VOCT_INPUT, "V/OCT (tune)");
@@ -199,8 +243,10 @@ struct Thunder : Module, ThunderLink {
 	}
 
 	// what this hit actually used (knobs + CV + MUTATE's offsets), for Lightning
-	void noteHit(const float* v) {
+	void noteHit(const float* v, float accent, float level) {
 		for (int i = 0; i < thunder::NUM_MEM_VALUES; i++) hitVals[i] = v[i];
+		hitVals[24] = accent;
+		hitVals[25] = level;
 		hitVals[TUNE_PARAM] = clamp(hitVals[TUNE_PARAM], 0.f, 1.f);
 		hitVals[P1_PARAM] = engine.effP1(ctl);
 		hitVals[P2_PARAM] = engine.effP2(ctl);
@@ -276,13 +322,23 @@ struct Thunder : Module, ThunderLink {
 		if (button) {
 			engine.hit(0.f, ctl);
 			hitFlash = 1.f;
-			noteHit(v);
+			noteHit(v, 0.f, level);
 		}
 		if (hitDelay > 0 && --hitDelay == 0) {
-			engine.hit(clamp(inputs[ACC_INPUT].getVoltage() * 0.2f, 0.f, 1.f), ctl);
+			float acc = clamp(inputs[ACC_INPUT].getVoltage() * 0.2f, 0.f, 1.f);
+			engine.hit(acc, ctl);
 			hitFlash = 1.f;
-			noteHit(v);
+			noteHit(v, acc, level);
 		}
+		// a finished render nobody collected (its Lightning was removed): free the slot after 2 s
+		if (renderState == 3) {
+			if (++renderUnclaimed > (int) (2.f * args.sampleRate)) {
+				renderUnclaimed = 0;
+				renderState = 0;
+			}
+		}
+		else
+			renderUnclaimed = 0;
 
 		engine.process(ctl);
 		linkOut = engine.out;
@@ -362,6 +418,22 @@ struct Thunder : Module, ThunderLink {
 	}
 };
 
+// tooltip text for P1 / P2 / MODE (what they do on the algorithm you hear most) and the CV trims
+static std::string thunderLabel(Module* mod, int which) {
+	Thunder* m = dynamic_cast<Thunder*>(mod);
+	if (!m) return "";
+	thunder::Controls& c = m->ctl;
+	float morph = m->engine.effMorph(c);
+	int algo = morph < 0.5f ? c.algoA : c.algoB;
+	const thunder::AlgoInfo& a = thunder::algoInfo(algo);
+	if (which == 0) return string::f("P1: %s (%s)", a.p1, a.name);
+	if (which == 1) return string::f("P2: %s (%s)", a.p2, a.name);
+	if (which == 2) return string::f("Mode (%s: A %s, B %s, C %s)", a.name, a.mode[0], a.mode[1], a.mode[2]);
+	int k = which - 3;
+	int t = m->cvTarget[k];
+	return string::f("CV %c amount (controls %s; press LEARN to change)", 'A' + k, t < 0 ? "nothing" : TARGET_NAMES[t]);
+}
+
 // ---- the screen ----
 struct ThunderScreen : TransparentWidget {
 	Thunder* module = nullptr;
@@ -380,55 +452,27 @@ struct ThunderScreen : TransparentWidget {
 		if (layer != 1) return;
 		std::shared_ptr<Font> font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
 		if (!font) return;
-		std::string l1, l2, l3;
-		if (!module) {
-			l1 = "A 01 FOLD BD > 15% > B 03 RESONANT BD";
-			l2 = "MODE A sine | P1 fold | P2 symmetry";
-			l3 = "MEM 1 Thunder Kick | A>CUTOFF";
-		}
-		else {
-			Thunder* m = module;
-			thunder::Controls& c = m->ctl;
-			thunder::Engine& e = m->engine;
-			float morph = e.effMorph(c);
-			int mode = e.effMode(c);
-			const thunder::AlgoInfo& a = thunder::algoInfo(c.algoA);
-			const thunder::AlgoInfo& b = thunder::algoInfo(c.algoB);
-			const thunder::AlgoInfo& cur = morph < 0.5f ? a : b;
-			if (morph < 0.005f) l1 = string::f("A %02d %s", c.algoA + 1, a.name);
-			else if (morph > 0.995f) l1 = string::f("B %02d %s", c.algoB + 1, b.name);
-			else l1 = string::f("A %02d %s > %d%% > B %02d %s", c.algoA + 1, a.name, (int) std::round(morph * 100.f), c.algoB + 1, b.name);
-			l2 = string::f("MODE %c %s | P1 %s %d | P2 %s %d", 'A' + mode, cur.mode[mode], cur.p1, (int) std::round(e.effP1(c) * 100.f),
-			               cur.p2, (int) std::round(e.effP2(c) * 100.f));
-			if (m->learnArmed[0] || m->learnArmed[1]) l3 = string::f("LEARN CV %c: move a knob", m->learnArmed[0] ? 'A' : 'B');
-			else if (m->storeArmed) l3 = "STORE: press a memory 1-8";
-			else {
-				l3 = string::f("MEM %d %s", m->currentMem + 1, m->memName[m->currentMem].c_str());
-				if (thunder::isDrone(c.decay)) l3 += " | DRONE";
-				if (c.wear > 0.005f) l3 += string::f(" | WEAR %d", (int) std::round(c.wear * 100.f));
-				if (c.mutate > 0.005f) l3 += string::f(" | MUT %d", (int) std::round(c.mutate * 100.f));
-				if (c.lock) l3 += " | LOCK";
-				for (int k = 0; k < 2; k++)
-					if (m->inputs[Thunder::CVA_INPUT + k].isConnected() && m->cvTarget[k] >= 0)
-						l3 += string::f(" | %c>%s", 'A' + k, TARGET_NAMES[m->cvTarget[k]]);
-			}
+		// just the two algorithm names
+		std::string l1 = "A  FOLD BD", l2 = "B  RESONANT BD";
+		if (module) {
+			thunder::Controls& c = module->ctl;
+			l1 = string::f("A  %s", thunder::algoInfo(c.algoA).name);
+			l2 = string::f("B  %s", thunder::algoInfo(c.algoB).name);
 		}
 		nvgFontFaceId(args.vg, font->handle);
 		nvgTextLetterSpacing(args.vg, 0.f);
-		float size = 10.5f;
-		// shrink line 1 if it would overflow
-		nvgFontSize(args.vg, size);
 		nvgFillColor(args.vg, nvgRGB(0x66, 0xff, 0x77));
-		nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-		const std::string* lines[3] = {&l1, &l2, &l3};
-		for (int i = 0; i < 3; i++) {
+		nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		const std::string* lines[2] = {&l1, &l2};
+		float size = 13.5f;
+		for (int i = 0; i < 2; i++) {
 			float bounds[4];
 			nvgFontSize(args.vg, size);
 			nvgTextBounds(args.vg, 0, 0, lines[i]->c_str(), nullptr, bounds);
 			float w = bounds[2] - bounds[0];
-			float maxW = box.size.x - 10.f;
+			float maxW = box.size.x - 12.f;
 			nvgFontSize(args.vg, w > maxW ? size * maxW / w : size);
-			nvgText(args.vg, 5.f, 6.f + i * 15.f, lines[i]->c_str(), nullptr);
+			nvgText(args.vg, 6.f, box.size.y * (0.3f + 0.42f * i), lines[i]->c_str(), nullptr);
 		}
 	}
 };

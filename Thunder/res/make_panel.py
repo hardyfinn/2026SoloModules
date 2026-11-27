@@ -28,7 +28,7 @@ IO_TOP, IO_BOT = 106.0, 118.6
 MEMX = [96.5, 103.5, 110.5, 117.5]
 MEMY = [9.5, 16.8]
 STORE_X, STORE_Y = 125.6, 12.8
-SCREEN = (27.5, 3.0, 62.5, 16.5)
+SCREEN = (36.0, 5.5, 53.0, 12.0)
 
 CONTROL = 3.2   # control label size (project standard)
 JACK = 2.9      # jack label size (project standard)
@@ -62,8 +62,8 @@ add = parts.append
 add(f'<rect width="{W}" height="{H}" fill="{BG}"/>')
 
 # ---- header
-add(text("THUNDER", 4.2, 11.0, 5.0, FONT_BOLD, AMBER, anchor="start", spacing=0.12))
-add(text("drum + synth voice", 4.4, 16.0, 2.0, FONT_MED, SOFT, anchor="start"))
+add(text("THUNDER", 4.6, 11.4, 4.6, FONT_BOLD, AMBER, anchor="start", spacing=0.12))
+add(text("drum + synth voice", 4.8, 16.2, 2.0, FONT_MED, SOFT, anchor="start"))
 sx, sy, sw, sh = SCREEN
 add(f'<rect x="{sx - 0.6}" y="{sy - 0.6}" width="{sw + 1.2}" height="{sh + 1.2}" rx="1.2" fill="#000"/>')
 add(text("STORE", STORE_X, STORE_Y + 7.4, SMALL, FONT_BOLD, AMBER))

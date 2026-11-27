@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FONT_BOLD = os.environ.get("PANEL_FONT_BOLD", "/usr/share/fonts/opentype/inter/Inter-Bold.otf")
 FONT_MED = os.environ.get("PANEL_FONT_MED", "/usr/share/fonts/opentype/inter/Inter-Medium.otf")
 
-W, H = 111.76, 128.5  # 22 HP
+W, H = 142.24, 128.5  # 28 HP
 
 BG = "#1B1D22"
 BAND = "#23262C"
@@ -22,8 +22,8 @@ GREEN = "#7FE08A"
 IOBG = "#2E2A22"
 
 # ---- LAYOUT (same numbers in src/Lightning.cpp) ----
-COL = [13.0, 32.0, 51.0, 70.0]
-C5 = 94.5
+COL = [13.0, 32.0, 51.0, 70.0, 89.0, 108.0]
+C5 = 129.5
 DISP_Y, DISP_W, DISP_H = 19.5, 16.5, 13.0
 KEEP_DX, SEND_DX, BTN_Y = -4.8, 5.0, 43.0
 ROW = [58.0, 73.0, 88.0]
@@ -97,4 +97,4 @@ print("ok")
 import sys as _sys
 _sys.path.insert(0, HERE)
 import haer_logo
-haer_logo.add_to_file(os.path.join(HERE, "Lightning.svg"), x=66.0, y=12.0, cap=3.0, bg=BG)
+haer_logo.add_to_file(os.path.join(HERE, "Lightning.svg"), x=80.0, y=12.0, cap=3.0, bg=BG)
