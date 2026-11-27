@@ -5,6 +5,7 @@ FLAGS +=
 SOURCES += $(wildcard src/*.cpp)
 DISTRIBUTABLES += $(wildcard res/*.svg)
 DISTRIBUTABLES += $(wildcard LICENSE*)
+DISTRIBUTABLES += res/fonts
 
 ifneq ($(MAKECMDGOALS),test)
 include $(RACK_DIR)/plugin.mk

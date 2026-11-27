@@ -4,7 +4,7 @@
 # knob: (ID, LABEL, tooltip, stock position 0..1, display, lo, hi, unit, row, col[, kind, norand])
 #   display: pct | exp (lo*(hi/lo)^k) | lin (lo+(hi-lo)k) | int (rounded lin) | sw (switch)
 #   kind: knob (default) | sw3 | sw2 ; switch labels go in unit, bottom first, '|' separated
-# cv: (LABEL, knob ID or 'VOCT')
+# cv: (LABEL, knob ID or 'VOCT'); since 2.3.0 only V/OCT (Hardy: V/OCT, TRIG, ACCENT, OUT)
 #
 # Stock values are fitted to the 909's published behaviour (service-notes block diagram,
 # commonly quoted pitches and times); they are not read from component values.
@@ -41,7 +41,7 @@ VOICES = [
       ("SHAPE", "SHAPE", "Shape (the waveshaper: sine <-> triangle <-> raw ramp)", 0.15, "pct", 0, 100, "%", 2, 0),
       ("DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.0, "pct", 0, 100, "%", 2, 1),
     ],
-    cv=[("V/OCT", "VOCT"), ("TUNE", "TUNE"), ("DECAY", "DECAY"), ("ATTACK", "ATTACK"), ("SWEEP", "SWEEP"), ("SHAPE", "SHAPE"), ("DRIVE", "DRIVE")]),
+    cv=[("V/OCT", "VOCT")]),
 
   dict(slug="Snare909", cls="Snare", title="909 SNARE", sub="TR-909 snare drum circuit", color=ORANGE,
     sections=[[("STOCK 909", 0, 6)], [("OSCILLATORS", 0, 5)], [("NOISE", 0, 1), ("OUT", 2, 2)]],
@@ -62,7 +62,7 @@ VOICES = [
       ("NOISECOL", "COLOUR", "Colour (high-pass corner on the noise)", pos_exp(700, 150, 8000), "exp", 150, 8000, " Hz", 2, 1),
       ("DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.0, "pct", 0, 100, "%", 2, 2),
     ],
-    cv=[("V/OCT", "VOCT"), ("TONE", "TONE"), ("SNAPPY", "SNAPPY"), ("RATIO", "RATIO"), ("DECAY", "DECAY"), ("SNAP DEC", "SNAPDECAY"), ("DRIVE", "DRIVE")]),
+    cv=[("V/OCT", "VOCT")]),
 
   dict(slug="Tom909", cls="Tom", title="909 TOM", sub="TR-909 tom circuits", color=ORANGE,
     sections=[[("STOCK 909", 0, 6)], [("DRUM", 0, 5)], [("SKIN", 0, 0), ("OUT", 1, 1)]],
@@ -82,7 +82,7 @@ VOICES = [
       ("MUTE", "MUTE", "Mute (a hand resting on the head)", 0.0, "pct", 0, 100, "%", 2, 0),
       ("DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.0, "pct", 0, 100, "%", 2, 1),
     ],
-    cv=[("V/OCT", "VOCT"), ("DECAY", "DECAY"), ("SWEEP", "SWEEP"), ("BEND", "BEND"), ("NOISE", "NOISE"), ("DOUBLE", "DOUBLE"), ("DRIVE", "DRIVE")]),
+    cv=[("V/OCT", "VOCT")]),
 
   dict(slug="Rim909", cls="Rim", title="909 RIM", sub="TR-909 rim shot circuit", color=ORANGE,
     sections=[[("STOCK 909", 0, 6)], [("RESONATORS + VCA", 0, 5)], []],
@@ -98,7 +98,7 @@ VOICES = [
       ("STRIKE", "STRIKE", "Strike (below 1 ms: harder trigger; above: soft mallet)", 0.5, "exp", 0.1, 10, " ms", 1, 4),
       ("DRIVE", "DRIVE", "Drive (VCA and op-amp into saturation)", 0.0, "pct", 0, 100, "%", 1, 5),
     ],
-    cv=[("V/OCT", "VOCT"), ("RATIO", "RATIO"), ("RING", "RING"), ("GATE", "GATE"), ("SNAP", "SNAP"), ("DRIVE", "DRIVE")]),
+    cv=[("V/OCT", "VOCT")]),
 
   dict(slug="Clap909", cls="Clap", title="909 CLAP", sub="TR-909 hand clap circuit", color=ORANGE,
     sections=[[("FILTER", 0, 2), ("STOCK 909", 3, 6)], [("CLAPS", 0, 5)], []],
@@ -116,7 +116,7 @@ VOICES = [
       ("MIX", "MIX", "Mix (bursts <-> tail)", 0.55, "pct", 0, 100, "%", 1, 4),
       ("DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.0, "pct", 0, 100, "%", 1, 5),
     ],
-    cv=[("BAND", "BAND"), ("SPREAD", "SPREAD"), ("TAIL", "TAIL"), ("BURSTS", "BURSTS"), ("MIX", "MIX"), ("DRIVE", "DRIVE")]),
+    cv=[]),
 
   dict(slug="Cymbals909", cls="Cymbals", title="909 CYMBALS", sub="TR-909 6-bit hat and cymbal path", color=ORANGE,
     sections=[[("STOCK 909", 0, 6)], [("SOURCE", 0, 1), ("DIGITAL", 2, 3), ("VCA + CUT", 4, 5)], [("OUT", 0, 0)]],
@@ -136,5 +136,41 @@ VOICES = [
       ("CUT", "CUT", "Cut (output high-pass)", pos_exp(250, 30, 8000), "exp", 30, 8000, " Hz", 1, 5),
       ("DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.0, "pct", 0, 100, "%", 2, 0),
     ],
-    cv=[("V/OCT", "VOCT"), ("DECAY", "DECAY"), ("CH DEC", "CHDECAY"), ("METAL", "METAL"), ("NOISE", "NOISE"), ("BITS", "BITS"), ("DRIVE", "DRIVE")]),
+    cv=[("V/OCT", "VOCT")]),
 ]
+
+# ---- 16 HP layout (2.3.0, Hardy picked "panel B"): rows 0-1 are big knobs in 3 columns
+# (row 1 col 2 is HIT), rows 2-4 small knobs in 4 columns. RAND and NEAR STOCK sit in the
+# last two columns of the first small row that has both free. BAND labels the big rows.
+PLACE = {
+  "Kick909": dict(band="STOCK 909", big=[["TUNE", "ATTACK", "DECAY"], ["ACCENT", "LEVEL"]],
+                  small=[["BASE", "SWEEP", "BEND", "SHAPE"], ["PULSE", "NOISE", "NOISELP", "SNAP"], ["DRIVE", "AGE"]]),
+  "Snare909": dict(band="STOCK 909", big=[["TUNE", "TONE", "SNAPPY"], ["ACCENT", "LEVEL"]],
+                   small=[["RATIO", "BALANCE", "DECAY", "SHAPE"], ["SWEEP", "BEND", "SNAPDECAY", "NOISECOL"], ["DRIVE", "AGE"]]),
+  "Tom909": dict(band="STOCK 909", big=[["TUNE", "DECAY", "RANGE"], ["ACCENT", "LEVEL"]],
+                 small=[["SWEEP", "BEND", "SHAPE", "NOISE"], ["DOUBLE", "TONE", "MUTE", "DRIVE"], ["AGE"]]),
+  "Rim909": dict(band="MAIN", big=[["TUNE", "RING", "GATE"], ["ACCENT", "LEVEL"]],
+                 small=[["RATIO", "SNAP", "STRIKE", "DRIVE"], ["AGE"]]),
+  "Clap909": dict(band="MAIN", big=[["BAND", "TONE", "TAIL"], ["ACCENT", "LEVEL"]],
+                  small=[["RES", "BURSTS", "SPREAD", "SNAP"], ["MIX", "DRIVE"], ["AGE"]]),
+  "Cymbals909": dict(band="STOCK 909", big=[["TUNE", "DECAY", "TYPE"], ["ACCENT", "LEVEL"]],
+                     small=[["CHDECAY", "METAL", "NOISE", "BITS"], ["RECON", "CUT", "DRIVE", "AGE"]]),
+}
+for _v in VOICES:
+    _p = PLACE[_v["slug"]]
+    _rc = {}
+    for _r, _row in enumerate(_p["big"]):
+        for _c, _id in enumerate(_row): _rc[_id] = (_r, _c)
+    for _r, _row in enumerate(_p["small"]):
+        for _c, _id in enumerate(_row): _rc[_id] = (2 + _r, _c)
+    _ids = [k[0] for k in _v["knobs"]]
+    assert sorted(_ids) == sorted(_rc), (_v["slug"], set(_ids) ^ set(_rc))
+    _new = []
+    for _k in _v["knobs"]:
+        _k = list(_k); _k[8], _k[9] = _rc[_k[0]]; _new.append(tuple(_k))
+    _v["knobs"] = _new
+    # RAND / NEAR STOCK: last two columns of the first small row that has both free
+    _used = {}
+    for _id, (_r, _c) in _rc.items(): _used.setdefault(_r, set()).add(_c)
+    _v["rand_row"] = next(_r for _r in (2, 3, 4) if not ({2, 3} & _used.get(_r, set())))
+    _v["band"] = _p["band"]

@@ -4,13 +4,13 @@ Circuit models of the Roland TR-909's instruments, one module per instrument, in
 spirit as [808 Circuits](../Circuit808/): a model of the stock voice first, then the circuit's
 inner parts on the panel with ranges past stock. No samples are used or shipped.
 
-Modules (all 28 HP): **909 Kick, 909 Snare, 909 Tom, 909 Rim, 909 Clap, 909 Cymbals**.
+Modules (all 16 HP since 2.3.0): **909 Kick, 909 Snare, 909 Tom, 909 Rim, 909 Clap, 909 Cymbals**.
 
 ![909 Kick](panel-preview.png)
 
 Every module has a **STOCK 909** row (the 909's own knobs, plus ACCENT, LEVEL and AGE),
-the circuit controls, CV inputs (±5 V = full knob range), TRIG, ACCENT, ENV and OUT, and a HIT
-button. An **orange dot** beside each knob marks the stock 909 setting; right-click →
+the circuit controls, jacks for RAND, NEAR, TRIG, ACCENT, V/OCT (not on the Clap; the Cymbals
+also have OPEN) and OUT, and a HIT button. An **orange dot** beside each knob marks the stock 909 setting; right-click →
 *Reset to stock 909* puts every knob back (LEVEL and switches are left alone).
 
 - **ACCENT** stands in for the 909's TOTAL ACCENT knob. The ACCENT jack takes a gate
@@ -71,31 +71,47 @@ Still to check against the service notes or a recording before moving any stock 
 sweep law and start pitch, the snare's noise paths and oscillator pitches, three oscillators
 per tom, rim ring and pitches, the cymbal clock rate and reconstruction filter.
 
-## 909 Circuit Bench (2.2.0)
+## 2.3.0: compact panels and randomise
 
-All eleven voices in one 48 HP module: BD, SD, LT, MT, HT, RS, CP, CH, OH, CR, RD. It
-works like the 808 Circuit Bench.
+- The six single modules are 16 HP (was 28): the stock 909 knobs big in a shaded band, the
+  circuit knobs small below, no explanation text. Jacks are only RAND, NEAR, TRIG, ACC,
+  V/OCT and OUT (plus OPEN on the Cymbals); the other CV inputs and ENV are gone.
+- **RAND** (key R, or a trigger at the RAND jack) sets every knob to a random value, like
+  Ctrl+R. **NEAR** (key N, or the NEAR jack) does the same, but values near the stock 909
+  setting are twice as likely as values at the ends of the knob. Neither touches LEVEL,
+  AGE or the switches.
 
-- The screen draws the selected voice as its circuit (for the kick: TRIG, PITCH ENV,
-  CLICK, VCO + SHAPER, VCA, OUT). Tap a block, or turn SELECT, and the four EDIT knobs
-  take its values. You can also drag a value on the screen (shift = fine, double-click =
-  stock). A filled orange dot means the stock 909 setting; a ring means it has moved.
-- Tap a voice button to select it; SHIFT + voice hits it.
-- STOCK puts the block on screen back to the 909 (SHIFT + STOCK: the whole voice).
-- COPY, then tap another voice of the same kind, pastes (tom to tom, OH/CR/RD to each other).
-- KITS steps through four kit memories, all saved in the patch (SHIFT + KITS: stock kit).
+## 909 Circuit Bench (2.3.0)
+
+All eleven voices in one 36 HP module: BD, SD, LT, MT, HT, RS, CP, CH, OH, CR, RD. It
+works like the 808 Circuit Bench 2.4.0.
+
+- No screen: 16 knobs follow the selected voice, each with its name and value, grouped by
+  circuit stage (for the kick: TRIG, PITCH ENV, CLICK, VCO + SHAPER, VCA, OUT). Knobs a
+  voice does not use are hidden. An orange dot marks stock 909; a blue dot marks the kit
+  as loaded.
+- Double-click a knob: back to the loaded kit value, double-click again: stock 909.
+- Tap a voice button to select it; SHIFT + voice hits it. STOCK puts the voice back to the
+  loaded kit (SHIFT + STOCK: stock 909). COPY, then tap another voice of the same kind,
+  pastes.
+- KITS steps through four kit memories saved in the patch (SHIFT + KITS: stock kit).
+  Right-click has 11 factory kits (Stock 909, Chicago Jack, Detroit, Hard Techno, Gabber
+  Kick, Deep House, Garage Swing, Crunchy 4-bit, Tuned Toms, Worn Unit, Circuit Bent) and
+  .909kit save/load.
+- **RAND** rolls the selected voice near its loaded values; SHIFT + RAND (or RAND while
+  SHIFT is lit) rolls wild. The IN jack beside it does the same from a trigger. LEVEL, AGE,
+  PAN, the tom range and the cymbal type are never rolled.
 - Every voice has its own TRIG and OUT. Voices whose OUT is not patched go to the stereo
-  mix (PAN per voice, in the OUT block), 6 dB below the single outputs.
-- ACC: mono = all voices, poly = one channel per voice (BD first). POLY: one trigger
-  channel per voice (1 = BD ... 11 = RD).
-- CH chokes OH, as on the 909. The toms keep their LOW/MID/HIGH range and CH/OH/CR/RD
-  keep their type; the CH has CH DEC, the others have DECAY.
+  mix (PAN per voice), 6 dB below the single outputs. ACC: mono = all voices, poly = one
+  channel per voice. POLY: one trigger channel per voice (1 = BD ... 11 = RD).
+- CH chokes OH, as on the 909.
 - Right-click: own WAVs for the hats (CH and OH together), crash and ride, saved by path
-  in the patch; serial number for AGE; whole kit back to stock.
+  in the patch; serial number for AGE.
 
-The sound is the same engines as the single modules. Offline checks in `test/bench.cpp`
-(`make test`): levels and accent per voice, tom pitches, CH/OH lengths, the choke,
-random settings at 44.1/96 kHz, sleep, every parameter on screen exactly once.
+The sound is the same engines as the single modules. Offline checks in `test/bench.cpp`:
+levels and accent per voice, tom pitches, CH/OH lengths, the choke, random settings, every
+parameter on a knob slot exactly once, RAND never moving LEVEL/AGE/PAN/RANGE/TYPE, and every
+factory kit playing at a sane level.
 
 ## Build
 

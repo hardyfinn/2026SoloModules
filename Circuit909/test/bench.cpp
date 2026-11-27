@@ -62,7 +62,7 @@ int main() {
 	}
 	// random settings stay finite and bounded
 	{
-		Rng r; r.seed(5); bool ok = true;
+		c909::Rng r; r.seed(5); bool ok = true;
 		for (int t = 0; t < 20; t++) for (int v = 0; v < NV; v++) {
 			Kit k3; k3.setSampleRate(t % 2 ? 96000.f : 44100.f);
 			for (int i = 0; i < k3.v[v]->nK(); i++) k3.v[v]->set(i, t == 0 ? 0.f : t == 1 ? 1.f : r.uni());
@@ -97,6 +97,82 @@ int main() {
 			}
 		}
 		check(ok, "screen blocks show every parameter exactly once");
+	}
+	// the 16 knobs: every shown parameter once, PAN once, hidden ones never
+	{
+		bool ok = true;
+		for (int v = 0; v < NV; v++) {
+			const Slots& S = slots(kindOf(v));
+			if (S.n > NSLOT) ok = false;
+			std::vector<int> seen(MAXK, 0); int pans = 0;
+			for (int s = 0; s < S.n; s++) {
+				int p = S.p[s];
+				if (p == PAN) { pans++; continue; }
+				if (p < 0 || p >= kit.v[v]->nK()) ok = false; else seen[p]++;
+			}
+			if (pans != 1) ok = false;
+			for (int i = 0; i < kit.v[v]->nK(); i++)
+				if (seen[i] != (hidden(v, i) ? 0 : 1)) { ok = false; printf("  %s param %s appears %d times\n", code(v), kit.v[v]->def(i).id, seen[i]); }
+		}
+		check(ok, "the 16 knobs show every parameter of every voice exactly once");
+	}
+	// RAND: LEVEL, AGE, PAN and the fixed RANGE / TYPE never move; a nudge stays near home
+	{
+		Kit kr; RollRng r; bool keep = true, range = true;
+		double dn = 0, dw = 0; int cn = 0, cw = 0;
+		for (int t = 0; t < 400; t++) for (int v = 0; v < NV; v++) {
+			Voice* vo = kr.v[v];
+			vo->toStock();
+			if (t % 2) vo->set(0, 0.9f);
+			float home[MAXK + 1];
+			for (int i = 0; i < MAXK; i++) home[i] = vo->k[i];
+			home[MAXK] = vo->pan = 0.3f;
+			bool wild = t % 4 >= 2;
+			roll(vo, home, wild, r);
+			for (int i = 0; i < vo->nK(); i++) {
+				if (vo->k[i] < 0.f || vo->k[i] > (vo->def(i).kind == 1 ? 2.f : 1.f)) range = false;
+				if (!rollable(vo, i) && vo->k[i] != home[i]) keep = false;
+				if (rollable(vo, i)) { if (wild) { dw += std::fabs(vo->k[i] - home[i]); cw++; } else { dn += std::fabs(vo->k[i] - home[i]); cn++; } }
+			}
+			if (vo->pan != 0.3f) keep = false;
+		}
+		printf("  mean move: nudge %.3f, wild %.3f (of the knob's travel)\n", dn / cn, dw / cw);
+		check(keep, "RAND never moves LEVEL, AGE, PAN, a tom's range or a cymbal's type");
+		check(range, "RAND keeps every knob in range");
+		check(dn / cn < 0.13 && dw / cw > 0.25, "RAND nudge stays near the loaded kit, wild goes anywhere");
+	}
+	// factory kits: every name they use exists on the voices they name, and each plays
+	{
+		bool ok = true, plays = true;
+		for (auto& fk : factoryKits()) {
+			std::string s(fk.text);
+			size_t pos = 0;
+			Kit kf; kf.setSampleRate(FS);
+			while (pos < s.size()) {
+				size_t end = s.find(';', pos); if (end == std::string::npos) end = s.size();
+				std::string part = s.substr(pos, end - pos); pos = end + 1;
+				size_t c = part.find(':'); if (c == std::string::npos) continue;
+				std::string who = " " + part.substr(0, c) + " ", sets = part.substr(c + 1);
+				for (int v = 0; v < NV; v++) {
+					if (who.find(std::string(" ") + code(v) + " ") == std::string::npos && who.find(" ALL ") == std::string::npos) continue;
+					size_t i = 0;
+					while (i < sets.size()) {
+						while (i < sets.size() && sets[i] == ' ') i++;
+						size_t j = sets.find('=', i); if (j == std::string::npos) break;
+						std::string id = sets.substr(i, j - i);
+						if (paramByIdString(kf.v[v], id) < 0) { ok = false; printf("  %s: %s has no %s\n", fk.name, code(v), id.c_str()); }
+						i = sets.find(' ', j); if (i == std::string::npos) break;
+					}
+				}
+			}
+			applyKit(kf, fk.text);
+			for (int v = 0; v < NV; v++) {
+				float pk = peakOf(kf, v, 0.f, 0.6f);
+				if (!(pk > 0.5f && pk < 13.f)) { plays = false; printf("  %s: %s peak %.2f V\n", fk.name, code(v), pk); }
+			}
+		}
+		check(ok, "factory kits only use parameters their voices have");
+		check(plays, "every voice of every factory kit plays (0.5-13 V)");
 	}
 	// demo: four bars of a kit pattern through the stereo mix
 	{

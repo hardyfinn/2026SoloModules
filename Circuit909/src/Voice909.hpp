@@ -12,9 +12,12 @@
 namespace c909 {
 
 // ---- LAYOUT (same numbers in res/make_voice_panels.py) ----
-static const float VCOL[7] = {11.f, 31.04f, 51.08f, 71.12f, 91.16f, 111.2f, 131.24f};
-static const float VROW[3] = {30.f, 52.f, 74.f};
-static const float VROW_CV = 96.f, VROW_IO = 115.f;
+static const float PW = 81.28f;   // 16 HP
+static inline float bigX(int c) { return PW / 6.f + c * PW / 3.f; }       // rows 0-1
+static inline float smallX(int c) { return PW / 8.f + c * PW / 4.f; }     // rows 2-4
+static const float ROW_Y[5] = {27.f, 44.5f, 63.f, 76.5f, 90.f};
+static const float JACK_Y = 112.f;
+static inline float jackX(int i, int n) { return 7.5f + i * (PW - 15.f) / (n - 1); }
 
 struct KnobQuantity : ParamQuantity {
 	const KnobDef* def = nullptr;
@@ -63,15 +66,22 @@ struct VoiceModule : Module {
 	float pendingAcc = 0.f;
 
 	int hitParam() const { return nK; }
+	int randParam() const { return nK + 1; }
+	int nearParam() const { return nK + 2; }
+	dsp::BooleanTrigger randBtn, nearBtn;
+	dsp::SchmittTrigger randIn, nearIn;
+	std::atomic<int> keyRandom{0};   // 1 = R, 2 = N, set by the widget (hover + key)
+	int randInput() const { return nCv + 2 + (E::EXTRA_TRIG ? 1 : 0); }
+	int nearInput() const { return randInput() + 1; }
 	int trigInput() const { return nCv; }
 	int accentInput() const { return nCv + 1; }
-	enum OutputIds { ENV_OUTPUT, OUT_OUTPUT, NUM_OUTPUTS };
+	enum OutputIds { OUT_OUTPUT, NUM_OUTPUTS };
 
 	VoiceModule() {
 		const VoiceSpec& s = E::spec();
 		nK = s.nKnobs; nCv = s.nCv;
 		k.assign(nK, 0.f);
-		config(nK + 1, nCv + 2 + (E::EXTRA_TRIG ? 1 : 0), NUM_OUTPUTS, 1);
+		config(nK + 3, nCv + 2 + (E::EXTRA_TRIG ? 1 : 0) + 2, NUM_OUTPUTS, 1);
 		for (int i = 0; i < nK; i++) {
 			const KnobDef& d = s.knobs[i];
 			if (d.kind == 0) {
@@ -84,6 +94,8 @@ struct VoiceModule : Module {
 			}
 		}
 		configButton(nK, "Hit");
+		configButton(nK + 1, "Random (every knob except LEVEL and AGE, anywhere on its range; switches stay; key R)");
+		configButton(nK + 2, "Near stock (every knob except LEVEL and AGE; values near the stock 909 twice as likely as the ends; key N)");
 		for (int i = 0; i < nCv; i++) {
 			const CvDef& c = s.cv[i];
 			if (c.knob < 0) configInput(i, "V/OCT");
@@ -92,7 +104,8 @@ struct VoiceModule : Module {
 		configInput(nCv, "Trigger");
 		configInput(nCv + 1, "Accent (gate = accented; 0-5 V = how much, read at each trigger)");
 		if (E::EXTRA_TRIG) configInput(nCv + 2, "Open hat trigger (crash/ride: plays too)");
-		configOutput(ENV_OUTPUT, "Envelope (0-10 V)");
+		configInput(randInput(), "Random trigger (as the ALL button)");
+		configInput(nearInput(), "Near stock trigger (as the NEAR STOCK button)");
 		configOutput(OUT_OUTPUT, s.name);
 		lightDivider.setDivision(256);
 		serial = random::u32();
@@ -154,6 +167,13 @@ struct VoiceModule : Module {
 			std::unique_lock<std::mutex> lock(sampleMutex, std::try_to_lock);
 			if (lock.owns_lock()) { engine.swapSample(newSample); sampleReady = false; }   // swap, no copy
 		}
+		bool rnd = randBtn.process(params[randParam()].getValue() > 0.5f);
+		bool near = nearBtn.process(params[nearParam()].getValue() > 0.5f);
+		rnd |= randIn.process(inputs[randInput()].getVoltage(), 0.1f, 1.f);
+		near |= nearIn.process(inputs[nearInput()].getVoltage(), 0.1f, 1.f);
+		int key = keyRandom.exchange(0);
+		rnd |= key == 1; near |= key == 2;
+		if (rnd || near) randomise(near);
 		for (int i = 0; i < nK; i++) k[i] = params[i].getValue();
 		float voct = 0.f;
 		for (int i = 0; i < nCv; i++) {
@@ -181,13 +201,23 @@ struct VoiceModule : Module {
 		}
 		else engine.process(k.data(), voct);
 		outputs[OUT_OUTPUT].setVoltage(engine.out);
-		outputs[ENV_OUTPUT].setVoltage(engine.env);
 		if (lightDivider.process()) {
 			float dt = args.sampleTime * lightDivider.getDivision();
 			lights[0].setBrightnessSmooth(engine.env * 0.1f, dt, 30.f);
 		}
 	}
 
+	// the two random buttons: LEVEL, AGE (the knobs Rack's own randomise skips) and the
+	// switches are left alone
+	void randomise(bool nearStockOnly) {
+		const VoiceSpec& s = E::spec();
+		for (int i = 0; i < nK; i++) {
+			const KnobDef& d = s.knobs[i];
+			if (d.kind != 0 || d.norand) continue;
+			float u1 = random::uniform(), u2 = random::uniform();
+			params[i].setValue(nearStockOnly ? nearStock(d.stock, u1, u2) : u1);
+		}
+	}
 	// every control back to the stock 909 (LEVEL and switches left alone)
 	void resetToStock() {
 		const VoiceSpec& s = E::spec();
@@ -212,27 +242,43 @@ struct VoiceWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		for (int i = 0; i < s.nKnobs; i++) {
 			const KnobDef& d = s.knobs[i];
-			Vec p = mm2px(Vec(VCOL[d.col], VROW[d.row]));
+			bool big = d.row < 2;
+			Vec p = mm2px(Vec(big ? bigX(d.col) : smallX(d.col), ROW_Y[d.row]));
 			if (d.kind == 1) addParam(createParamCentered<CKSSThree>(p, module, i));
 			else if (d.kind == 2) addParam(createParamCentered<CKSS>(p, module, i));
-			else addParam(createParamCentered<RoundBlackKnob>(p, module, i));
+			else if (big) addParam(createParamCentered<RoundBlackKnob>(p, module, i));
+			else addParam(createParamCentered<RoundSmallBlackKnob>(p, module, i));
 		}
-		addParam(createLightParamCentered<VCVLightBezel<RedLight>>(mm2px(Vec(VCOL[6], VROW[0])), module, s.nKnobs, 0));
-		for (int i = 0; i < s.nCv; i++)
-			addInput(createInputCentered<PJ301MPort>(mm2px(Vec(VCOL[i], VROW_CV)), module, i));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(VCOL[0], VROW_IO)), module, s.nCv));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(VCOL[1], VROW_IO)), module, s.nCv + 1));
-		if (E::EXTRA_TRIG) addInput(createInputCentered<PJ301MPort>(mm2px(Vec(VCOL[2], VROW_IO)), module, s.nCv + 2));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(VCOL[5], VROW_IO)), module, VoiceModule<E>::ENV_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(VCOL[6], VROW_IO)), module, VoiceModule<E>::OUT_OUTPUT));
+		addParam(createLightParamCentered<VCVLightBezel<RedLight>>(mm2px(Vec(bigX(2), ROW_Y[1])), module, s.nKnobs, 0));
+		addParam(createParamCentered<VCVButton>(mm2px(Vec(smallX(2), ROW_Y[s.randRow])), module, s.nKnobs + 1));
+		addParam(createParamCentered<VCVButton>(mm2px(Vec(smallX(3), ROW_Y[s.randRow])), module, s.nKnobs + 2));
+		// one row of jacks: RAND, NEAR, TRIG, ACC, (OPEN), (V/OCT), OUT
+		int ri = s.nCv + 2 + (E::EXTRA_TRIG ? 1 : 0);
+		int n = 4 + (E::EXTRA_TRIG ? 1 : 0) + s.nCv + 1, j = 0;
+		auto in = [&](int id) { addInput(createInputCentered<PJ301MPort>(mm2px(Vec(jackX(j++, n), JACK_Y)), module, id)); };
+		in(ri); in(ri + 1); in(s.nCv); in(s.nCv + 1);
+		if (E::EXTRA_TRIG) in(s.nCv + 2);
+		for (int i = 0; i < s.nCv; i++) in(i);
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(jackX(j, n), JACK_Y)), module, VoiceModule<E>::OUT_OUTPUT));
 	}
 
+	// with the mouse over the module: R = random (ALL), N = near stock
+	void onHoverKey(const HoverKeyEvent& e) override {
+		VoiceModule<E>* m = dynamic_cast<VoiceModule<E>*>(this->module);
+		if (m && e.action == GLFW_PRESS && (e.mods & RACK_MOD_MASK) == 0) {
+			if (e.keyName == "r") { m->keyRandom = 1; e.consume(this); return; }
+			if (e.keyName == "n") { m->keyRandom = 2; e.consume(this); return; }
+		}
+		ModuleWidget::onHoverKey(e);
+	}
 	void appendContextMenu(Menu* menu) override {
 		VoiceModule<E>* m = dynamic_cast<VoiceModule<E>*>(this->module);
 		if (!m)
 			return;
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createMenuItem("Reset to stock 909", "", [=]() { m->resetToStock(); }));
+		menu->addChild(createMenuItem("Random (every knob but LEVEL and AGE)", "R", [=]() { m->keyRandom = 1; }));
+		menu->addChild(createMenuItem("Random near stock", "N", [=]() { m->keyRandom = 2; }));
 		if (E::USES_SAMPLE) {
 			menu->addChild(createMenuLabel(!m->sampleStatus.empty() ? "Source: built-in metal (" + m->sampleStatus + ")"
 				: m->samplePath.empty() ? "Source: built-in metal" : "Source: " + system::getFilename(m->samplePath)));

@@ -31,6 +31,7 @@ struct VoiceSpec {
 	const KnobDef* knobs;
 	int nCv;
 	const CvDef* cv;
+	int randRow;      // panel row (2-4) of the RAND / NEAR STOCK buttons
 };
 
 // knob position -> value, as the tooltip shows it
@@ -42,6 +43,15 @@ inline float knobValue(const KnobDef& d, float k) {
 		case DISP_PCT: return k;
 		default: return k;
 	}
+}
+
+// NEAR STOCK randomise: a knob position drawn so that values near the stock setting are
+// twice as likely as values at the ends of the knob. The density falls in a straight
+// line from 2 at stock to 1 at each end; each side gets its share by its length.
+// u1, u2: independent uniform numbers in [0, 1).
+inline float nearStock(float stock, float u1, float u2) {
+	float t = 2.f - std::sqrt(4.f - 3.f * u2);   // 0..1, inverse CDF of (2 - t) / 1.5
+	return u1 < stock ? stock - t * stock : stock + t * (1.f - stock);
 }
 
 }  // namespace c909
