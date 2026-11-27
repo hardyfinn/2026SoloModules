@@ -1,0 +1,255 @@
+// Offline checks for the Thunder engine + demo WAVs. No Rack needed.
+//   make test   (prints the checks, writes test/out/*.wav)
+#include "../src/ThunderEngine.hpp"
+#include "../src/ThunderPresets.hpp"
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <chrono>
+#include <cstring>
+
+using namespace thunder;
+static float SR = 48000.f;
+static int fails = 0;
+#define CHECK(c, ...) do { if (!(c)) { std::printf("FAIL: "); fails++; } else std::printf("ok:   "); std::printf(__VA_ARGS__); std::printf("\n"); } while (0)
+
+static void writeWav(const std::string& path, const std::vector<float>& x, float gain = 0.1f) {
+	FILE* f = std::fopen(path.c_str(), "wb");
+	if (!f) return;
+	int n = x.size(), sr = (int) SR, bytes = n * 2;
+	auto w32 = [&](int v) { std::fwrite(&v, 4, 1, f); };
+	auto w16 = [&](short v) { std::fwrite(&v, 2, 1, f); };
+	std::fwrite("RIFF", 1, 4, f); w32(36 + bytes); std::fwrite("WAVEfmt ", 1, 8, f);
+	w32(16); w16(1); w16(1); w32(sr); w32(sr * 2); w16(2); w16(16);
+	std::fwrite("data", 1, 4, f); w32(bytes);
+	for (float v : x) { float s = std::max(-1.f, std::min(1.f, v * gain)); w16((short) (s * 32767)); }
+	std::fclose(f);
+}
+
+static Controls fromPreset(int i) {
+	Controls c;
+	valuesToControls(factoryPreset(i).v, c);
+	c.level = 0.8f;
+	return c;
+}
+
+static float peak(const std::vector<float>& x, int a = 0, int b = -1) {
+	if (b < 0) b = x.size();
+	float p = 0.f;
+	for (int i = a; i < b; i++) p = std::max(p, std::fabs(x[i]));
+	return p;
+}
+
+// 16-step pattern at bpm; pattern chars: x = hit, X = accent, . = rest
+static std::vector<float> pattern(Engine& e, Controls c, const char* pat, float bpm, int bars, Controls* (*mod)(Controls&, int) = nullptr) {
+	std::vector<float> out;
+	int stepLen = (int) (SR * 60.f / bpm / 4.f);
+	int n = (int) std::strlen(pat);
+	for (int s = 0; s < 16 * bars; s++) {
+		Controls cc = c;
+		if (mod) mod(cc, s);
+		char ch = pat[s % n];
+		if (ch == 'x' || ch == 'X') e.hit(ch == 'X' ? 1.f : 0.f, cc);
+		for (int i = 0; i < stepLen; i++) { e.process(cc); out.push_back(e.out); }
+	}
+	return out;
+}
+
+int main(int argc, char** argv) {
+	std::string dir = argc > 1 ? argv[1] : "test/out";
+	// 1. every algorithm makes sound, stays bounded and ends
+	for (int a = 0; a < NUM_ALGOS; a++) {
+		for (int m = 0; m < 3; m++) {
+			Engine e; e.setSampleRate(SR);
+			Controls c = fromPreset(0);
+			c.algoA = a; c.morph = 0.f; c.mode = m; c.drive = 0.f; c.send = 0.f; c.click = 0.f;
+			c.tuneHz = (a >= 7 && a != 9 && a != 10) ? 400.f : (a == 10 ? 261.63f : 120.f);
+			c.decay = 0.45f;
+			if (a == 10) c.p1 = 0.f;
+			e.hit(0.f, c);
+			std::vector<float> o;
+			for (int i = 0; i < (int) (2.f * SR); i++) { e.process(c); o.push_back(e.out); }
+			bool finite = true;
+			for (float v : o) if (!std::isfinite(v)) finite = false;
+			float p = peak(o, 0, (int) (0.3f * SR)), tail = peak(o, (int) (1.6f * SR));
+			CHECK(finite && p > 0.3f && p < 10.01f && tail < 0.05f, "%-12s %-10s peak %.2f V tail %.4f", algoInfo(a).name, algoInfo(a).mode[m], p, tail);
+		}
+	}
+	// 2. drone: DECAY at max keeps ringing
+	{
+		Engine e; Controls c = fromPreset(0); c.decay = 1.f; c.send = 0;
+		e.hit(0, c);
+		std::vector<float> o;
+		for (int i = 0; i < (int) (3.f * SR); i++) { e.process(c); o.push_back(e.out); }
+		CHECK(peak(o, (int) (2.5f * SR)) > 0.5f, "drone still sounding after 2.5 s (%.2f V)", peak(o, (int) (2.5f * SR)));
+	}
+	// 3. mutate moves, lock holds
+	{
+		Engine e; Controls c = fromPreset(3); c.mutate = 1.f;
+		for (int i = 0; i < 40; i++) e.hit(0, c);
+		float a = e.mutP1;
+		CHECK(std::fabs(e.mutP1) + std::fabs(e.mutP2) + std::fabs(e.mutMorph) > 0.01f, "MUTATE wandered (P1 %+.2f P2 %+.2f morph %+.2f)", e.mutP1, e.mutP2, e.mutMorph);
+		c.lock = true;
+		for (int i = 0; i < 40; i++) e.hit(0, c);
+		CHECK(e.mutP1 == a, "LOCK holds the offsets");
+	}
+
+	// 5. review regressions (Fable DSP review 2026-11-27)
+	{
+		// voice stealing: long kick every 137 ms must never jump
+		Engine e; Controls c = fromPreset(0); c.decay = 0.8f; c.click = 0.f; c.send = 0.f; c.drive = 0.f; c.wear = 0.f; c.bend = 0.f;
+		float prev = 0.f, maxJump = 0.f, pk = 0.f;
+		int step = (int) (0.137f * SR);
+		for (int i = 0; i < step * 12; i++) {
+			if (i % step == 0) e.hit(0, c);
+			e.process(c);
+			if (i % step > 100) maxJump = std::max(maxJump, std::fabs(e.out - prev));
+			pk = std::max(pk, std::fabs(e.out));
+			prev = e.out;
+		}
+		CHECK(maxJump < pk * 0.1f, "no click when a fifth hit steals a voice (max jump %.3f V, peak %.2f V)", maxJump, pk);
+	}
+	{
+		// punch mode keeps its body
+		Engine e1, e2; Controls c = fromPreset(2); c.send = 0; c.drive = 0; c.click = 0; c.p1 = 0;
+		Controls cp = c; cp.mode = 1;
+		e1.hit(0, c); e2.hit(0, cp);
+		std::vector<float> a, b;
+		for (int i = 0; i < (int) (0.1f * SR); i++) { e1.process(c); e2.process(cp); a.push_back(e1.out); b.push_back(e2.out); }
+		CHECK(peak(b) > 0.6f * peak(a) && peak(b, (int) (0.05f * SR)) > 0.3f * peak(a, (int) (0.05f * SR)), "RESONANT punch as strong as pure (%.2f vs %.2f V)", peak(b), peak(a));
+	}
+	{
+		// morph moved mid-hit: B (resonant) still starts properly
+		Engine e; Controls c = fromPreset(0); c.algoA = 6; c.algoB = 2; c.morph = 0.f; c.send = 0; c.decay = 0.7f;
+		e.hit(0, c);
+		for (int i = 0; i < (int) (0.05f * SR); i++) e.process(c);
+		c.morph = 1.f;
+		std::vector<float> o;
+		for (int i = 0; i < (int) (0.1f * SR); i++) { e.process(c); o.push_back(e.out); }
+		CHECK(peak(o) > 0.5f, "MORPH to B during a hit: B sounds (%.2f V)", peak(o));
+	}
+	{
+		// noisy sounds keep their level at 96 kHz
+		auto lvl = [](float sr, int algo) {
+			Engine e; e.setSampleRate(sr); Controls c = fromPreset(5); c.algoA = algo; c.morph = 0; c.send = 0; c.drive = 0;
+			e.hit(0, c); double s2 = 0; int n = (int) (0.15f * sr);
+			for (int i = 0; i < n; i++) { e.process(c); s2 += e.out * e.out; }
+			return 10.f * std::log10((float) (s2 / n));
+		};
+		float d5 = lvl(96000.f, 5) - lvl(48000.f, 5), d7 = lvl(96000.f, 7) - lvl(48000.f, 7);
+		CHECK(std::fabs(d5) < 1.f && std::fabs(d7) < 1.f, "96 kHz vs 48 kHz level: slap %+.1f dB, noise hat %+.1f dB", d5, d7);
+	}
+	{
+		// Karplus in tune (string + metal, damp full)
+		for (int m = 0; m < 3; m += 2) {
+			Engine e; Controls c = fromPreset(0); c.algoA = 9; c.morph = 0; c.mode = m; c.p2 = 1.f; c.p1 = 0.3f; c.tuneHz = 220.f;
+			c.bend = 0; c.click = 0; c.drive = 0; c.send = 0; c.decay = 0.9f; c.wear = 0;
+			e.hit(0, c);
+			std::vector<float> o;
+			for (int i = 0; i < (int) (1.0f * SR); i++) { e.process(c); o.push_back(e.out); }
+			// autocorrelation peak near one period
+			int a = (int) (0.2f * SR), n = (int) (0.5f * SR);
+			float best = -1e9f; int bl = 0;
+			for (int L = 180; L < 260; L++) { double s2 = 0; for (int i = a; i < a + n; i++) s2 += o[i] * o[i + L]; if (s2 > best) { best = s2; bl = L; } }
+			// parabolic refine
+			auto ac = [&](int L) { double s2 = 0; for (int i = a; i < a + n; i++) s2 += o[i] * o[i + L]; return s2; };
+			double y0 = ac(bl - 1), y1 = ac(bl), y2 = ac(bl + 1);
+			double off = 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2);
+			double hz = SR / (bl + off);
+			double cents = 1200.0 * std::log2(hz / 220.0);
+			CHECK(std::fabs(cents) < 10.0, "Karplus %s at 220 Hz with DAMP full: %+.1f cents", algoInfo(9).mode[m], cents);
+		}
+	}
+	// 4. CPU
+	{
+		Engine e; Controls c = fromPreset(7); c.morph = 0.5f; c.decay = 0.9f;
+		auto t0 = std::chrono::steady_clock::now();
+		for (int k = 0; k < 4; k++) e.hit(0, c);
+		for (int i = 0; i < (int) SR * 2; i++) e.process(c);
+		double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+		CHECK(true, "worst case (4 hits x 2 algorithms, morph) %.1f%% of one core", ms / 2000.0 * 100.0);
+	}
+
+	// demos
+	const char* pats[8] = {
+		"X...x...X...x.x.", "X..x..x.X...x...", "X.......x..x....", "x.xX.x.xx.x.X.x.",
+		"....X.......X..x", "....X.......X...", "xxXxxxXxxxXxxxXx", "X..x..x...x.X..."};
+	std::vector<float> all;
+	for (int p = 0; p < 8; p++) {
+		Engine e; Controls c = fromPreset(p);
+		std::vector<float> o = pattern(e, c, pats[p], 124.f, 4);
+		char name[64];
+		std::snprintf(name, sizeof(name), "/%d-%s.wav", p + 1, factoryPreset(p).name);
+		std::string fn = dir + name;
+		for (auto& ch : fn) if (ch == ' ') ch = '-';
+		writeWav(fn, o);
+		all.insert(all.end(), o.begin(), o.end());
+	}
+	// morph sweep: Fold kick -> Tom over 8 bars
+	{
+		Engine e; Controls c = fromPreset(0); c.algoB = 6;
+		std::vector<float> o = pattern(e, c, "X...x...x...x...", 124.f, 8, [](Controls& cc, int s) -> Controls* { cc.morph = s / 127.f; return nullptr; });
+		writeWav(dir + "/morph-kick-to-tom.wav", o);
+	}
+	// mutate: FM perc with MUTATE at 0.8 over 8 bars
+	{
+		Engine e; Controls c = fromPreset(3); c.mutate = 0.8f; c.wear = 0.3f;
+		std::vector<float> o = pattern(e, c, "x.xx.x.xx.x.x.xx", 124.f, 8);
+		writeWav(dir + "/mutate-fm-perc.wav", o);
+	}
+	// tom -> bell: memory 8 with MORPH swept 0 -> 1 over 8 bars
+	{
+		Engine e; Controls c = fromPreset(7);
+		std::vector<float> o = pattern(e, c, "X..x..x...x.X...", 124.f, 8, [](Controls& cc, int s) -> Controls* { cc.morph = s / 127.f; return nullptr; });
+		writeWav(dir + "/morph-tom-to-bell.wav", o);
+	}
+	// new in 2.2.0: Particles, Circuit 909, Chaos
+	{
+		Engine e; Controls c = fromPreset(6); c.algoA = 12; c.morph = 0; c.mode = 0; c.tuneHz = 400; c.decay = 0.35f; c.p1 = 0.5f; c.p2 = 0.4f; c.cutoff = 0.3f; c.vcf = 0; c.wear = 0.3f;
+		std::vector<float> o = pattern(e, c, "xxXxxxXxxxXxxxXx", 124.f, 2);
+		c.mode = 1; c.decay = 0.5f; std::vector<float> o2 = pattern(e, c, "X...x.x.X...x.x.", 124.f, 2);
+		c.mode = 2; c.decay = 0.55f; c.tuneHz = 300; std::vector<float> o3 = pattern(e, c, "X.......X...x...", 124.f, 2);
+		o.insert(o.end(), o2.begin(), o2.end()); o.insert(o.end(), o3.begin(), o3.end());
+		writeWav(dir + "/particles-maracas-tambourine-scrape.wav", o);
+	}
+	{
+		Engine k, s, r; Controls ck = fromPreset(0), cs = fromPreset(0), cr = fromPreset(0);
+		ck.algoA = 13; ck.morph = 0; ck.mode = 0; ck.tuneHz = 48; ck.bend = 0.1f; ck.decay = 0.55f; ck.p1 = 0.4f; ck.p2 = 0.5f; ck.click = 0; ck.drive = 0.25f;
+		cs = ck; cs.mode = 1; cs.tuneHz = 185; cs.decay = 0.45f; cs.p1 = 0.5f; cs.p2 = 0.6f; cs.level = 0.6f;
+		cr = ck; cr.mode = 2; cr.tuneHz = 480; cr.decay = 0.3f; cr.p1 = 0.4f; cr.p2 = 0.5f; cr.level = 0.5f;
+		std::vector<float> o; int stepLen = (int) (SR * 60.f / 126.f / 4.f);
+		const char* pk = "X...X...X...X..."; const char* ps = "....X.......X..x"; const char* pr = "..x...x..x....x.";
+		for (int st = 0; st < 16 * 8; st++) {
+			int i = st % 16;
+			if (pk[i] != '.') k.hit(pk[i] == 'X', ck);
+			if (ps[i] != '.') s.hit(ps[i] == 'X', cs);
+			if (pr[i] != '.') r.hit(0, cr);
+			for (int j = 0; j < stepLen; j++) { k.process(ck); s.process(cs); r.process(cr); o.push_back(k.out + s.out + r.out); }
+		}
+		writeWav(dir + "/circuit909-kick-snare-rim.wav", o, 0.08f);
+	}
+	{
+		Engine e; Controls c = fromPreset(3); c.algoA = 14; c.morph = 0; c.decay = 0.4f; c.tuneHz = 220; c.mutate = 0.6f; c.wear = 0.2f; c.send = 0.25f;
+		std::vector<float> o;
+		for (int m = 0; m < 3; m++) { c.mode = m; c.p1 = 0.6f; c.p2 = 0.4f; std::vector<float> x = pattern(e, c, "x.xX.x.xx.x.X.xx", 124.f, 2); o.insert(o.end(), x.begin(), x.end()); }
+		writeWav(dir + "/chaos-logistic-feedback-lorenz.wav", o);
+	}
+	// groove: three Thunders summed (kick, snare, hat)
+	{
+		Engine k, s, h; Controls ck = fromPreset(0), cs = fromPreset(4), ch = fromPreset(6);
+		ch.level = 0.5f; cs.level = 0.7f;
+		std::vector<float> o;
+		int stepLen = (int) (SR * 60.f / 126.f / 4.f);
+		const char* pk = "X...x...X...x..x"; const char* ps = "....X.......X..."; const char* ph = "x.X.x.Xxx.X.x.Xx";
+		for (int st = 0; st < 16 * 8; st++) {
+			int i16 = st % 16;
+			if (pk[i16] != '.') k.hit(pk[i16] == 'X', ck);
+			if (ps[i16] != '.') s.hit(ps[i16] == 'X', cs);
+			if (ph[i16] != '.') h.hit(ph[i16] == 'X', ch);
+			for (int i = 0; i < stepLen; i++) { k.process(ck); s.process(cs); h.process(ch); o.push_back(k.out + s.out + h.out); }
+		}
+		writeWav(dir + "/groove-three-thunders.wav", o, 0.07f);
+	}
+	std::printf("%s (%d failed)\n", fails ? "SOME CHECKS FAILED" : "all checks passed", fails);
+	return fails ? 1 : 0;
+}

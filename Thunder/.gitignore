@@ -1,0 +1,9 @@
+build/
+dist/
+*.so
+*.dylib
+*.dll
+test/render
+test/out/
+__pycache__/
+test/lightning
