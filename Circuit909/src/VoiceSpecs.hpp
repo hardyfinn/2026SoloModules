@@ -20,7 +20,7 @@ inline const VoiceSpec& spec() {
 		{"PULSE", "PULSE", "Pulse (the click's square pulse)", 0.500000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 3, 0, false},
 		{"NOISE", "NOISE", "Noise (the click's noise burst)", 0.500000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 4, 0, false},
 		{"NOISELP", "NOISE LP", "Noise LP (low-pass on the click noise)", 0.611731f, DISP_EXP, 800.0f, 16000.0f, " Hz", 1, 5, 0, false},
-		{"SNAP", "SNAP", "Snap (length of the click)", 0.525461f, DISP_EXP, 0.5f, 40.0f, " ms", 1, 6, 0, false},
+		{"SNAP", "SNAP", "Snap (length of the click: the noise burst, and the pulse up to 1 ms)", 0.525461f, DISP_EXP, 0.5f, 40.0f, " ms", 1, 6, 0, false},
 		{"SHAPE", "SHAPE", "Shape (the waveshaper: sine <-> triangle <-> raw ramp)", 0.150000f, DISP_PCT, 0.0f, 100.0f, "%", 2, 0, 0, false},
 		{"DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 2, 1, 0, false},
 	};
@@ -116,7 +116,7 @@ inline const VoiceSpec& spec() {
 		{"RATIO", "RATIO", "Ratio (spread of the upper two resonators; stock 2.2x)", 0.243243f, DISP_LIN, 1.3f, 5.0f, "x", 1, 0, 0, false},
 		{"RING", "RING", "Ring (resonator decay)", 0.353044f, DISP_EXP, 5.0f, 800.0f, " ms", 1, 1, 0, false},
 		{"GATE", "GATE", "Gate (how long the VCA stays open)", 0.389076f, DISP_EXP, 1.0f, 100.0f, " ms", 1, 2, 0, false},
-		{"SNAP", "SNAP", "Snap (high-pass corner on the crack; moves with TUNE)", 0.497418f, DISP_EXP, 100.0f, 5000.0f, " Hz", 1, 3, 0, false},
+		{"SNAP", "SNAP", "Snap (high-pass corner on the crack; moves with TUNE)", 0.604531f, DISP_EXP, 100.0f, 2500.0f, " Hz", 1, 3, 0, false},
 		{"STRIKE", "STRIKE", "Strike (below 1 ms: harder trigger; above: soft mallet)", 0.500000f, DISP_EXP, 0.1f, 10.0f, " ms", 1, 4, 0, false},
 		{"DRIVE", "DRIVE", "Drive (VCA and op-amp into saturation)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 5, 0, false},
 	};
@@ -168,7 +168,7 @@ enum Knob { TUNE, DECAY, TYPE, ACCENT, LEVEL, AGE, METAL, NOISE, BITS, RECON, CH
 inline const VoiceSpec& spec() {
 	static const KnobDef knobs[] = {
 		{"TUNE", "TUNE", "Tune (the sample clock: pitch and grit together)", 0.500000f, DISP_LIN, -1.0f, 1.0f, " oct", 0, 0, 0, false},
-		{"DECAY", "DECAY", "Decay (open hat; for crash and ride, fully up = the recording's own decay)", 0.671033f, DISP_EXP, 20.0f, 4000.0f, " ms", 0, 1, 0, false},
+		{"DECAY", "DECAY", "Decay (times this type's stock length: open hat 0.7 s, crash 2.2 s, ride 1.6 s)", 0.588592f, DISP_EXP, 0.1f, 5.0f, "x", 0, 1, 0, false},
 		{"TYPE", "TYPE", "Type", 0.000000f, DISP_SW, 0.0f, 2.0f, "HAT|CRASH|RIDE", 0, 2, 1, false},
 		{"ACCENT", "ACCENT", "Accent (the 909's TOTAL ACCENT: how much louder an accented hit is)", 0.600000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 3, 0, false},
 		{"LEVEL", "LEVEL", "Level", 1.000000f, DISP_PCT, 0.0f, 100.0f, "%", 0, 4, 0, true},

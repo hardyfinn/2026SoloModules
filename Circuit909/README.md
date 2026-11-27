@@ -35,11 +35,16 @@ button. An **orange dot** beside each knob marks the stock 909 setting; right-cl
 
 **909 Cymbals.** On the real 909 the hats, crash and ride are 6-bit recordings in ROM. Those
 recordings are Roland's, so they are not here; the module models the path around them. Its
-source is a built-in synthesised metal sound (six square oscillators plus noise, with its own
-decay, shaped per type) or a WAV you load (right-click → *Load sample WAV*; the path is saved
-with the patch). TRIG plays the closed hat and chokes the open hat; OPEN plays the open hat
-(DECAY). For crash and ride both inputs play the cymbal, and DECAY fully up leaves the
-recording's own decay. At stock TUNE a loaded WAV plays at its own pitch.
+source is a built-in synthesised metal sound (six square oscillators plus noise, shaped per
+type, restarted on every hit so each hit is the same "recording") or a WAV you load
+(right-click → *Load sample WAV*; the path is saved with the patch). A loaded WAV is converted
+once to the model's 32 kHz clock and normalised, like a ROM; PCM 8/16/24/32-bit and 32/64-bit
+float files load, anything else is refused and the menu says so. The source reaches the
+6-bit converter at full level and the analogue VCA after it does all the fading, as on the
+909, so tails fade smoothly. TRIG plays the closed hat (CH DEC) and chokes the open hat; OPEN
+plays the open hat. DECAY is a multiple of the type's stock length (open hat 0.7 s, crash
+2.2 s, ride 1.6 s), so 1.0x is stock for every type. For crash and ride both inputs play the
+cymbal. At stock TUNE a loaded WAV plays at its own pitch.
 
 **Sources and honesty.** The structures follow the TR-909 service notes' block diagrams and
 the 909's widely published behaviour. Stock pitches and times are fitted, not read from
@@ -50,6 +55,21 @@ component values, and have not yet been compared with recordings of a real 909.
 rim's STRIKE and TUNE holding the level, clap BAND and RES holding the level, knob maths at
 control rate, smoothed DRIVE and LEVEL, a DC blocker after DRIVE, NaN-safe V/OCT, and voices
 that sleep when silent.
+
+## 2.1.0 (Fable's DSP review)
+
+Cymbals: ENV returns to zero and the module sleeps after a crash or ride; the fade moved after
+the converter; DECAY reads true for every type; WAV files resampled to 32 kHz, normalised,
+handed over without a copy on the audio thread, and odd headers refused instead of crashing.
+All voices: the output stage is straight up to 7.5 V at DRIVE 0 (accents keep their peaks),
+DRIVE adds little loudness; retriggering a ringing Kick, Snare or Tom fades the old tail over
+about 1 ms instead of clicking; the ramp end of SHAPE starts from zero; AGE hiss holds its level
+at high sample rates. Rim level holds over V/OCT and its SNAP range is 100-2500 Hz; Tom skin
+noise holds its level at high sample rates; Snare noise filters are two-pole; Clap MIX is
+equal-power. Both hat triggers inside the accent window: the closed hat wins.
+Still to check against the service notes or a recording before moving any stock dot: kick
+sweep law and start pitch, the snare's noise paths and oscillator pitches, three oscillators
+per tom, rim ring and pitches, the cymbal clock rate and reconstruction filter.
 
 ## Build
 

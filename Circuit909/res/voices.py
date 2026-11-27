@@ -37,7 +37,7 @@ VOICES = [
       ("PULSE", "PULSE", "Pulse (the click's square pulse)", 0.5, "pct", 0, 100, "%", 1, 3),
       ("NOISE", "NOISE", "Noise (the click's noise burst)", 0.5, "pct", 0, 100, "%", 1, 4),
       ("NOISELP", "NOISE LP", "Noise LP (low-pass on the click noise)", pos_exp(5000, 800, 16000), "exp", 800, 16000, " Hz", 1, 5),
-      ("SNAP", "SNAP", "Snap (length of the click)", pos_exp(5, 0.5, 40), "exp", 0.5, 40, " ms", 1, 6),
+      ("SNAP", "SNAP", "Snap (length of the click: the noise burst, and the pulse up to 1 ms)", pos_exp(5, 0.5, 40), "exp", 0.5, 40, " ms", 1, 6),
       ("SHAPE", "SHAPE", "Shape (the waveshaper: sine <-> triangle <-> raw ramp)", 0.15, "pct", 0, 100, "%", 2, 0),
       ("DRIVE", "DRIVE", "Drive (output op-amp into its rails)", 0.0, "pct", 0, 100, "%", 2, 1),
     ],
@@ -94,7 +94,7 @@ VOICES = [
       ("RATIO", "RATIO", "Ratio (spread of the upper two resonators; stock 2.2x)", pos_lin(2.2, 1.3, 5), "lin", 1.3, 5, "x", 1, 0),
       ("RING", "RING", "Ring (resonator decay)", pos_exp(30, 5, 800), "exp", 5, 800, " ms", 1, 1),
       ("GATE", "GATE", "Gate (how long the VCA stays open)", pos_exp(6, 1, 100), "exp", 1, 100, " ms", 1, 2),
-      ("SNAP", "SNAP", "Snap (high-pass corner on the crack; moves with TUNE)", pos_exp(700, 100, 5000), "exp", 100, 5000, " Hz", 1, 3),
+      ("SNAP", "SNAP", "Snap (high-pass corner on the crack; moves with TUNE)", pos_exp(700, 100, 2500), "exp", 100, 2500, " Hz", 1, 3),
       ("STRIKE", "STRIKE", "Strike (below 1 ms: harder trigger; above: soft mallet)", 0.5, "exp", 0.1, 10, " ms", 1, 4),
       ("DRIVE", "DRIVE", "Drive (VCA and op-amp into saturation)", 0.0, "pct", 0, 100, "%", 1, 5),
     ],
@@ -125,7 +125,7 @@ VOICES = [
     extra_trig="OPEN",
     knobs=[
       ("TUNE", "TUNE", "Tune (the sample clock: pitch and grit together)", 0.5, "lin", -1, 1, " oct", 0, 0),
-      ("DECAY", "DECAY", "Decay (open hat; for crash and ride, fully up = the recording's own decay)", pos_exp(700, 20, 4000), "exp", 20, 4000, " ms", 0, 1),
+      ("DECAY", "DECAY", "Decay (times this type's stock length: open hat 0.7 s, crash 2.2 s, ride 1.6 s)", pos_exp(1.0, 0.1, 5.0), "exp", 0.1, 5.0, "x", 0, 1),
       ("TYPE", "TYPE", "Type", 0.0, "sw", 0, 2, "HAT|CRASH|RIDE", 0, 2, "sw3"),
     ] + COMMON_STOCK(3, 4, 5) + [
       ("METAL", "METAL", "Metal (pitch of the built-in metal source)", 0.5, "lin", -1, 1, " oct", 1, 0),

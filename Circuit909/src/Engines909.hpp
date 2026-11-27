@@ -34,10 +34,21 @@ struct EngineBase {
 	static constexpr bool USES_SAMPLE = false;
 	void hit2(float, const float*) {}
 	void setSample(const std::vector<float>&, float) {}
+	static std::vector<float> prepareSample(const std::vector<float>&, float) { return std::vector<float>(); }
+	void swapSample(std::vector<float>&) {}
 	bool hasSample() const { return false; }
 
-	explicit EngineBase(uint32_t noiseSeed = 909u) { rng.seed(noiseSeed); }
-	void setSampleRate(float s) { fs = s; }
+	float smK = 0.f, dcK = 0.f, holdK = 0.f, hold = 0.f, lastPre = 0.f;
+	explicit EngineBase(uint32_t noiseSeed = 909u) { rng.seed(noiseSeed); setSampleRate(48000.f); }
+	void setSampleRate(float s) {
+		if (s == fs && smK > 0.f) return;
+		fs = s;
+		smK = 1.f - std::exp(-1.f / (0.005f * fs));
+		dcK = 1.f - std::exp(-2.f * PI * 10.f / fs);
+		holdK = std::exp(-1.f / (0.0003f * fs));
+	}
+	// on a retrigger the old tail fades over about 1 ms instead of jumping (VCO voices)
+	void catchTail() { hold = lastPre; }
 	void drifts(float ageK) {
 		hitPitch = age.drift(ageK, 0.004f);
 		hitDecay = age.drift(ageK, 0.06f);
@@ -45,15 +56,16 @@ struct EngineBase {
 	}
 	bool sleeping() const { return quiet > (int)(0.1f * fs); }
 	float finish(float y, float ageK, float drive, float level) {
-		const float dt = 1.f / fs;
 		float w = Age::worn(ageK);
-		y += age.hiss(ageK);
-		float sm = 1.f - std::exp(-dt / 0.005f);
+		if (hold != 0.f) { y += hold; hold *= holdK; if (std::fabs(hold) < 1e-6f) hold = 0.f; }
+		lastPre = y;
+		y += age.hiss(ageK, fs);
+		float sm = smK;
 		if (levelS < 0.f) { levelS = level; driveS = drive; }
 		driveS += (drive - driveS) * sm;
 		levelS += (level - levelS) * sm;
 		float o = opamp(y, driveS);
-		dcZ += (o - dcZ) * (1.f - std::exp(-dt * 2.f * PI * 10.f));
+		dcZ += (o - dcZ) * dcK;
 		o -= dcZ;
 		if (std::fabs(dcZ) < 1e-20f) dcZ = 0.f;
 		o *= levelS * hitLevel * age.part(6, ageK, 0.1f);
@@ -104,6 +116,7 @@ struct KickEngine : EngineBase {
 		drifts(k[AGE]);
 		refresh(k); woke();
 		amp = accentGain(k[ACCENT], acc) * age.part(5, k[AGE], 0.1f);
+		catchTail();
 		vco.reset();
 		pe1 = pe2 = 1.f; ae = 1.f; ne = 1.f;
 		t = 0.f;
@@ -146,7 +159,7 @@ struct SnareEngine : EngineBase {
 	C909_VAL(snare)
 	SnareEngine() : EngineBase(0x909C5u) {}
 	Vco v1, v2;
-	OnePole nhp, nlp, aa;
+	Svf nhp, nlp, aa;   // two-pole noise filters (2.1.0)
 	float t = 1e9f, pe = 0.f, ae = 0.f, ne = 0.f, amp = 1.f;
 	float kp = 0.f, ka = 0.f, ka2 = 0.f, kn = 0.f, ae2 = 0.f;
 	static constexpr float G = 3.4f, GN = 7.5f;
@@ -164,6 +177,7 @@ struct SnareEngine : EngineBase {
 		drifts(k[AGE]);
 		refresh(k); woke();
 		amp = accentGain(k[ACCENT], acc) * age.part(5, k[AGE], 0.1f);
+		catchTail();
 		v1.reset(); v2.reset();
 		pe = 1.f; ae = ae2 = 1.f; ne = 1.f;
 		t = 0.f;
@@ -186,9 +200,10 @@ struct SnareEngine : EngineBase {
 		float n = 0.f;
 		if (ne > 1e-6f) {
 			float w = rng.noise(fs);
-			n = nhp.hp(w, c[NOISECOL] * age.part(4, ag, 0.2f), fs);
-			n = nlp.lp(n, c[TONE], fs);
-			n = aa.lp(n, 18000.f, fs) * ne;
+			nhp.process(w, c[NOISECOL] * age.part(4, ag, 0.2f), 0.707f, fs);
+			nlp.process(nhp.hp, c[TONE], 0.707f, fs);
+			aa.process(nlp.lp, 18000.f, 0.707f, fs);
+			n = aa.lp * ne;
 			ne *= kn;
 		}
 		else ne = 0.f;
@@ -230,6 +245,7 @@ struct TomEngine : EngineBase {
 		drifts(k[AGE]);
 		refresh(k); woke();
 		amp = accentGain(k[ACCENT], acc) * age.part(5, k[AGE], 0.1f);
+		catchTail();
 		v1.reset(); v2.reset();
 		pe = 1.f; ae = 1.f; ne = 1.f;
 		t = 0.f;
@@ -251,7 +267,7 @@ struct TomEngine : EngineBase {
 		else ae = 0.f;
 		float n = 0.f;
 		if (ne > 1e-6f) {
-			n = nhp.hp(nlp.lp(pink.process(rng.noise(fs)), 3000.f, fs), 120.f, fs) * ne;
+			n = nhp.hp(nlp.lp(pink.process(rng.bi()), 3000.f, fs), 120.f, fs) * ne;   // pink holds its in-band level by itself
 			ne *= kn;
 		}
 		else ne = 0.f;
@@ -273,7 +289,7 @@ struct RimEngine : EngineBase {
 	PulseShaper sh;
 	Resonator r1, r2, r3;
 	Svf hp;
-	float t = 1e9f, gate = 0.f, gateLen = 0.006f, sg1 = 1.f, sg2 = 1.f, sg3 = 1.f, accPost = 1.f;
+	float t = 1e9f, gate = 0.f, gateLen = 0.006f, sg1 = 1.f, sg2 = 1.f, sg3 = 1.f, accPost = 1.f, voctNow = 0.f;
 	static constexpr float G = 2.4f, F1 = 500.f, R3 = 1.65f;
 	void reset() { r1.reset(); r2.reset(); r3.reset(); gate = 0.f; out = env = 0.f; }
 	void derive(const float*) {}
@@ -284,7 +300,7 @@ struct RimEngine : EngineBase {
 		float a = accentGain(k[ACCENT], acc) * age.part(5, k[AGE], 0.1f);
 		float sMs = c[STRIKE];
 		sh.fire(4.f, sMs);
-		float f1 = F1 * std::exp2(c[TUNE]), f2 = f1 * c[RATIO], f3 = f2 * R3;
+		float f1 = F1 * std::exp2(c[TUNE] + voctNow), f2 = f1 * c[RATIO], f3 = f2 * R3;   // TUNE and V/OCT both
 		sg1 = strikeComp(4.f, sMs, f1, F1, fs);
 		sg2 = strikeComp(4.f, sMs, f2, F1 * 2.2f, fs);
 		sg3 = strikeComp(4.f, sMs, f3, F1 * 2.2f * R3, fs);
@@ -294,6 +310,7 @@ struct RimEngine : EngineBase {
 	}
 	void process(const float* k, float voct) {
 		using namespace rim;
+		voctNow = std::isfinite(voct) ? clampf(voct, -10.f, 10.f) : 0.f;
 		tick(k);
 		const float dt = 1.f / fs, ag = k[AGE], worn = Age::worn(ag);
 		float x = sh.process(dt);
@@ -370,7 +387,8 @@ struct ClapEngine : EngineBase {
 		envTr *= kT;
 		if (envT < 1e-7f && envTr < 1e-7f) envT = envTr = 0.f;
 		float mix = k[MIX];
-		float wc = std::min(1.f, 2.f * (1.f - mix)), wt = 0.6f * std::min(1.f, 2.f * mix);
+		// equal-power MIX (2.1.0): the same loudness across the knob
+		float wc = std::cos(0.5f * PI * mix), wt = 0.85f * std::sin(0.5f * PI * mix);
 		float e = wc * envC + wt * envT;
 		float y = 0.f;
 		if (e > 1e-7f || std::fabs(bp.bp) > 1e-7f) {
@@ -389,48 +407,76 @@ struct ClapEngine : EngineBase {
 // through a DAC, a reconstruction filter and an analogue VCA with its own decay. Those
 // recordings are Roland's and are not here: this models the path around them. The
 // source is either a built-in synthesised metal sound (six square oscillators plus noise,
-// with its own "recorded" decay) or a WAV you load. Each clock tick takes one source
-// sample, quantises it to BITS, and holds it until the next tick (band-limited steps);
-// then RECON, the VCA and the output high-pass. TRIG = closed hat (chokes the open hat),
+// restarted on every hit so each hit is the same "recording") or a WAV you load
+// (converted to the model's 32 kHz clock and normalised when it is loaded). Each clock
+// tick takes one source sample at full level, quantises it to BITS and holds it until the
+// next tick (band-limited steps); then RECON, and the VCA, which does all of the fading
+// (as on the 909, so the tail fades smoothly instead of crumbling into the 6-bit steps).
+// DECAY is a multiple of this type's stock length (open hat 0.7 s, crash 2.2 s, ride
+// 1.6 s); CH DEC is the closed hat's length. TRIG = closed hat (chokes the open hat),
 // OPEN = open hat; for crash and ride both inputs play the cymbal.
 struct CymbalsEngine : EngineBase {
 	static const VoiceSpec& spec() { return cymbals::spec(); }
-	static float stockFor(int i, const float* k) {
-		if (i == cymbals::DECAY && k[cymbals::TYPE] > 0.5f) return 1.f;   // crash/ride: the recording's own decay
-		return spec().knobs[i].stock;
-	}
+	static float stockFor(int i, const float*) { return spec().knobs[i].stock; }
 	C909_VAL(cymbals)
 	static constexpr bool EXTRA_TRIG = true;
 	static constexpr bool USES_SAMPLE = true;
-	static constexpr float CLOCK = 32000.f;   // nominal clock of the model's "ROM"
+	static constexpr float CLOCK = 32000.f;   // the model's "ROM" clock
 	CymbalsEngine() : EngineBase(0x909CCu) {}
 	SteppedHold dac;
 	Svf recon;
 	OnePole hp1, hp2, srcHp1, srcHp2, srcLp;
 	float oph[6] = {0, 0, 0, 0, 0, 0};
-	float t = 1e9f, ve = 0.f, se = 0.f, amp = 1.f, kv = 0.f, kvC = 0.f, kvO = 0.f, ksTick = 0.f;
+	float t = 1e9f, ve = 0.f, amp = 1.f, kv = 0.f;
 	bool open = false;
 	int type = 0;
-	double sPos = 0.0;
-	std::vector<float> user;
-	float userRate = 44100.f;
+	size_t sPos = 0;
+	std::vector<float> user;   // already at CLOCK and normalised (see prepareSample)
 	static constexpr float G = 6.0f;
-	void reset() { ve = se = 0.f; dac.reset(); out = env = 0.f; }
-	void setSample(const std::vector<float>& s, float sr) { user = s; userRate = sr > 0.f ? sr : 44100.f; }
+	void reset() { ve = 0.f; dac.reset(); out = env = 0.f; }
+	// the module converts a WAV with prepareSample() off the audio thread, then swaps it in
+	void swapSample(std::vector<float>& s) { user.swap(s); sPos = user.size(); }
+	void setSample(const std::vector<float>& s, float sr) { std::vector<float> v = prepareSample(s, sr); swapSample(v); }
 	bool hasSample() const { return !user.empty(); }
+	// resample to CLOCK (windowed sinc, cut at 15 kHz) and normalise to 0.95 peak
+	static std::vector<float> prepareSample(const std::vector<float>& in, float sr) {
+		std::vector<float> out;
+		if (in.empty() || !(sr > 1000.f)) return out;
+		double ratio = sr / CLOCK;                 // input samples per output sample
+		size_t n = (size_t)(in.size() / ratio);
+		out.resize(n);
+		float fc = std::min(15000.f, 0.47f * sr) / sr;   // cut-off, cycles per input sample
+		const int HALF = 16;
+		float scale = (float)std::max(1.0, ratio);
+		int half = (int)(HALF * scale);
+		for (size_t i = 0; i < n; i++) {
+			double x = i * ratio;
+			long c = (long)x;
+			double acc = 0.0;
+			for (long j = c - half + 1; j <= c + half; j++) {
+				if (j < 0 || j >= (long)in.size()) continue;
+				double d = x - j;
+				double a = 2.0 * PI * fc * d;
+				double sinc = std::fabs(d) < 1e-9 ? 2.0 * fc : std::sin(a) / (PI * d);
+				double wn = 0.5 + 0.5 * std::cos(PI * d / half);   // Hann
+				acc += in[j] * sinc * wn;
+			}
+			out[i] = (float)acc;
+		}
+		float pk = 0.f;
+		for (float v : out) pk = std::max(pk, std::fabs(v));
+		if (pk > 1e-6f) for (float& v : out) v *= 0.95f / pk;
+		return out;
+	}
 	int typeOf(const float* k) const { return (int)clampf(std::round(k[cymbals::TYPE]), 0.f, 2.f); }
-	// the built-in "recording": how long it rings, how bright, how much noise
-	static float srcDecay(int ty) { static const float T[3] = {1.2f, 2.2f, 1.6f}; return T[ty]; }
+	static float natural(int ty) { static const float T[3] = {0.7f, 2.2f, 1.6f}; return T[ty]; }
 	static float srcCut(int ty) { static const float F[3] = {6500.f, 2800.f, 2200.f}; return F[ty]; }
 	void derive(const float* k) {
 		using namespace cymbals;
 		float ag = k[AGE], worn = Age::worn(ag);
-		float dec = (type > 0 && k[DECAY] > 0.995f) ? 0.f : c[DECAY] * 1e-3f;
 		float wd = age.part(3, ag, 0.25f) * hitDecay * (1.f - 0.3f * worn);
-		kvO = dec > 0.f ? t60coef(dec * wd) : 1.f;
-		kvC = t60coef(c[CHDECAY] * 1e-3f * wd);
-		kv = (type == 0 && !open) ? kvC : kvO;
-		ksTick = std::exp(-6.9078f / (srcDecay(type) * age.part(2, ag, 0.2f) * CLOCK));
+		float T = (type == 0 && !open) ? c[CHDECAY] * 1e-3f : natural(type) * c[DECAY] * age.part(2, ag, 0.15f);
+		kv = t60coef(T * wd);
 	}
 	void start(float acc, const float* k, bool isOpen) {
 		using namespace cymbals;
@@ -439,20 +485,20 @@ struct CymbalsEngine : EngineBase {
 		drifts(k[AGE]);
 		refresh(k); woke();
 		amp = accentGain(k[ACCENT], acc) * age.part(5, k[AGE], 0.1f);
-		ve = 1.f; se = 1.f; sPos = 0.0;
+		ve = 1.f; sPos = 0;
+		// a recording plays the same every time: restart the oscillators and the noise
+		for (int i = 0; i < 6; i++) oph[i] = 0.f;
+		rng.seed(0x909CCu + 7u * (uint32_t)type);
+		srcHp1.z = srcHp2.z = srcLp.z = 0.f;
 		t = 0.f;
 	}
 	void hit(float acc, const float* k) { start(acc, k, false); }
 	void hit2(float acc, const float* k) { start(acc, k, true); }
-	// one source sample at the clock rate (the "ROM" read)
-	float sourceTick(const float* k, float clk) {
+	bool sourceDone() const { return !user.empty() && sPos >= user.size(); }
+	// one source sample at the clock rate (the "ROM" read), at full level
+	float sourceTick(const float* k) {
 		using namespace cymbals;
-		if (!user.empty()) {
-			size_t i = (size_t)sPos;
-			sPos += userRate / CLOCK;
-			return i < user.size() ? user[i] : 0.f;
-		}
-		if (se < 1e-5f) return 0.f;
+		if (!user.empty()) return sPos < user.size() ? user[sPos++] : 0.f;
 		static const float base[6] = {205.3f, 304.4f, 369.6f, 522.7f, 540.f, 800.f};
 		static const float mul[3] = {1.6f, 1.15f, 1.35f};
 		float m = std::exp2(c[METAL]) * mul[type] * age.part(7, k[AGE], 0.05f);
@@ -467,26 +513,22 @@ struct CymbalsEngine : EngineBase {
 		static const float gm[3] = {4.6f, 2.2f, 1.65f}, gn[3] = {1.28f, 0.69f, 0.69f};
 		float x = (1.f - k[NOISE]) * sq * (1.4f / 6.f) * gm[type] + k[NOISE] * nz * gn[type];
 		if (type == 2) x += 0.25f * gm[type] * (1.f - k[NOISE]) * std::sin(2.f * PI * oph[5] * 2.f);   // ride bell
-		// the recording's own brightness and decay (filters run at the clock rate)
 		x = srcHp2.hp(srcHp1.hp(x, srcCut(type), CLOCK), srcCut(type), CLOCK);
-		x = srcLp.lp(x, 14000.f, CLOCK);
-		x *= se;
-		se *= ksTick;
-		(void)clk;
-		return x;
+		return srcLp.lp(x, 14000.f, CLOCK);
 	}
 	void process(const float* k, float voct) {
 		using namespace cymbals;
 		tick(k);
 		const float ag = k[AGE];
 		float y = 0.f;
-		if (ve > 1e-6f) {
+		if (ve > 1e-5f && !(sourceDone() && std::fabs(recon.lp) < 1e-6f)) {
+			if (!std::isfinite(voct)) voct = 0.f;
 			float clk = CLOCK * std::exp2(c[TUNE] + voct) * age.part(0, ag, 0.04f) * hitPitch;
-			clk = clampf(clk, 1000.f, 4.f * fs);
+			clk = clampf(clk, 1000.f, 7.f * fs);
 			float levels = std::exp2(c[BITS] - 1.f);
 			float s = dac.process(clk, fs, [&]() {
-				float v = clampf(sourceTick(k, clk), -1.f, 1.f);
-				return std::round(v * levels) / levels;
+				float v = clampf(sourceTick(k), -1.f, 1.f);
+				return clampf(std::round(v * levels), -levels, levels - 1.f) / levels;   // 2^BITS steps
 			});
 			recon.process(s, c[RECON] * age.part(4, ag, 0.15f), 0.75f, fs);
 			float v = recon.lp * ve;

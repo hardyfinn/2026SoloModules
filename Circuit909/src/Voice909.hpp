@@ -3,6 +3,7 @@
 #pragma once
 #include "plugin.hpp"
 #include "Engines909.hpp"
+#include "Wav909.hpp"
 #include <osdialog.h>
 #include <cstdio>
 #include <atomic>
@@ -51,9 +52,10 @@ struct VoiceModule : Module {
 	std::string samplePath;
 	// a new sample is handed to the audio thread through here
 	std::mutex sampleMutex;
-	std::vector<float> newSample;
-	float newRate = 44100.f;
+	std::vector<float> newSample;   // already converted for the engine
+	std::string sampleStatus;       // shown in the menu when a load failed
 	std::atomic<bool> sampleReady{false};
+	std::atomic<uint32_t> newSerial{0};
 	int nK = 0, nCv = 0;
 	// accent is read over 0.5 ms after a trigger (an accent through another module may
 	// arrive a sample or two late); every voice waits the same, so the kit stays aligned
@@ -110,78 +112,47 @@ struct VoiceModule : Module {
 		json_t* s = json_object_get(root, "serial");
 		if (s) { serial = (uint32_t)json_integer_value(s); engine.age.setSerial(serial); }
 		json_t* p = json_object_get(root, "sample");
-		if (E::USES_SAMPLE && p && json_string_value(p)) loadSample(json_string_value(p));
+		if (E::USES_SAMPLE && p && json_string_value(p)) {
+			std::string path = json_string_value(p);
+			if (!loadSample(path)) samplePath = path;   // keep the path, so a missing file is not forgotten
+		}
 	}
 
-	// a mono float copy of a WAV file (PCM 8/16/24/32-bit or 32-bit float; channels mixed)
+	// a WAV file (PCM 8/16/24/32-bit or 32/64-bit float; channels mixed), converted here,
+	// off the audio thread, to the engine's clock and handed over by swapping
 	bool loadSample(const std::string& path) {
 		std::vector<float> data;
 		float sr = 44100.f;
-		if (!readWav(path, data, sr)) return false;
+		if (!readWav(path, data, sr)) {
+			sampleStatus = system::exists(path) ? "could not read " : "missing: ";
+			sampleStatus += system::getFilename(path);
+			return false;
+		}
 		if (data.size() > (size_t)(sr * 20.f)) data.resize((size_t)(sr * 20.f));
-		handOver(data, sr);
+		std::vector<float> conv = E::prepareSample(data, sr);
+		if (conv.empty()) { sampleStatus = "could not read " + system::getFilename(path); return false; }
+		handOver(conv);
 		samplePath = path;
+		sampleStatus.clear();
 		return true;
 	}
-	void clearSample() { handOver(std::vector<float>(), 44100.f); samplePath.clear(); }
-	void handOver(const std::vector<float>& d, float sr) {
+	void clearSample() { std::vector<float> none; handOver(none); samplePath.clear(); sampleStatus.clear(); }
+	void handOver(std::vector<float>& d) {
 		std::lock_guard<std::mutex> lock(sampleMutex);
-		newSample = d; newRate = sr;
+		newSample.swap(d);   // the old pending buffer (if any) is freed here, on this thread
 		sampleReady = true;
 	}
 
-	static bool readWav(const std::string& path, std::vector<float>& out, float& sr) {
-		FILE* f = std::fopen(path.c_str(), "rb");
-		if (!f) return false;
-		std::vector<uint8_t> b;
-		uint8_t buf[65536];
-		size_t n;
-		while ((n = std::fread(buf, 1, sizeof(buf), f)) > 0 && b.size() < (size_t)200e6) b.insert(b.end(), buf, buf + n);
-		std::fclose(f);
-		auto u16 = [&](size_t i) { return (uint32_t)b[i] | ((uint32_t)b[i + 1] << 8); };
-		auto u32 = [&](size_t i) { return u16(i) | (u16(i + 2) << 16); };
-		if (b.size() < 12 || std::memcmp(&b[0], "RIFF", 4) || std::memcmp(&b[8], "WAVE", 4)) return false;
-		int fmt = 0, ch = 0, bits = 0;
-		size_t p = 12;
-		while (p + 8 <= b.size()) {
-			uint32_t len = u32(p + 4);
-			size_t body = p + 8;
-			if (!std::memcmp(&b[p], "fmt ", 4) && body + 16 <= b.size()) {
-				fmt = (int)u16(body); ch = (int)u16(body + 2); sr = (float)u32(body + 4); bits = (int)u16(body + 14);
-				if (fmt == 0xFFFE && body + 26 <= b.size()) fmt = (int)u16(body + 24);
-			}
-			else if (!std::memcmp(&b[p], "data", 4) && ch > 0 && bits > 0) {
-				size_t bytes = std::min((size_t)len, b.size() - body);
-				int bps = bits / 8;
-				size_t frames = bytes / (bps * ch);
-				out.assign(frames, 0.f);
-				for (size_t i = 0; i < frames; i++) {
-					float acc = 0.f;
-					for (int c = 0; c < ch; c++) {
-						size_t q = body + (i * ch + c) * bps;
-						float v = 0.f;
-						if (fmt == 3 && bits == 32) { float x; std::memcpy(&x, &b[q], 4); v = x; }
-						else if (bits == 8) v = (b[q] - 128) / 128.f;
-						else if (bits == 16) v = (int16_t)u16(q) / 32768.f;
-						else if (bits == 24) v = (int32_t)((b[q] << 8) | (b[q + 1] << 16) | ((uint32_t)b[q + 2] << 24)) / 2147483648.f;
-						else if (bits == 32) v = (int32_t)u32(q) / 2147483648.f;
-						acc += std::isfinite(v) ? v : 0.f;
-					}
-					out[i] = acc / ch;
-				}
-				return frames > 0 && sr > 1000.f;
-			}
-			p = body + len + (len & 1);
-		}
-		return false;
-	}
+	static bool readWav(const std::string& path, std::vector<float>& out, float& sr) { return readWavFile(path, out, sr); }
 
 	void process(const ProcessArgs& args) override {
 		const VoiceSpec& s = E::spec();
 		engine.setSampleRate(args.sampleRate);
+		uint32_t ns = newSerial.exchange(0);
+		if (ns) { serial = ns; engine.age.setSerial(ns); }
 		if (E::USES_SAMPLE && sampleReady) {
 			std::unique_lock<std::mutex> lock(sampleMutex, std::try_to_lock);
-			if (lock.owns_lock()) { engine.setSample(newSample, newRate); sampleReady = false; }
+			if (lock.owns_lock()) { engine.swapSample(newSample); sampleReady = false; }   // swap, no copy
 		}
 		for (int i = 0; i < nK; i++) k[i] = params[i].getValue();
 		float voct = 0.f;
@@ -194,7 +165,9 @@ struct VoiceModule : Module {
 		bool hit = trigIn.process(inputs[trigInput()].getVoltage(), 0.1f, 1.f);
 		hit |= hitButton.process(params[hitParam()].getValue());
 		bool hit2 = E::EXTRA_TRIG && trig2In.process(inputs[nCv + 2].getVoltage(), 0.1f, 1.f);
-		if ((hit || hit2) && pending < 0) { pending = (int)(0.0005f * args.sampleRate); pendingAcc = 0.f; pendingWhich = hit2 && !hit ? 2 : 1; }
+		if ((hit || hit2) && pending < 0) { pending = (int)(0.0005f * args.sampleRate); pendingAcc = 0.f; pendingWhich = 0; }
+		// both triggers inside the window: the closed hat wins (it chokes the open one)
+		if (pending >= 0) { if (hit) pendingWhich = 1; else if (hit2 && pendingWhich == 0) pendingWhich = 2; }
 		if (pending >= 0) {
 			float acc = inputs[accentInput()].isConnected() ? clamp(inputs[accentInput()].getVoltage() / 5.f, 0.f, 1.f) : 0.f;
 			pendingAcc = std::max(pendingAcc, acc);
@@ -261,7 +234,8 @@ struct VoiceWidget : ModuleWidget {
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createMenuItem("Reset to stock 909", "", [=]() { m->resetToStock(); }));
 		if (E::USES_SAMPLE) {
-			menu->addChild(createMenuLabel(m->samplePath.empty() ? "Source: built-in metal" : "Source: " + system::getFilename(m->samplePath)));
+			menu->addChild(createMenuLabel(!m->sampleStatus.empty() ? "Source: built-in metal (" + m->sampleStatus + ")"
+				: m->samplePath.empty() ? "Source: built-in metal" : "Source: " + system::getFilename(m->samplePath)));
 			menu->addChild(createMenuItem("Load sample WAV (replaces the built-in source)", "", [=]() {
 				char* path = osdialog_file(OSDIALOG_OPEN, NULL, NULL, osdialog_filters_parse("WAV:wav,WAV"));
 				if (path) { m->loadSample(path); std::free(path); }
@@ -270,8 +244,7 @@ struct VoiceWidget : ModuleWidget {
 		}
 		menu->addChild(createMenuLabel(string::f("Serial number %u (sets this unit's AGE character)", (unsigned)m->serial)));
 		menu->addChild(createMenuItem("New serial number (a different old unit)", "", [=]() {
-			m->serial = random::u32();
-			m->engine.age.setSerial(m->serial);
+			m->newSerial = random::u32();   // applied on the audio thread
 		}));
 	}
 };

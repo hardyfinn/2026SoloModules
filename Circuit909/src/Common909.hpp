@@ -39,7 +39,8 @@ struct Age {
 	float part(int i, float age, float spread) const { return 1.f + spread * age * u[i & 7]; }
 	float drift(float age, float spread) { return 1.f + spread * age * rng.bi(); }
 	static float worn(float age) { return clampf((age - 0.7f) / 0.3f, 0.f, 1.f); }
-	float hiss(float age) { float w = worn(age); return w > 0.f ? w * 0.006f * rng.bi() : 0.f; }
+	// worn-part hiss, the same in-band level at any sample rate
+	float hiss(float age, float fs = 48000.f) { float w = worn(age); return w > 0.f ? w * 0.006f * rng.noise(fs) : 0.f; }
 };
 
 // STRIKE (in ms, stock 1): below 1 ms the trigger pulse gets shorter (harder); above,
@@ -166,9 +167,21 @@ struct Pink {
 };
 
 // The output op-amp: DRIVE pushes into the rails (about +-10.5 V)
+static const float DRIVE_MAKEUP = 2.4f;
+// 909 Circuits 2.1.0: straight up to 7.5 V, then a soft knee into the +-10.5 V rails, so
+// DRIVE 0 is clean and accents keep their peaks; DRIVE pushes into the knee, with make-up.
+static inline float railKnee(float x) {
+	const float K = 7.5f, R = 10.5f;
+	float a = std::fabs(x);
+	if (a <= K) return x;
+	float y = K + (R - K) * std::tanh((a - K) / (R - K));
+	return x < 0.f ? -y : y;
+}
 static inline float opamp(float x, float drive) {
+	if (drive <= 0.f) return railKnee(x);
 	float pre = 1.f + 11.f * drive * drive;
-	return 10.5f * std::tanh(x * pre / 10.5f) / (1.f + 0.6f * drive);
+	float y = 10.5f * std::tanh(x * pre / 10.5f);
+	return railKnee(x + (y - x) * std::min(1.f, 4.f * drive)) / (1.f + DRIVE_MAKEUP * drive * drive + 0.6f * drive);
 }
 
 // Accent: trigger height 4 V, up to 14 V when accented (VR3); see accentLaw()
@@ -200,7 +213,9 @@ struct Vco {
 			y = sine + (tri - sine) * (2.f * shape);
 		}
 		else {
-			float sb = saw - blep(ph, inc);
+			// the ramp starts from its own zero crossing too (no step on the first sample)
+			float p2 = ph + 0.25f; if (p2 >= 1.f) p2 -= 1.f;
+			float sb = 2.f * p2 - 1.f - blep(p2, inc);
 			y = tri + (sb - tri) * (2.f * shape - 1.f);
 		}
 		return y;
@@ -210,18 +225,17 @@ struct Vco {
 // Zero-order hold at a clock rate below or near the host rate (the 909's sample DACs),
 // with each step band-limited (two-sample polyBLEP; output one sample late).
 struct SteppedHold {
-	float held = 0.f, prevOut = 0.f, corrNext = 0.f, ph = 1.f;
-	void reset() { held = prevOut = corrNext = 0.f; ph = 1.f; }
+	float held = 0.f, prevOut = 0.f, ph = 1.f;
+	void reset() { held = prevOut = 0.f; ph = 1.f; }
 	// next(): called for each new clock tick, returns the new sample value
 	template <class F>
 	float process(float clockHz, float fs, F next) {
 		float inc = clockHz / fs;
-		float cur = held + corrNext;
-		corrNext = 0.f;
+		float cur = held;
 		float corrPrev = 0.f;
 		ph += inc;
 		int guard = 0;
-		while (ph >= 1.f && guard++ < 8) {
+		while (ph >= 1.f && guard++ < 10) {
 			ph -= 1.f;
 			float x = inc > 0.f ? clampf(ph / inc, 0.f, 0.999f) : 0.f;   // samples since the step
 			float v = next();

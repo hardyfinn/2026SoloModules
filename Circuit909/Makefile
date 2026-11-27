@@ -12,7 +12,7 @@ endif
 
 # Offline engine checks + demo WAVs (no Rack needed): make test
 test/voices: test/voices.cpp src/Engines909.hpp src/Common909.hpp src/VoiceSpecs.hpp
-	$(CXX) -O2 -std=c++11 test/voices.cpp -o test/voices
+	$(CXX) -O2 -std=c++14 test/voices.cpp -o test/voices
 .PHONY: test
 test: test/voices
 	mkdir -p test/out && ./test/voices test/out

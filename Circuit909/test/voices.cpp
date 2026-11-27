@@ -1,6 +1,7 @@
 // Offline checks and demo WAVs for the 909 Circuits voices (no Rack needed).
 //   make test   ->  test/out/*.wav and a printed report
 #include "../src/Engines909.hpp"
+#include "../src/Wav909.hpp"
 #include <cstdio>
 #include <vector>
 #include <string>
@@ -172,9 +173,9 @@ int main(int argc, char** argv) {
 		printf("  kick cycle after 30 ms: stock TUNE %.0f Hz, TUNE up %.0f Hz\n", fs0, fl);
 		check(fl > fs0 * 1.2f, "TUNE up = longer, higher sweep");
 		float lo = 1e9f, hi = 0.f;
-		for (int st = -12; st <= 12; st += 3) { float p = loud<KickEngine>(stockKnobs<KickEngine>(), 0.3f, 0.f, FS, st / 12.f, true); lo = std::min(lo, p); hi = std::max(hi, p); }
-		printf("  kick over two octaves of V/OCT: %.1f dB peak spread\n", db(hi, lo));
-		check(db(hi, lo) < 3.f, "kick level even over V/OCT");
+		for (int st = -12; st <= 12; st += 3) { float p = loud<KickEngine>(stockKnobs<KickEngine>(), 0.3f, 0.f, FS, st / 12.f); lo = std::min(lo, p); hi = std::max(hi, p); }
+		printf("  kick over two octaves of V/OCT: %.1f dB loudness spread\n", db(hi, lo));
+		check(db(hi, lo) < 2.f, "kick level even over V/OCT");
 	}
 	{   // snare: noise near the shells at stock
 		auto k = stockKnobs<SnareEngine>();
@@ -235,6 +236,108 @@ int main(int argc, char** argv) {
 		float up = pitch(us, 0.02f, 0.2f);
 		printf("  user WAV 440 Hz plays at %.0f Hz\n", up);
 		check(std::fabs(up / 440.f - 1.f) < 0.03f, "user WAV plays at its own pitch at stock TUNE");
+	}
+
+	// --- regressions for the 2.1.0 DSP review ---
+	printf("review checks\n");
+	{   // crash at stock: ENV back to zero and asleep; tail fades smoothly at 6 bits
+		auto k = stockKnobs<CymbalsEngine>(); k[ki<CymbalsEngine>("TYPE")] = 1.f;
+		CymbalsEngine e; e.setSampleRate(FS);
+		e.hit(0.f, k.data());
+		std::vector<float> s;
+		for (int i = 0; i < 5 * FS; i++) { e.process(k.data(), 0.f); s.push_back(e.out); }
+		printf("  crash ENV after 5 s: %.4f V, asleep %d\n", e.env, (int)e.sleeping());
+		check(e.env < 0.01f && e.sleeping(), "crash: ENV returns to zero and the module sleeps");
+		float r0 = rms(s, 0.05f, 0.15f), r1 = rms(s, 1.4f, 1.5f), r2 = rms(s, 2.0f, 2.1f);
+		printf("  crash at 6 bits: %.1f dB at 1.4 s, %.1f dB at 2.0 s\n", db(r1, r0), db(r2, r0));
+		check(r1 > 0.f && db(r1, r0) > -45.f && db(r2, r0) < db(r1, r0), "crash tail fades smoothly, not cut off");
+	}
+	{   // DECAY reads true: open hat 1.0x = 0.7 s to -60 dB
+		auto k = stockKnobs<CymbalsEngine>(); k[ki<CymbalsEngine>("BITS")] = 1.f;
+		auto s = render<CymbalsEngine>(k, 0.f, 2.f, 909, 0.f, FS, true);
+		float p0 = rms(s, 0.f, 0.02f), tEnd = 0.f;
+		for (float t = 0.f; t < 1.9f; t += 0.01f) if (rms(s, t, t + 0.02f) > p0 * 0.001f) tEnd = t + 0.01f;
+		printf("  open hat -60 dB at %.2f s (DECAY says 0.70 s)\n", tEnd);
+		check(std::fabs(tEnd / 0.7f - 1.f) < 0.2f, "open hat DECAY reads true");
+	}
+	{   // a 44.1 kHz WAV: a 5 kHz sine stays clean (false tones well down)
+		std::vector<float> w(44100);
+		for (size_t i = 0; i < w.size(); i++) w[i] = 0.8f * std::sin(2.f * PI * 5000.f * i / 44100.f);
+		auto k = stockKnobs<CymbalsEngine>();
+		k[ki<CymbalsEngine>("BITS")] = 1.f; k[ki<CymbalsEngine>("RECON")] = 1.f; k[ki<CymbalsEngine>("CUT")] = 0.f; k[ki<CymbalsEngine>("DECAY")] = 1.f;
+		CymbalsEngine e; e.setSampleRate(FS); e.setSample(w, 44100.f);
+		e.hit2(0.f, k.data());
+		std::vector<float> s; Svf l1, l2;   // look below 12 kHz: the DAC's own images above are genuine
+		for (int i = 0; i < 0.4f * FS; i++) { e.process(k.data(), 0.f); l1.process(e.out, 12000.f, 0.54f, FS); l2.process(l1.lp, 12000.f, 1.31f, FS); s.push_back(l2.lp); }
+		// fit a 5 kHz sine with a slowly changing level over short frames; the rest is false
+		double sig = 0, res = 0; int N = 480;
+		for (int f0 = (int)(0.05f * FS); f0 + N < (int)s.size(); f0 += N) {
+			double a = 0, b = 0;
+			for (int i = 0; i < N; i++) { double ph = 2 * PI * 5000.0 * (f0 + i) / FS; a += s[f0 + i] * std::cos(ph); b += s[f0 + i] * std::sin(ph); }
+			a *= 2.0 / N; b *= 2.0 / N;
+			for (int i = 0; i < N; i++) { double ph = 2 * PI * 5000.0 * (f0 + i) / FS; double fit = a * std::cos(ph) + b * std::sin(ph); sig += fit * fit; res += (s[f0 + i] - fit) * (s[f0 + i] - fit); }
+		}
+		float fal = 10.f * std::log10((float)(res / sig));
+		printf("  5 kHz sine in a 44.1 kHz WAV: everything else below 12 kHz %.1f dB\n", fal);
+		check(fal < -40.f, "loaded WAV is resampled cleanly");
+	}
+	{   // WAV reader refuses odd headers
+		auto writeHdr = [](const char* path, int fmt, int bits) {
+			FILE* f = fopen(path, "wb");
+			auto w32 = [&](uint32_t v) { fwrite(&v, 4, 1, f); };
+			auto w16 = [&](uint16_t v) { fwrite(&v, 2, 1, f); };
+			fwrite("RIFF", 1, 4, f); w32(36 + 64); fwrite("WAVEfmt ", 1, 8, f);
+			w32(16); w16(fmt); w16(1); w32(44100); w32(44100 * 2); w16((uint16_t)std::max(1, bits / 8)); w16(bits);
+			fwrite("data", 1, 4, f); w32(64); for (int i = 0; i < 64; i++) fputc(i * 3, f);
+			fclose(f);
+		};
+		std::vector<float> d; float sr;
+		writeHdr("/tmp/c909_4bit.wav", 1, 4); bool b4 = readWavFile("/tmp/c909_4bit.wav", d, sr);
+		writeHdr("/tmp/c909_12bit.wav", 1, 12); bool b12 = readWavFile("/tmp/c909_12bit.wav", d, sr);
+		writeHdr("/tmp/c909_16bit.wav", 1, 16); bool b16 = readWavFile("/tmp/c909_16bit.wav", d, sr);
+		writeHdr("/tmp/c909_f64.wav", 3, 64); bool f64 = readWavFile("/tmp/c909_f64.wav", d, sr);
+		check(!b4 && !b12 && b16 && f64, "WAV reader: 4/12-bit refused, 16-bit and 64-bit float read");
+	}
+	{   // tom skin noise: same at 48 and 96 kHz
+		auto k = stockKnobs<TomEngine>(); k[ki<TomEngine>("NOISE")] = 1.f;
+		float a = loud<TomEngine>(k, 0.2f, 0.f, 48000.f), b = loud<TomEngine>(k, 0.2f, 0.f, 96000.f);
+		printf("  tom NOISE 100%% 96 vs 48 kHz: %+.2f dB\n", db(b, a));
+		check(std::fabs(db(b, a)) < 1.f, "tom noise holds its level at 96 kHz");
+	}
+	{   // rim over V/OCT
+		auto k = stockKnobs<RimEngine>();
+		float lo = 1e9f, hi = 0.f;
+		for (int st = -12; st <= 12; st += 3) { float l = loud<RimEngine>(k, 0.05f, 0.f, FS, st / 12.f); lo = std::min(lo, l); hi = std::max(hi, l); }
+		printf("  rim over V/OCT -1..+1: %.1f dB spread\n", db(hi, lo));
+		check(db(hi, lo) < 3.f, "rim level even over V/OCT");
+	}
+	{   // output stage: accent keeps its peak, a clean sine stays clean, DRIVE not a big volume knob
+		auto k = stockKnobs<KickEngine>(); k[ki<KickEngine>("ATTACK")] = 0.f;
+		float pu = peak(render<KickEngine>(k, 0.f, 0.5f)), pa = peak(render<KickEngine>(k, 1.f, 0.5f));
+		printf("  kick accent peak +%.1f dB\n", db(pa, pu));
+		check(db(pa, pu) > 4.f, "accent keeps most of its peak");
+		auto kd = stockKnobs<KickEngine>(); kd[ki<KickEngine>("DRIVE")] = 1.f;
+		float l0 = loud<KickEngine>(stockKnobs<KickEngine>(), 0.1f), l1 = loud<KickEngine>(kd, 0.1f);
+		auto hd = stockKnobs<CymbalsEngine>(); hd[ki<CymbalsEngine>("DRIVE")] = 1.f;
+		float h0 = loud<CymbalsEngine>(stockKnobs<CymbalsEngine>(), 0.1f), h1 = loud<CymbalsEngine>(hd, 0.1f);
+		printf("  DRIVE 1 vs 0 loudness: kick %+.1f dB, hat %+.1f dB\n", db(l1, l0), db(h1, h0));
+		check(db(l1, l0) < 6.f && db(h1, h0) < 7.f, "DRIVE adds at most about 6 dB");
+		double th = 0, fu = 0;
+		for (int i = 0; i < 4800; i++) { float x = 6.f * std::sin(2.f * PI * 100.f * i / FS); float y = opamp(x, 0.f); th += y * std::sin(3 * 2.f * PI * 100.f * i / FS); fu += y * std::sin(2.f * PI * 100.f * i / FS); }
+		printf("  6 V sine through the stage at DRIVE 0: 3rd harmonic %.1f dB\n", db(std::fabs((float)th), std::fabs((float)fu)));
+		check(db(std::fabs((float)th), std::fabs((float)fu)) < -45.f, "output stage clean at DRIVE 0");
+	}
+	{   // retriggering a ringing kick and snare: no hard step
+		auto rollStep = [&](auto e, std::vector<float> k, int gap) {
+			e.setSampleRate(FS); float prev = 0.f, worst = 0.f;
+			for (int i = 0; i < FS; i++) { if (i % gap == 0) e.hit(0.f, k.data()); e.process(k.data(), 0.f); if (i > 10) worst = std::max(worst, std::fabs(e.out - prev)); prev = e.out; }
+			return worst;
+		};
+		auto kk = stockKnobs<KickEngine>(); kk[ki<KickEngine>("ATTACK")] = 0.f; kk[ki<KickEngine>("DECAY")] = 1.f;
+		auto ks = stockKnobs<SnareEngine>(); ks[ki<SnareEngine>("SNAPPY")] = 0.f;
+		float a = rollStep(KickEngine(), kk, (int)(0.03f * FS)), b = rollStep(SnareEngine(), ks, (int)(0.06f * FS));
+		printf("  largest step in a roll: kick %.2f V, snare %.2f V\n", a, b);
+		check(a < 0.8f && b < 0.8f, "retrigger fades the old tail (no click)");
 	}
 
 	// demos: each voice, then the whole kit
