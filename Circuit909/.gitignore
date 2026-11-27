@@ -1,0 +1,6 @@
+test/out/
+test/voices
+res/__pycache__/
+dist/
+build/
+*.vcvplugin

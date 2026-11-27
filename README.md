@@ -6,6 +6,7 @@ without stepping on each other.
 
 | Folder | Module | What it is |
 |---|---|---|
+| [Circuit909](Circuit909/) | 909 Kick, 909 Snare, 909 Tom, 909 Rim, 909 Clap, 909 Cymbals | TR-909 circuit models, one module per instrument: stock 909 knobs plus the inner circuit on the panel, AGE, and the 6-bit cymbal path with a built-in metal source or your own WAV |
 | [Paddock](Paddock/) | Swerve, Gallop, Tumble | Blasser-style coupled circuits: a bounce oscillator, four bounce oscillators bounding each other, five touch-coupled rhythm cores with gongs |
 | [Riddim](Riddim/) | Riddim | Dancehall riddim drum machine: 24 classic riddims, each with its machine flavour, ten synthesised voices |
 | [CymbolismFable](CymbolismFable/) | Cymbolism, Cymbolism Extended | Physical cymbal: ten types computed from their geometry, nonlinear crash bloom, stick, mallet, rods, brush and bow; Extended adds morph, warp, tuning to scales, sustain, freeze, stereo and more |

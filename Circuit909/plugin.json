@@ -1,0 +1,71 @@
+{
+  "slug": "Circuit909",
+  "name": "909 Circuits",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Kick909",
+      "name": "909 Kick",
+      "description": "Circuit model of the TR-909 bass drum: reset VCO and waveshaper, pitch sweep (TUNE), click (pulse + noise), with BASE, SWEEP, BEND, SHAPE and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Snare909",
+      "name": "909 Snare",
+      "description": "Circuit model of the TR-909 snare: two swept VCOs plus filtered noise (TONE, SNAPPY), with RATIO, BALANCE, SWEEP, BEND, SHAPE, COLOUR and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Tom909",
+      "name": "909 Tom",
+      "description": "Circuit model of the TR-909 low, mid and high toms: swept VCO, waveshaper and skin noise, with SWEEP, BEND, DOUBLE, MUTE and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Rim909",
+      "name": "909 Rim",
+      "description": "Circuit model of the TR-909 rim shot: three high resonators through a fast transistor VCA and high-pass; RATIO, RING, GATE, SNAP and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Clap909",
+      "name": "909 Clap",
+      "description": "Circuit model of the TR-909 hand clap: band-passed noise with a burst sawtooth and reverb tail; BURSTS, SPREAD, SNAP, TAIL, BAND and AGE",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    },
+    {
+      "slug": "Cymbals909",
+      "name": "909 Cymbals",
+      "description": "The TR-909's 6-bit hat, crash and ride path (clocked DAC, BITS, reconstruction filter, VCA, closed/open choke) around a built-in metal source or your own WAV",
+      "tags": [
+        "Drum",
+        "Synth Voice"
+      ]
+    }
+  ]
+}
