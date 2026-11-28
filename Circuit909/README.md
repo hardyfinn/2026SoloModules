@@ -71,6 +71,13 @@ Still to check against the service notes or a recording before moving any stock 
 sweep law and start pitch, the snare's noise paths and oscillator pitches, three oscillators
 per tom, rim ring and pitches, the cymbal clock rate and reconstruction filter.
 
+## 2.3.1: kick tuned to a measured 909
+
+- The kick's stock BASE is now 49.5 Hz (was 52 Hz), a slightly sharp G1. That is where a
+  real 909's body settles at every TUNE setting, measured from a multisampled TR-909 pack;
+  the TR-808 lands on the same pitch. Applies to the 909 Kick module and the Bench's BD
+  (they share one engine). Factory kits keep their own BASE settings.
+
 ## 2.3.0: compact panels and randomise
 
 - The six single modules are 16 HP (was 28): the stock 909 knobs big in a shaded band, the

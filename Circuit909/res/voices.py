@@ -31,7 +31,7 @@ VOICES = [
       ("ATTACK", "ATTACK", "Attack (the 909's ATTACK: level of the click)", 0.5, "pct", 0, 100, "%", 0, 1),
       ("DECAY", "DECAY", "Decay (the 909's DECAY: body length)", pos_exp(500, 60, 4000), "exp", 60, 4000, " ms", 0, 2),
     ] + COMMON_STOCK(3, 4, 5) + [
-      ("BASE", "BASE", "Base (the note the sweep lands on; a trimmer on the 909)", pos_exp(52, 25, 140), "exp", 25, 140, " Hz", 1, 0),
+      ("BASE", "BASE", "Base (the note the sweep lands on; a trimmer on the 909, stock 49.5 Hz as measured)", pos_exp(49.5, 25, 140), "exp", 25, 140, " Hz", 1, 0),
       ("SWEEP", "SWEEP", "Sweep (how far above BASE the hit starts)", pos_lin(1.8, 0, 4), "lin", 0, 4, " oct", 1, 1),
       ("BEND", "BEND", "Bend (a slower last drop into the note)", pos_lin(0.15, 0, 1.5), "lin", 0, 1.5, " oct", 1, 2),
       ("PULSE", "PULSE", "Pulse (the click's square pulse)", 0.5, "pct", 0, 100, "%", 1, 3),
