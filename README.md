@@ -29,6 +29,7 @@ without stepping on each other.
 | [Rimbaud](Rimbaud/) | Rimbaud | Physical model of a snare drum: coupled heads, colliding snare wires, rimshot, cross-stick, buzz strokes, top/bottom mics |
 | [Lilt](Lilt/) | Lilt | Relabi generator: four summed LFOs crossing four thresholds make triggers that drift around the pulse |
 | [Peal](Peal/) | Peal, Bell Foundry | Change ringing sequencer (methods, calls, open handstroke) and a 12-bell modal voice to ring it |
+| [Crate](Crate/) | Crate | 12-bit 26 kHz sampler voice: drop-sample pitch aliasing, sample-at-45 trick, channel filters, live sampling, age, mutate + lock |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
