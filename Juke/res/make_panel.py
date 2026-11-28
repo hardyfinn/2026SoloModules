@@ -12,7 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FONT_BOLD = os.environ.get("PANEL_FONT_BOLD", "/usr/share/fonts/opentype/inter/Inter-Bold.otf")
 FONT_MED = os.environ.get("PANEL_FONT_MED", "/usr/share/fonts/opentype/inter/Inter-Medium.otf")
 
-W, H = 162.56, 128.5  # 32 HP
+W, H = 182.88, 128.5  # 36 HP
 
 BG = "#17141C"
 BG_DARK = "#0E0C12"
@@ -27,6 +27,8 @@ KNOB_Y, CV_Y = 19.5, 30.0
 KX = [10.5, 24.0, 39.5, 54.0, 67.5, 81.5]   # TEMPO PRESET DENSITY VARY SWING LEVEL
 BX = [95.0, 108.0, 121.0]                   # GEN MUTATE FILL
 FEEL_X, EVOLVE_X = 134.0, 154.0
+MOD_X = 171.0                                # metric shift column
+SHIFT_Y, GATE_Y, ON_Y, BEAT_Y = 46.5, 62.0, 77.5, 93.0
 ROW_Y0, ROW_DY = 38.5, 9.0
 LABEL_X, MUTE_X = 3.6, 20.5
 GRID_X0, CELL, GAP = 26.0, 6.0, 1.5
@@ -75,7 +77,7 @@ add(f'<rect x="0" y="0" width="{W}" height="1.3" fill="{PINK}"/>')
 
 # ---- title
 add(text("Juke", 13.0, 9.0, 5.6, FONT_BOLD, INK, anchor="start", spacing=0.02))
-add(text("footwork drum machine", 148.0, 8.6, 2.6, FONT_MED, PINK, anchor="end"))
+add(text("footwork drum machine", 166.0, 8.6, 2.6, FONT_MED, PINK, anchor="end"))
 
 # ---- top controls
 for x, n in zip(KX, ["TEMPO", "PRESET", "DENSITY", "VARY", "SWING", "LEVEL"]):
@@ -93,15 +95,28 @@ for x in KX[1:5] + BX:
 
 # ---- grid band
 gy0 = ROW_Y0 - ROW_DY / 2
-add(f'<rect x="2.0" y="{gy0 - 0.6:.2f}" width="{W - 4.0:.2f}" height="{9 * ROW_DY + 1.2:.2f}" rx="1.4" fill="{BG_DARK}"/>')
+add(f'<rect x="2.0" y="{gy0 - 0.6:.2f}" width="{AUDIO_X + 6.0:.2f}" height="{9 * ROW_DY + 1.2:.2f}" rx="1.4" fill="{BG_DARK}"/>')
 rows = ["KICK", "CLAP", "SNARE", "C HAT", "O HAT", "TOM HI", "TOM LO", "BELL", "CHOP"]
 for i, n in enumerate(rows):
     y = ROW_Y0 + i * ROW_DY
     add(text(n, LABEL_X, y + 1.05, JACK, anchor="start"))
     if i:
-        add(f'<rect x="3.0" y="{y - ROW_DY / 2 - 0.08:.2f}" width="{W - 6.0:.2f}" height="0.16" fill="{LINE}"/>')
+        add(f'<rect x="3.0" y="{y - ROW_DY / 2 - 0.08:.2f}" width="{AUDIO_X + 4.0:.2f}" height="0.16" fill="{LINE}"/>')
 # beat numbers are drawn by the grid widget; outputs plate on the right
 add(f'<rect x="{TRIG_X - 6.0:.2f}" y="{gy0 - 0.6:.2f}" width="{AUDIO_X - TRIG_X + 12.0:.2f}" height="{9 * ROW_DY + 1.2:.2f}" rx="1.4" fill="#231E2B"/>')
+
+
+# ---- metric shift column
+add(text("MOD", MOD_X, KNOB_Y - 6.6, CONTROL, fill=CYAN))
+add(f'<rect x="{MOD_X - 0.15:.2f}" y="{KNOB_Y + 5.4:.2f}" width="0.3" height="0.9" fill="{SOFT}"/>')
+add(f'<rect x="{MOD_X - 7.0:.2f}" y="{gy0 - 0.6:.2f}" width="14.0" height="{9 * ROW_DY + 1.2:.2f}" rx="1.4" fill="{BG_DARK}"/>')
+add(text("SHIFT", MOD_X, SHIFT_Y - 6.0, CONTROL, fill=CYAN))
+add(text("GATE", MOD_X, GATE_Y - 6.0, JACK))
+add(f'<rect x="{MOD_X - 6.0:.2f}" y="{ON_Y - 9.6:.2f}" width="12.0" height="{BEAT_Y - ON_Y + 14.4:.2f}" rx="1.2" fill="#231E2B"/>')
+add(text("ON", MOD_X, ON_Y - 6.0, JACK, fill=CYAN))
+add(text("BEAT", MOD_X, BEAT_Y - 6.0, JACK, fill=CYAN))
+add(text("1:2 - 2:1", MOD_X, BEAT_Y + 9.0, SMALL, FONT_BOLD, SOFT))
+add(text("pulse", MOD_X, BEAT_Y + 12.2, SMALL, FONT_BOLD, SOFT))
 
 # ---- bottom row
 add(f'<rect x="{IOX[3] - 6.0:.2f}" y="{IO_LABEL_Y - 3.6:.2f}" width="{IOX[6] - IOX[3] + 12.0:.2f}" height="{H - IO_LABEL_Y + 1.6:.2f}" rx="1.2" fill="#231E2B"/>')

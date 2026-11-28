@@ -401,9 +401,11 @@ struct Seq {
 	uint32_t seed = 1;
 	int barKind = 0;          // 0 base, 1 variation, 2 fill (for the display)
 	int barInPhrase = 0;
+	bool holdBar = false;     // while shifted: wrapping to step 1 replays this bar instead of starting the next
+	bool wrapHeld = false;
 
 	Seq() { free.seed(0xC0FFEEu); loadPreset(0, base); play = base; }
-	void reset() { step = 0; bar = 0; fillArmed = false; fillDone = false; play = base; barKind = 0; barInPhrase = 0; }
+	void reset() { step = 0; bar = 0; fillArmed = false; fillDone = false; play = base; barKind = 0; barInPhrase = 0; holdBar = wrapHeld = false; }
 
 	void startBar() {
 		fillDone = false;
@@ -421,10 +423,12 @@ struct Seq {
 
 	// Level of each lane for the coming step into lv[] (0 none, 1 hit, 2 ghost), then advance.
 	void next(uint8_t* lv) {
-		if (step == 0) startBar();
+		if (step == 0) { if (wrapHeld) wrapHeld = false; else startBar(); }
+		else wrapHeld = false;
 		if (step == 8 && fillArmed && barKind != 2) { fillBar(play, free); fillArmed = false; fillDone = true; barKind = 2; }
 		for (int l = 0; l < NUM_LANES; l++) lv[l] = play.s[l][step];
 		step = (step + 1) % STEPS;
+		if (step == 0 && holdBar) wrapHeld = true;
 	}
 
 	void doGenerate(uint32_t s, double dens, int feel) {
@@ -436,6 +440,63 @@ struct Seq {
 	void edit(int lane, int st) {
 		uint8_t v = (uint8_t) ((play.s[lane][st] + 1) % 3);
 		base.s[lane][st] = v; play.s[lane][st] = v;
+	}
+};
+
+
+// ---- metric shift: play the pattern's 16ths at a ratio of the clock's 16ths ----
+// Tempo ratios new:old. 4:3 makes the dotted 8th the new beat (160 -> 213 BPM feel),
+// 3:2 plays 16th triplets (240), 1:2 is half-time (80) and so on. The pattern stays
+// locked to the clock: every clock 16th re-anchors where the shifted steps fall.
+struct Ratio { const char* name; int a, b; };
+static const Ratio RATIOS[] = {
+	{"1:2", 1, 2}, {"2:3", 2, 3}, {"3:4", 3, 4}, {"1:1", 1, 1}, {"4:3", 4, 3}, {"3:2", 3, 2}, {"2:1", 2, 1},
+};
+static const int NUM_RATIOS = 7, UNITY_RATIO = 3;
+
+struct MetricShift {
+	long master = -1;          // clock 16ths so far (index of the last one)
+	float since = 0.f;         // samples since the last clock 16th
+	bool active = false;
+	int a = 1, b = 1;          // ratio in force
+	long c0 = 0, fired = 0;
+
+	void reset() { master = -1; since = 0.f; active = false; fired = 0; }
+	int masterStep() const { return master < 0 ? -1 : (int) (master % STEPS); }
+	float stepLen(float period) const { return active ? period * b / a : period; }
+
+	// Call every sample. clockTick: a clock 16th arrived this sample. period: clock 16th in samples.
+	// want: shift requested. ri: index into RATIOS. returnOnBar: come back on the clock's bar line
+	// (and ask for the pattern to realign to step 1), otherwise on the next beat.
+	// Returns how many pattern steps to play this sample.
+	int process(bool clockTick, float period, bool want, int ri, bool returnOnBar, bool& realign) {
+		realign = false;
+		int steps = 0;
+		if (clockTick) {
+			master++;
+			since = 0.f;
+			int ms = masterStep();
+			bool beat = (ms % 4) == 0;
+			const Ratio& r = RATIOS[std::min(std::max(ri, 0), NUM_RATIOS - 1)];
+			bool unity = r.a == r.b;
+			if (!active) {
+				if (want && !unity && beat) { active = true; a = r.a; b = r.b; c0 = master; fired = 0; }
+			}
+			else {
+				bool stop = !want || unity;
+				if (stop && (returnOnBar ? ms == 0 : beat)) { active = false; realign = returnOnBar; }
+				else if (!stop && (r.a != a || r.b != b) && beat) { a = r.a; b = r.b; c0 = master; fired = 0; }
+			}
+			if (!active) steps = 1;
+		}
+		else since += 1.f;
+		if (active) {
+			double frac = period > 0.f ? std::min((double) since / period, 0.999) : 0.0;
+			double pos = ((double) (master - c0) + frac) * a / b;
+			long due = (long) std::floor(pos + 1e-9);
+			while (fired <= due) { steps++; fired++; }
+		}
+		return steps;
 	}
 };
 

@@ -1,7 +1,8 @@
 // Juke: footwork / juke drum machine. 16-step grid of nine lanes you can edit on the
 // panel, 14 presets, a generator that writes new bars in the style (GEN), mutates them
 // (MUTATE), fills phrase endings (FILL) and evolves phrases (EVOLVE). Internal clock at
-// 160 BPM, or send 16ths to CLOCK. Engine, presets and generator: JukeDSP.hpp.
+// 160 BPM, or send 16ths to CLOCK. SHIFT plays the pattern at a ratio of the clock
+// (metric modulation, locked to the clock). Engine, presets and generator: JukeDSP.hpp.
 #include "plugin.hpp"
 #include "JukeDSP.hpp"
 
@@ -12,6 +13,8 @@ static const float KNOB_Y = 19.5f, CV_Y = 30.0f;
 static const float KX[6] = {10.5f, 24.0f, 39.5f, 54.0f, 67.5f, 81.5f};   // TEMPO PRESET DENSITY VARY SWING LEVEL
 static const float BX[3] = {95.0f, 108.0f, 121.0f};                       // GEN MUTATE FILL
 static const float FEEL_X = 134.0f, EVOLVE_X = 154.0f;
+static const float MOD_X = 171.0f;
+static const float SHIFT_Y = 46.5f, GATE_Y = 62.0f, ON_Y = 77.5f, BEAT_Y = 93.0f;
 static const float ROW_Y0 = 38.5f, ROW_DY = 9.0f;
 static const float MUTE_X = 20.5f;
 static const float GRID_X0 = 26.0f, CELL = 6.0f, GAP = 1.5f;
@@ -35,11 +38,13 @@ struct Juke : Module {
 		TEMPO_PARAM, PRESET_PARAM, DENSITY_PARAM, VARY_PARAM, SWING_PARAM, LEVEL_PARAM,
 		GEN_PARAM, MUTATE_PARAM, FILL_PARAM, FEEL_PARAM, EVOLVE_PARAM, RUN_PARAM,
 		MUTE_PARAM,
-		NUM_PARAMS = MUTE_PARAM + NUM_LANES
+		MOD_PARAM = MUTE_PARAM + NUM_LANES, SHIFT_PARAM,
+		NUM_PARAMS
 	};
 	enum InputIds {
 		PRESET_INPUT, DENSITY_INPUT, VARY_INPUT, SWING_INPUT,
 		GEN_INPUT, MUTATE_INPUT, FILL_INPUT, CLOCK_INPUT, RESET_INPUT,
+		MOD_INPUT, SHIFT_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -47,12 +52,13 @@ struct Juke : Module {
 		AUDIO_OUTPUT = TRIG_OUTPUT + NUM_LANES,
 		CLOCK_OUTPUT = AUDIO_OUTPUT + NUM_LANES,
 		ACCENT_OUTPUT, MIXL_OUTPUT, MIXR_OUTPUT,
+		SHIFT_OUTPUT, BEAT_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
 		MUTE_LIGHT,
 		RUN_LIGHT = MUTE_LIGHT + NUM_LANES,
-		GEN_LIGHT, MUTATE_LIGHT, FILL_LIGHT,
+		GEN_LIGHT, MUTATE_LIGHT, FILL_LIGHT, SHIFT_LIGHT,
 		NUM_LIGHTS
 	};
 
@@ -67,6 +73,13 @@ struct Juke : Module {
 	float accent = 0.f, genFlash = 0.f, mutFlash = 0.f;
 	int lastPreset = 0;
 	float ghostVolts = 5.f;
+	MetricShift shift;
+	dsp::PulseGenerator beatPulse;
+	bool returnOnBar = true;   // menu: come back on the clock's bar line (realign) or on the next beat
+	bool autoShift = false;    // menu: with EVOLVE, shift the bar before each fill
+	bool autoWant = false;
+	int modIdx = UNITY_RATIO;
+	float clockPeriod = 0.f;
 	// display state (read by the widgets)
 	int status = ST_PRESET, dispStep = -1;
 	float flash[NUM_LANES] = {};
@@ -106,6 +119,18 @@ struct Juke : Module {
 		configOutput(ACCENT_OUTPUT, "Accent CV (how busy each step is, 0-10 V)");
 		configOutput(MIXL_OUTPUT, "Mix left");
 		configOutput(MIXR_OUTPUT, "Mix right");
+		struct RatioQuantity : ParamQuantity {
+			std::string getDisplayValueString() override {
+				return RATIOS[clamp((int) std::round(getValue()), 0, NUM_RATIOS - 1)].name;
+			}
+		};
+		configParam<RatioQuantity>(MOD_PARAM, 0.f, NUM_RATIOS - 1, UNITY_RATIO, "Metric shift ratio (new pulse : old)")->snapEnabled = true;
+		configSwitch(SHIFT_PARAM, 0.f, 1.f, 0.f, "Shift (starts on the next beat)", {"Off", "On"});
+		paramQuantities[SHIFT_PARAM]->randomizeEnabled = false;
+		configInput(MOD_INPUT, "Shift ratio CV (+-5 V moves across all ratios)");
+		configInput(SHIFT_INPUT, "Shift gate (high = shifted)");
+		configOutput(SHIFT_OUTPUT, "Shift gate (10 V while shifted)");
+		configOutput(BEAT_OUTPUT, "Beat (every 4 pattern steps: the pulse you feel)");
 		onReset();
 	}
 
@@ -133,6 +158,7 @@ struct Juke : Module {
 
 	void tick(const ProcessArgs& args, float stepSamples) {
 		clockPulse.trigger(1e-3f);
+		if (seq.step % 4 == 0) beatPulse.trigger(1e-3f);
 		seq.vary = knobCv(VARY_PARAM, VARY_INPUT);
 		seq.evolve = params[EVOLVE_PARAM].getValue() > 0.5f;
 		int played = seq.step;
@@ -186,7 +212,8 @@ struct Juke : Module {
 		if (fillTrig.process(inputs[FILL_INPUT].getVoltage(), 0.1f, 2.f) || f) seq.fillArmed = true;
 
 		if (resetTrig.process(inputs[RESET_INPUT].getVoltage(), 0.1f, 2.f)) {
-			seq.step = 0; seq.bar = 0;
+			seq.step = 0; seq.bar = 0; seq.holdBar = seq.wrapHeld = false;
+			shift.reset(); autoWant = false;
 			for (int l = 0; l < NUM_LANES; l++) pendDelay[l] = -1.f;
 			phase = 1.f;   // internal clock plays step 1 right away
 			dispStep = -1;
@@ -196,17 +223,38 @@ struct Juke : Module {
 		bool running = params[RUN_PARAM].getValue() > 0.5f;
 		extClock = inputs[CLOCK_INPUT].isConnected();
 		float intPeriod = args.sampleRate * 60.f / params[TEMPO_PARAM].getValue() / 4.f;
+		bool clockTick = false;
 		if (extClock) {
 			if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f)) {
 				if (sinceClock > 8.f && sinceClock < args.sampleRate * 2.f) period = period > 0.f ? 0.7f * period + 0.3f * sinceClock : sinceClock;
 				sinceClock = 0.f;
-				if (running) tick(args, period > 0.f ? period : intPeriod);
+				clockTick = running;
 			}
 		}
 		else if (running) {
 			phase += 1.f / intPeriod;
-			if (phase >= 1.f) { phase -= std::floor(phase); tick(args, intPeriod); }
+			if (phase >= 1.f) { phase -= std::floor(phase); clockTick = true; }
 		}
+		clockPeriod = extClock && period > 0.f ? period : intPeriod;
+
+		// metric shift: the pattern's steps run at a ratio of the clock's 16ths
+		int mi = (int) std::round(params[MOD_PARAM].getValue());
+		if (inputs[MOD_INPUT].isConnected()) mi += (int) std::round(inputs[MOD_INPUT].getVoltage() / 5.f * (NUM_RATIOS / 2));
+		modIdx = clamp(mi, 0, NUM_RATIOS - 1);
+		if (clockTick && ((shift.master + 1) % STEPS) == 0) {
+			// decided on the clock's bar line: with EVOLVE, shift the bar before the fill
+			int len = std::max(1, seq.phrase);
+			autoWant = autoShift && seq.evolve && seq.step == 0 && (seq.bar % len) == len - 2;
+		}
+		bool want = params[SHIFT_PARAM].getValue() > 0.5f || inputs[SHIFT_INPUT].getVoltage() > 1.f || autoWant;
+		bool realign = false;
+		int n = shift.process(clockTick, clockPeriod, want, modIdx, returnOnBar, realign);
+		if (realign) { seq.step = 0; seq.wrapHeld = false; }
+		seq.holdBar = shift.active;
+		for (int k = 0; k < n; k++) tick(args, shift.stepLen(clockPeriod));
+		outputs[SHIFT_OUTPUT].setVoltage(shift.active ? 10.f : 0.f);
+		outputs[BEAT_OUTPUT].setVoltage(beatPulse.process(args.sampleTime) ? 10.f : 0.f);
+		lights[SHIFT_LIGHT].setBrightness(shift.active ? 1.f : (want && modIdx != UNITY_RATIO ? 0.3f : 0.f));
 
 		// swung hits waiting for their moment
 		for (int l = 0; l < NUM_LANES; l++) {
@@ -259,6 +307,8 @@ struct Juke : Module {
 		json_object_set_new(r, "seed", json_integer(seq.seed));
 		json_object_set_new(r, "phrase", json_integer(seq.phrase));
 		json_object_set_new(r, "ghostVolts", json_real(ghostVolts));
+		json_object_set_new(r, "returnOnBar", json_boolean(returnOnBar));
+		json_object_set_new(r, "autoShift", json_boolean(autoShift));
 		return r;
 	}
 	void dataFromJson(json_t* r) override {
@@ -272,6 +322,8 @@ struct Juke : Module {
 		if (json_t* x = json_object_get(r, "seed")) seq.seed = (uint32_t) json_integer_value(x);
 		if (json_t* x = json_object_get(r, "phrase")) seq.phrase = clamp((int) json_integer_value(x), 2, 16);
 		if (json_t* x = json_object_get(r, "ghostVolts")) ghostVolts = (float) json_number_value(x);
+		if (json_t* x = json_object_get(r, "returnOnBar")) returnOnBar = json_boolean_value(x);
+		if (json_t* x = json_object_get(r, "autoShift")) autoShift = json_boolean_value(x);
 	}
 };
 
@@ -349,7 +401,11 @@ struct JukeDisplay : Widget {
 				case ST_EDITED: l1 = "EDITED"; break;
 				default: l1 = string::f("%02d %s", module->lastPreset + 1, PRESETS[module->lastPreset].name); break;
 				}
-				l2 = module->extClock ? "EXT CLK" : string::f("%.0f BPM", module->params[Juke::TEMPO_PARAM].getValue());
+				float bpm = module->clockPeriod > 0.f ? APP->engine->getSampleRate() * 15.f / module->clockPeriod : 160.f;
+				if (module->shift.active) {
+					l2 = string::f("%d:%d %.0f", module->shift.a, module->shift.b, bpm * module->shift.a / module->shift.b);
+				}
+				else l2 = module->extClock ? string::f("EXT %.0f", bpm) : string::f("%.0f BPM", bpm);
 				if (q.evolve) l2 += string::f(" %d/%d %s", q.barInPhrase + 1, q.phrase, q.barKind == 2 ? "FILL" : (q.barKind == 1 ? "VAR" : "BASE"));
 				else if (q.fillArmed || q.barKind == 2) l2 += "  FILL";
 			}
@@ -390,6 +446,14 @@ struct JukeWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(BX[2], CV_Y)), module, Juke::FILL_INPUT));
 		addParam(createParamCentered<CKSSThree>(mm2px(Vec(FEEL_X, KNOB_Y + 1.0f)), module, Juke::FEEL_PARAM));
 		addParam(createParamCentered<CKSS>(mm2px(Vec(EVOLVE_X, KNOB_Y)), module, Juke::EVOLVE_PARAM));
+
+		// metric shift column
+		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(MOD_X, KNOB_Y)), module, Juke::MOD_PARAM));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(MOD_X, CV_Y)), module, Juke::MOD_INPUT));
+		addParam(createLightParamCentered<VCVLightBezelLatch<WhiteLight>>(mm2px(Vec(MOD_X, SHIFT_Y)), module, Juke::SHIFT_PARAM, Juke::SHIFT_LIGHT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(MOD_X, GATE_Y)), module, Juke::SHIFT_INPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(MOD_X, ON_Y)), module, Juke::SHIFT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(MOD_X, BEAT_Y)), module, Juke::BEAT_OUTPUT));
 
 		// grid rows
 		StepGrid* g = createWidget<StepGrid>(mm2px(Vec(GRID_X0, ROW_Y0 - ROW_DY * 0.5f)));
@@ -432,6 +496,11 @@ struct JukeWidget : ModuleWidget {
 			for (float o : opts)
 				sub->addChild(createCheckMenuItem(o == 0.f ? "Off (hits only)" : string::f("%.0f V", o), "", [=]() { return m->ghostVolts == o; }, [=]() { m->ghostVolts = o; }));
 		}));
+		menu->addChild(createSubmenuItem("Shift returns", m->returnOnBar ? "on the bar line" : "on the next beat", [=](Menu* sub) {
+			sub->addChild(createCheckMenuItem("On the clock's bar line (pattern restarts in step)", "", [=]() { return m->returnOnBar; }, [=]() { m->returnOnBar = true; }));
+			sub->addChild(createCheckMenuItem("On the next beat (the bar line moves)", "", [=]() { return !m->returnOnBar; }, [=]() { m->returnOnBar = false; }));
+		}));
+		menu->addChild(createBoolPtrMenuItem("Evolve shifts the bar before each fill", "", &m->autoShift));
 		menu->addChild(createMenuItem("Reload preset", "", [=]() { loadPreset(m->lastPreset, m->seq.base); m->seq.play = m->seq.base; m->status = ST_PRESET; }));
 		menu->addChild(createMenuItem("Clear pattern", "", [=]() { m->seq.base.clear(); m->seq.play = m->seq.base; m->status = ST_EDITED; }));
 	}

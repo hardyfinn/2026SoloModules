@@ -29,7 +29,7 @@ without stepping on each other.
 | [Rimbaud](Rimbaud/) | Rimbaud | Physical model of a snare drum: coupled heads, colliding snare wires, rimshot, cross-stick, buzz strokes, top/bottom mics |
 | [Lilt](Lilt/) | Lilt | Relabi generator: four summed LFOs crossing four thresholds make triggers that drift around the pulse |
 | [Peal](Peal/) | Peal, Bell Foundry | Change ringing sequencer (methods, calls, open handstroke) and a 12-bell modal voice to ring it |
-| [Juke](Juke/) | Juke | Footwork / juke drum machine at 160 BPM: editable 9-lane step grid, 14 presets, a generator that writes, mutates, fills and evolves bars in the 3-3-2 style |
+| [Juke](Juke/) | Juke | Footwork / juke drum machine at 160 BPM: editable 9-lane step grid, 14 presets, a generator that writes, mutates, fills and evolves bars in the 3-3-2 style, metric shifts locked to the clock |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.

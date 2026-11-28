@@ -43,7 +43,34 @@ int main(int argc, char** argv) {
 	}
 	// mutating a kick-less preset must not invent kicks
 	for (int s = 0; s < 500; s++) { Pattern p; loadPreset(12, p); r.seed(s + 7); mutate(p, r, 1.0); if (p.count(KICK, 1) + p.count(KICK, 2)) bad++; }
-	std::printf("pattern checks: %d problems\n\n", bad);
+
+	// metric shift timing: clock 16th = 1000 samples; request 4:3 from clock step 2 to step 22
+	{
+		for (int ri = 0; ri < NUM_RATIOS; ri++) {
+			MetricShift ms; long lastFire = -1; int stepsAt = 0; bool engagedOnBeat = true, gapsOk = true, landsOk = true;
+			const Ratio& rr = RATIOS[ri];
+			double want = 1000.0 * rr.b / rr.a;
+			bool prevActive = false;
+			for (long t = 0; t < 48 * 1000; t++) {
+				bool tickNow = (t % 1000) == 0;
+				long ck = t / 1000;
+				bool w = ck >= 2 && ck < 22, re;
+				int n = ms.process(tickNow, 1000.f, w, ri, true, re);
+				if (ms.active && !prevActive && (ms.masterStep() % 4)) engagedOnBeat = false;
+				if (!ms.active && prevActive && ms.masterStep() != 0) landsOk = false;
+				for (int k = 0; k < n; k++) {
+					if (ms.active && prevActive && lastFire >= 0 && std::fabs((t - lastFire) - want) > 1.5) gapsOk = false;
+					lastFire = t; stepsAt++;
+				}
+				prevActive = ms.active;
+			}
+			bool ok = engagedOnBeat && gapsOk && landsOk;
+			if (!ok) bad++;
+			std::printf("shift %s: %d steps in 48 clock 16ths, on beat %s, even gaps %s, returns on bar %s\n", rr.name, stepsAt,
+				engagedOnBeat ? "yes" : "NO", gapsOk ? "yes" : "NO", landsOk ? "yes" : "NO");
+		}
+	}
+	std::printf("pattern and shift checks: %d problems\n\n", bad);
 
 	Pattern p; r.seed(42); generate(p, r, 0.55, FEEL_AUTO);
 	std::printf("seed 42, density 0.55, auto:\n"); print(p);
@@ -73,6 +100,32 @@ int main(int argc, char** argv) {
 		std::printf(" %s %.2f", LANE_NAMES[l], pk);
 	}
 	std::printf("\nmix peak %.2f, NaN %s\n", peak, nanSeen ? "YES" : "no");
+
+	// metric shift demo: "Juke drive", bars 1-2 straight, 4:3 shift for bars 3-4, back on bar 5, repeated
+	{
+		DrumEngine e; e.setSampleRate((float) sr);
+		Seq q2; loadPreset(5, q2.base); q2.play = q2.base;
+		MetricShift ms;
+		const float per = sr * 60.f / 160.f / 4.f;
+		std::vector<float> o2;
+		float phase2 = 1.f;
+		for (long t = 0; t < (long) (per * 16 * 12); t++) {
+			phase2 += 1.f / per;
+			bool tk = false;
+			if (phase2 >= 1.f) { phase2 -= std::floor(phase2); tk = true; }
+			long bar2 = (ms.master + (tk ? 1 : 0)) / 16;
+			bool re;
+			int n = ms.process(tk, per, (bar2 % 6) >= 2 && (bar2 % 6) < 4, 4, true, re);
+			if (re) { q2.step = 0; q2.wrapHeld = false; }
+			q2.holdBar = ms.active;
+			for (int k = 0; k < n; k++) { uint8_t lv[NUM_LANES]; q2.next(lv); for (int l = 0; l < NUM_LANES; l++) if (lv[l]) e.hit(l, lv[l]); }
+			float v[NUM_LANES]; e.process(v);
+			float m = 0.f; for (int l = 0; l < NUM_LANES; l++) m += v[l];
+			o2.push_back(std::tanh(m * 0.5f) * 0.9f);
+		}
+		std::string d2 = argc > 1 ? argv[1] : ".";
+		wavWrite((d2 + "/test/juke-shift-demo.wav").c_str(), o2, sr);
+	}
 	std::string dir = argc > 1 ? argv[1] : ".";
 	wavWrite((dir + "/test/juke-demo.wav").c_str(), out, sr);
 	return (bad || nanSeen) ? 1 : 0;

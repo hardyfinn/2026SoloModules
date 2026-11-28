@@ -16,7 +16,7 @@
     {
       "slug": "Juke",
       "name": "Juke",
-      "description": "Footwork / juke drum machine at 160 BPM: editable 9-lane 16-step grid, 14 presets, a generator that writes, mutates, fills and evolves bars in the 3-3-2 style, nine synthesised voices with trigger and audio outs",
+      "description": "Footwork / juke drum machine at 160 BPM: editable 9-lane 16-step grid, 14 presets, a generator that writes, mutates, fills and evolves bars in the 3-3-2 style, clock-locked metric shifts (4:3, 3:2, half-time and more), nine synthesised voices with trigger and audio outs",
       "tags": [
         "Drum",
         "Sequencer",
