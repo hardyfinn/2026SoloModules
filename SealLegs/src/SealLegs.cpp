@@ -13,7 +13,7 @@ static const float RX[6] = {107.5f, 123.0f, 138.5f, 154.0f, 169.5f, 185.0f};
 static const float R1_Y = 28.0f, R2_Y = 47.5f, R3_Y = 66.0f, R4_Y = 84.5f, R5_Y = 103.0f;
 static const float SW_DX = -2.6f;   // 3-position switches sit left of their column, labels to the right
 
-using namespace seallegs;
+namespace sl = seallegs;
 
 struct SealLegs;
 
@@ -27,10 +27,10 @@ struct ShapeQuantity : ParamQuantity {
 		int n = (int)std::round(k);
 		if (std::fabs(k - n) < 0.1f || k < 3.f) {
 			int i = k < 0.5f ? 0 : (k < 1.5f ? 1 : (k < 2.5f ? 2 : n));
-			return MOD_SHAPE_NAMES[clamp(i, 0, 9)];
+			return sl::MOD_SHAPE_NAMES[clamp(i, 0, 9)];
 		}
 		int a = (int)std::floor(k);
-		return string::f("%s > %s", MOD_SHAPE_NAMES[clamp(a, 0, 9)], MOD_SHAPE_NAMES[clamp(a + 1, 0, 9)]);
+		return string::f("%s > %s", sl::MOD_SHAPE_NAMES[clamp(a, 0, 9)], sl::MOD_SHAPE_NAMES[clamp(a + 1, 0, 9)]);
 	}
 };
 struct RateQuantity : ParamQuantity {
@@ -77,7 +77,7 @@ struct SealLegs : Module {
 	// slider order for the attenuverters and CV jacks
 	static constexpr int SLIDERS[8] = {TIME_PARAM, WIDTH_PARAM, FB_PARAM, MOD_RATE_PARAM, MOD_DEPTH_PARAM, COLOR_PARAM, HP_PARAM, LP_PARAM};
 
-	Engine engine;
+	sl::Engine engine;
 	dsp::SchmittTrigger clkIn, tapIn, clearIn, mutIn, tapBtn, clearBtn, freezeIn, revIn;
 	float tapFlash = 0.f;
 	int lightDiv = 0;
@@ -206,7 +206,7 @@ struct SealLegs : Module {
 	}
 
 	void process(const ProcessArgs& args) override {
-		Frame f;
+		sl::Frame f;
 		// audio in (polyphonic cables summed)
 		f.inL = inputs[IN_L_INPUT].getVoltageSum();
 		f.inR = inputs[IN_R_INPUT].isConnected() ? inputs[IN_R_INPUT].getVoltageSum() : f.inL;
@@ -232,12 +232,12 @@ struct SealLegs : Module {
 		int auxDest = clamp((int)std::round(params[AUX_DEST_PARAM].getValue()), 0, 4);
 		auto withAux = [&](float v, int dest) { return auxDest == dest ? v + aux : v; };
 
-		f.drive = clamp(withAux(params[DRIVE_PARAM].getValue(), AUX_DRIVE), 0.f, 1.f);
-		f.noise = clamp(withAux(params[NOISE_PARAM].getValue(), AUX_NOISE) + noiseMut, 0.f, 1.f);
+		f.drive = clamp(withAux(params[DRIVE_PARAM].getValue(), sl::AUX_DRIVE), 0.f, 1.f);
+		f.noise = clamp(withAux(params[NOISE_PARAM].getValue(), sl::AUX_NOISE) + noiseMut, 0.f, 1.f);
 		f.noiseMode = params[NOISE_MODE_PARAM].getValue();
-		f.fog = clamp(withAux(params[FOG_PARAM].getValue(), AUX_FOG) + fogMut, 0.f, 1.f);
+		f.fog = clamp(withAux(params[FOG_PARAM].getValue(), sl::AUX_FOG) + fogMut, 0.f, 1.f);
 		f.fogDecay = params[FOG_DECAY_PARAM].getValue();
-		f.mix = clamp(withAux(params[MIX_PARAM].getValue(), AUX_MIX), 0.f, 1.f);
+		f.mix = clamp(withAux(params[MIX_PARAM].getValue(), sl::AUX_MIX), 0.f, 1.f);
 		f.duck = params[DUCK_PARAM].getValue();
 
 		f.time = clamp(slider(0), 0.f, 1.f);
@@ -252,7 +252,7 @@ struct SealLegs : Module {
 		float k = params[MOD_SHAPE_PARAM].getValue();
 		if (snapShape) k = std::round(k);
 		if (shapeMut >= 0) k = (float)shapeMut;
-		if (auxDest == AUX_MOD) k += 9.f * aux;
+		if (auxDest == sl::AUX_MOD) k += 9.f * aux;
 		f.modShape = clamp(k, 0.f, 9.f);
 
 		f.range = range();
@@ -261,9 +261,9 @@ struct SealLegs : Module {
 		f.fogPos = clamp((int)std::round(params[FOG_POS_PARAM].getValue()), 0, 3);
 		f.drivePos = topIndex(params[DRIVE_POS_PARAM].getValue());
 		int rev = topIndex(params[REVERSE_PARAM].getValue());
-		if (revMut) rev = rev == REV_OFF ? REV_ON : (rev == REV_ON ? REV_OFF : rev);
+		if (revMut) rev = rev == sl::REV_OFF ? sl::REV_ON : (rev == sl::REV_ON ? sl::REV_OFF : rev);
 		revIn.process(inputs[REV_INPUT].getVoltage(), 0.1f, 1.f);
-		if (revIn.isHigh()) rev = rev == REV_OFF ? REV_ON : REV_OFF;
+		if (revIn.isHigh()) rev = rev == sl::REV_OFF ? sl::REV_ON : sl::REV_OFF;
 		f.reverse = rev;
 		const double speeds[3] = {0.5, 1.0, 2.0};
 		int sp = clamp((int)std::round(params[SPEED_PARAM].getValue()), 0, 2);
@@ -290,7 +290,7 @@ struct SealLegs : Module {
 		f.sendReturn = sendReturn;
 		f.modOut10 = modOut10;
 
-		Output o = engine.process(f);
+		sl::Output o = engine.process(f);
 		outputs[OUT_L_OUTPUT].setVoltage((float)o.l);
 		outputs[OUT_R_OUTPUT].setVoltage((float)o.r);
 		outputs[MOD_OUTPUT].setVoltage((float)o.mod);
@@ -344,7 +344,7 @@ struct SealLegs : Module {
 		if (json_t* j = json_object_get(root, "clkQuarter")) clkQuarter = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "modOut10")) modOut10 = json_boolean_value(j);
 		if (json_t* j = json_object_get(root, "snapShape")) snapShape = json_boolean_value(j);
-		if (json_t* j = json_object_get(root, "tempo16th")) engine.Pc = clamp((double)json_number_value(j), 0.002, 4.0);
+		if (json_t* j = json_object_get(root, "tempo16th")) engine.Pc = std::min(std::max((double)json_number_value(j), 0.002), 4.0);
 		if (json_t* mu = json_object_get(root, "mutation")) {
 			auto num = [&](const char* k, float& v) { if (json_t* j = json_object_get(mu, k)) v = (float)json_number_value(j); };
 			auto in = [&](const char* k, int& v) { if (json_t* j = json_object_get(mu, k)) v = (int)json_integer_value(j); };
@@ -362,11 +362,11 @@ constexpr int SealLegs::SLIDERS[8];
 
 std::string TimeQuantity::getDisplayValueString() {
 	SealLegs* m = dynamic_cast<SealLegs*>(module);
-	int rg = m ? m->range() : MED;
-	int st = m ? topIndex(m->params[SealLegs::STEREO_PARAM].getValue()) : TW;
+	int rg = m ? m->range() : sl::MED;
+	int st = m ? topIndex(m->params[SealLegs::STEREO_PARAM].getValue()) : sl::TW;
 	bool sync = m && m->params[SealLegs::DSYNC_PARAM].getValue() > 0.5f;
 	double s = getValue();
-	if (isWidth && st != LR) return string::f("+%.1f %%", 33.0 * s);
+	if (isWidth && st != sl::LR) return string::f("+%.1f %%", 33.0 * s);
 	if (sync) {
 		static const char* names[3][7] = {
 			{"1/64", "1/32T", "1/32D", "1/32", "1/16T", "1/16D", "1/16"},
@@ -375,7 +375,7 @@ std::string TimeQuantity::getDisplayValueString() {
 		};
 		return names[rg][(int)std::round(s * 6)];
 	}
-	double d = timeFree(rg, s);
+	double d = sl::timeFree(rg, s);
 	return d < 1 ? string::f("%.1f ms", d * 1000) : string::f("%.3f s", d);
 }
 
