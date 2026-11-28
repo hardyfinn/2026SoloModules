@@ -1,0 +1,367 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>The Changes, Weighted and Long Form: user guide</title>
+<style>
+@page { size: A4; margin: 16mm 16mm 18mm 16mm; }
+:root { --ink:#26262a; --quiet:#6b6660; --acc:#cf5a2e; --paper:#ece5d8; --plate:#2b2c31; --cyan:#1f8fa0; }
+* { box-sizing: border-box; }
+body { font-family: Inter, Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.45; margin: 0; }
+h1 { font-size: 30pt; letter-spacing: .02em; margin: 0 0 4mm; line-height: 1.05; }
+h2 { font-size: 17pt; margin: 0 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.2pt solid var(--acc); }
+h3 { font-size: 12pt; margin: 5mm 0 1.5mm; }
+p { margin: 0 0 2.4mm; }
+.page { page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+.kicker { color: var(--acc); font-weight: 700; letter-spacing: .14em; font-size: 9pt; text-transform: uppercase; margin-bottom: 3mm; }
+.lead { font-size: 12.5pt; color: #3b3a3d; max-width: 150mm; }
+.panels { display: flex; gap: 4mm; align-items: flex-end; }
+.panels img { height: 62mm; border-radius: 1mm; box-shadow: 0 .6mm 2mm rgba(0,0,0,.18); }
+.cap { font-size: 8.5pt; color: var(--quiet); margin-top: 1.5mm; }
+table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 2.5mm; font-size: 8.9pt; page-break-inside: auto; }
+tr { page-break-inside: avoid; }
+th { text-align: left; background: var(--paper); font-weight: 700; padding: 1.1mm 2mm; border-bottom: .6pt solid #cfc6b6; }
+td { padding: 1.0mm 2mm; border-bottom: .4pt solid #e2dbcd; vertical-align: top; }
+td:first-child { white-space: nowrap; font-weight: 600; }
+.box { background: var(--paper); border-radius: 2mm; padding: 3mm 4mm; margin: 2mm 0 3mm; }
+.box.dark { background: var(--plate); color: #f3efe8; }
+.box h3 { margin-top: 0; }
+ol, ul { margin: 0 0 2.4mm; padding-left: 5.5mm; }
+li { margin-bottom: 1mm; }
+.k { font-weight: 700; letter-spacing: .02em; }
+.jack { font-weight: 700; color: var(--cyan); }
+.two { display: flex; gap: 6mm; }
+.two > * { flex: 1; }
+.fig { text-align: center; margin: 2mm 0 3mm; }
+.fig img { max-width: 100%; border-radius: 1mm; }
+.small { font-size: 8.8pt; color: var(--quiet); }
+.num { display: inline-block; width: 5.5mm; height: 5.5mm; border-radius: 50%; background: var(--acc); color: #fff; font-size: 8pt; font-weight: 700; text-align: center; line-height: 5.5mm; margin-right: 1.5mm; }
+.step { display: flex; gap: 2mm; margin-bottom: 2mm; page-break-inside: avoid; }
+.step .num { flex: none; margin-top: .3mm; }
+.toc li { margin-bottom: .6mm; }
+</style></head>
+<body>
+
+<!-- ============================ COVER -->
+<section class="page cover">
+  <div>
+    <div class="kicker">Haer · VCV Rack 2 modules · user guide</div>
+    <h1>The Changes,<br>Weighted and<br>Long Form</h1>
+    <p class="lead">Three modules that play a whole track together. <b>Long Form</b> runs the song's sections, <b>The Changes</b> plays chords the way a style would, and <b>Weighted</b> writes a melody that leans on those chords.</p>
+  </div>
+  <div>
+    <div class="panels"><img src="ch.png"><img src="wt.png"></div>
+    <div class="cap">The Changes (28 HP) and Weighted 2.6 (20 HP). Panel renders, not Rack screenshots.</div>
+    <div style="margin-top:6mm" class="panels"><img src="lf.png" style="height:56mm"></div>
+    <div class="cap">Long Form (52 HP).</div>
+  </div>
+  <div class="small">For Weighted plugin 2.6.0 (Weighted + The Changes) and LongFormMixxa 2.1.0 (Long Form + Mixxa). November 2026.</div>
+</section>
+
+<!-- ============================ CONTENTS + HOW IT FITS -->
+<section class="page">
+  <h2>How the three fit together</h2>
+  <p>Each module does one job, and two cables tie them together.</p>
+  <svg viewBox="0 0 760 330" width="100%" style="margin:1mm 0 3mm" font-family="Inter, Helvetica, Arial" font-size="13">
+    <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b6660"/></marker>
+      <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1f8fa0"/></marker>
+      <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#cf5a2e"/></marker></defs>
+    <g fill="none" stroke-width="1.6">
+      <rect x="20" y="30" width="130" height="56" rx="8" stroke="#6b6660"/>
+      <rect x="220" y="30" width="170" height="56" rx="8" stroke="#26262a" fill="#ece5d8"/>
+      <rect x="470" y="30" width="170" height="56" rx="8" stroke="#26262a" fill="#ece5d8"/>
+      <rect x="470" y="150" width="170" height="56" rx="8" stroke="#26262a" fill="#ece5d8"/>
+      <rect x="220" y="150" width="170" height="56" rx="8" stroke="#6b6660"/>
+      <rect x="470" y="262" width="170" height="50" rx="8" stroke="#6b6660"/>
+      <rect x="680" y="150" width="64" height="56" rx="8" stroke="#6b6660"/>
+      <rect x="220" y="262" width="170" height="50" rx="8" stroke="#6b6660"/>
+    </g>
+    <g text-anchor="middle" fill="#26262a">
+      <text x="85" y="55" font-weight="700">Clock</text><text x="85" y="73" font-size="11" fill="#6b6660">16ths</text>
+      <text x="305" y="55" font-weight="700">Long Form</text><text x="305" y="73" font-size="11" fill="#6b6660">the song's sections</text>
+      <text x="555" y="55" font-weight="700">The Changes</text><text x="555" y="73" font-size="11" fill="#6b6660">chords</text>
+      <text x="555" y="175" font-weight="700">Weighted</text><text x="555" y="193" font-size="11" fill="#6b6660">melody</text>
+      <text x="305" y="175" font-weight="700">Random</text><text x="305" y="193" font-size="11" fill="#6b6660">any random CV</text>
+      <text x="555" y="284" font-weight="700">Voices</text><text x="555" y="300" font-size="11" fill="#6b6660">pad, bass, lead</text>
+      <text x="712" y="183" font-weight="700">Out</text>
+      <text x="305" y="284" font-weight="700">Mixxa</text><text x="305" y="300" font-size="11" fill="#6b6660">optional mixer</text>
+    </g>
+    <g fill="none" stroke-width="1.6">
+      <path d="M150 58H218" stroke="#6b6660" marker-end="url(#a)"/>
+      <path d="M390 58H468" stroke="#1f8fa0" stroke-width="2.4" marker-end="url(#ac)"/>
+      <path d="M555 86V148" stroke="#cf5a2e" stroke-width="2.4" marker-end="url(#ao)"/>
+      <path d="M390 178H468" stroke="#6b6660" marker-end="url(#a)"/>
+      <path d="M640 58H660V286H642" stroke="#6b6660" marker-end="url(#a)"/>
+      <path d="M555 206V260" stroke="#6b6660" marker-end="url(#a)"/>
+      <path d="M470 287H392" stroke="#6b6660" marker-end="url(#a)"/>
+      <path d="M305 86V120H180V287H218" stroke="#1f8fa0" stroke-width="2.4" stroke-dasharray="5 4" marker-end="url(#ac)"/>
+      <path d="M220 300H200V320H712V208" stroke="#6b6660" marker-end="url(#a)"/>
+    </g>
+    <g font-size="11.5" font-weight="700">
+      <text x="429" y="50" text-anchor="middle" fill="#1f8fa0">LINK</text>
+      <text x="565" y="122" fill="#cf5a2e">HARM</text>
+      <text x="667" y="118" fill="#6b6660">CHORD, BASS</text>
+      <text x="565" y="238" fill="#6b6660">V/OCT</text>
+      <text x="429" y="170" text-anchor="middle" fill="#6b6660">CV</text>
+      <text x="186" y="112" fill="#1f8fa0">LINK</text>
+    </g>
+  </svg>
+  <table>
+    <tr><th>Cable</th><th>From → to</th><th>What it carries</th></tr>
+    <tr><td><span class="jack">LINK</span></td><td>Long Form → The Changes (and Mixxa)</td><td>The beat, section changes, energy, reset and the section number. The Changes changes chord on Long Form's bar lines and keeps a separate chord loop for each section.</td></tr>
+    <tr><td><span class="jack" style="color:var(--acc)">HARM</span></td><td>The Changes → Weighted</td><td>The chord now playing, plus the key, mode and style. Weighted takes its key and profile from it, and its melody lands on the chord's notes more often.</td></tr>
+  </table>
+  <h3>In this guide</h3>
+  <ol class="toc">
+    <li>Installing</li>
+    <li>Sample setup: a house track in F minor, step by step</li>
+    <li>The Changes: every control</li>
+    <li>Weighted: the HARM input and PULL</li>
+    <li>Long Form: what matters for this setup</li>
+    <li>If something isn't working</li>
+  </ol>
+</section>
+
+<!-- ============================ INSTALL + SAMPLE SETUP -->
+<section class="page">
+  <h2>1 · Installing</h2>
+  <ol>
+    <li>Get two files: <b>Weighted-2.6.0-mac-arm64.vcvplugin</b> (Weighted and The Changes) and <b>LongFormMixxa-2.1.0-mac-arm64.vcvplugin</b> (Long Form and Mixxa).</li>
+    <li>In Rack choose <b>Help → Open user folder</b>, then quit Rack.</li>
+    <li>Put both files, unopened, in the <b>plugins-mac-arm64</b> folder, replacing any older Weighted or LongFormMixxa files.</li>
+    <li>Start Rack. Search the module browser for <b>The Changes</b>, <b>Weighted</b> and <b>Long Form</b>.</li>
+  </ol>
+  <p class="small">Long Form must be 2.1.0 or later. Older versions don't send the section number, so The Changes can't keep a separate loop for each section.</p>
+
+  <h2 style="margin-top:6mm">2 · Sample setup: a house track in F minor</h2>
+  <p>This patch plays about six minutes of house in F minor. A pad plays the chords, a bass follows the chord roots, and a lead melody sits on the chord tones. Long Form brings parts in and out, and the chords get richer as the energy rises.</p>
+  <h3>Modules you need</h3>
+  <table>
+    <tr><th>Module</th><th>Use</th></tr>
+    <tr><td>A clock</td><td>16th notes at about 124 BPM, with a reset output (for example Impromptu Clocked, or Live through CV Tools and the disting NT)</td></tr>
+    <tr><td>Long Form</td><td>The song form</td></tr>
+    <tr><td>The Changes</td><td>The chords</td></tr>
+    <tr><td>Weighted</td><td>The lead melody</td></tr>
+    <tr><td>VCV Random</td><td>Random CV for Weighted to quantize</td></tr>
+    <tr><td>Three voices</td><td>Pad: polyphonic VCO → VCF → VCA with an ADSR. Bass: VCO → VCF → VCA with an ADSR. Lead: VCO → VCF → VCA with an ADSR</td></tr>
+    <tr><td>Mixxa (optional)</td><td>Long Form's lanes mute and unmute the parts for you</td></tr>
+  </table>
+</section>
+
+<section class="page">
+  <h3 style="margin-top:0">Patching, step by step</h3>
+  <div class="step"><span class="num">1</span><div><b>Clock.</b> Clock 16ths → Long Form <span class="jack">CLOCK</span>. Clock reset → Long Form <span class="jack">RESET</span>.</div></div>
+  <div class="step"><span class="num">2</span><div><b>LINK.</b> Long Form <span class="jack">LINK</span> → The Changes <span class="jack">LINK</span>. If you use Mixxa, add a second cable from the same LINK jack → Mixxa <span class="jack">LINK</span>. The Changes now ignores its own CLOCK jack and follows Long Form.</div></div>
+  <div class="step"><span class="num">3</span><div><b>HARM.</b> The Changes <span class="jack" style="color:var(--acc)">HARM</span> → Weighted <span class="jack" style="color:var(--acc)">HARM</span>. Weighted's display shows HARM in its top line, and amber lines under the bars of the chord's notes.</div></div>
+  <div class="step"><span class="num">4</span><div><b>Pad.</b> The Changes <span class="jack">CHORD</span> → pad VCO V/OCT (polyphonic, 5 voices for House). The Changes <span class="jack">GATE</span> → pad ADSR gate. The gate drops for 5 ms at each chord change, so the envelope restarts on every new chord.</div></div>
+  <div class="step"><span class="num">5</span><div><b>Bass.</b> The Changes <span class="jack">BASS</span> → bass VCO V/OCT. For the rhythm, send an off-beat 8th from your clock (or a drum sequencer) → bass ADSR gate.</div></div>
+  <div class="step"><span class="num">6</span><div><b>Melody.</b> VCV Random → Weighted <span class="jack">CV</span>. Clock 16ths → Weighted <span class="jack">TRIG</span> (or 8ths for a calmer line). Long Form <span class="jack">BAR</span> → Weighted <span class="jack">ACCENT</span>, so the first note of every bar lands on a strong note.</div></div>
+  <div class="step"><span class="num">7</span><div><b>Lead.</b> Weighted <span class="jack">V/OCT</span> → lead VCO V/OCT. Weighted <span class="jack">TRIG</span> out → lead ADSR gate.</div></div>
+  <div class="step"><span class="num">8</span><div><b>Out.</b> Into Mixxa: bass on channel 2, pad on 6, lead on 7 (these match Long Form's lane names), and drums on 1, 3, 4 and 5 if you have them. Mixxa OUT L/R → Audio. Without Mixxa, send the voices to any mixer.</div></div>
+
+  <h3>Settings</h3>
+  <div class="two">
+    <table>
+      <tr><th colspan="2">The Changes</th></tr>
+      <tr><td>STYLE</td><td>House</td></tr>
+      <tr><td>KEY</td><td>F</td></tr>
+      <tr><td>MODE</td><td>Style (House plays in minor)</td></tr>
+      <tr><td>RATE</td><td>1 bar per chord</td></tr>
+      <tr><td>LOOP</td><td>4 chords</td></tr>
+      <tr><td>FOCUS</td><td>1 (as written)</td></tr>
+      <tr><td>COLOUR</td><td>noon (up to 9ths)</td></tr>
+      <tr><td>SPREAD</td><td>about 30%</td></tr>
+      <tr><td>DRIFT</td><td>20%</td></tr>
+    </table>
+    <table>
+      <tr><th colspan="2">Weighted</th></tr>
+      <tr><td>PULL</td><td>+50% (default)</td></tr>
+      <tr><td>FOCUS</td><td>1</td></tr>
+      <tr><td>STEP</td><td>50% (smaller jumps)</td></tr>
+      <tr><td>RANGE</td><td>2 octaves</td></tr>
+      <tr><td>OCTAVE</td><td>+1 for a lead above the pad</td></tr>
+      <tr><th colspan="2">Long Form</th></tr>
+      <tr><td>Form</td><td>The default (Intro 16, Groove 32, Build 8, Peak 32, Break 16, Drop 8, Peak 2 32, Outro 16)</td></tr>
+      <tr><td>DRIFT</td><td>a little, about 15%</td></tr>
+    </table>
+  </div>
+  <p class="small">Key, mode and style are set only on The Changes. Weighted follows them over HARM, so its ROOT, SCALE and PROFILE knobs have no effect while HARM is patched.</p>
+</section>
+
+<section class="page">
+  <h3 style="margin-top:0">What you'll hear</h3>
+  <ol>
+    <li><b>Press play.</b> Long Form starts the Intro and The Changes plays its first loop, starting on Fm9. A typical House loop is <b>Fm9 → Dbmaj9 → Eb7 → Fm9</b> (i, bVI, bVII, i), one chord per bar.</li>
+    <li><b>Each section gets its own loop.</b> When Long Form moves to the Groove, The Changes starts a new loop on the next bar line. The Intro's loop comes back when the form returns to it.</li>
+    <li><b>Energy brings colour.</b> In the Build and the Peaks, Long Form's energy is high, so the chords move up the stack (9ths, then 11ths) and lean towards tense chords. The Break thins them out again.</li>
+    <li><b>The melody follows.</b> Weighted picks chord notes more often, and the first note after each chord change lands on the new chord's root or 3rd. The light by Weighted's HARM jack flashes when that happens.</li>
+    <li><b>Slow change.</b> After each pass of a loop there's a 20% chance DRIFT rewrites one chord (never the first). An amber dot in the display marks it. Press <span class="k">LOCK</span> when you like a loop, or right-click → <i>Restore this loop</i> to undo the drift.</li>
+  </ol>
+  <div class="box">
+    <h3>Playing it live</h3>
+    <ul>
+      <li><b>Click a chord</b> in The Changes' display to roll it again. <b>Right-click it</b> to choose from the style's list, which shows each chord's name and Roman numeral; rare ones are marked.</li>
+      <li><span class="k">HOLD</span> stays on the current chord (or patch a gate to the HOLD jack).</li>
+      <li><span class="k">NEW</span> rolls a fresh loop on the next bar line.</li>
+      <li>Turn Weighted's <span class="k">PULL</span> left of noon in the Break. The melody then avoids the chord notes and floats over the harmony. Turn it back right for the Drop.</li>
+      <li>Patch Long Form <span class="jack">ENERGY</span> into Weighted <span class="jack">MOD A</span> and press MOD A's <span class="k">dest</span> button until the display shows <b>A&gt;PULL</b>. The melody then sits closer to the chords as the track builds.</li>
+    </ul>
+  </div>
+  <h3>Without Long Form</h3>
+  <p>The Changes works on its own: clock 16ths into its <span class="jack">CLOCK</span> jack, and it changes chord every RATE bars with a single free-running loop. With no clock at all, each trigger at <span class="jack">CHANGE</span> moves to the next chord, which is handy for playing chords by hand from a button or a sequencer.</p>
+  <div class="box"><b>More recipes.</b> Four complete setups (house, gospel, funk and Detroit), with drums from the Francois Markovian plugin and a ready-made Rack patch of the house track, are in the separate <b>Recipes</b> document.</div>
+</section>
+
+<!-- ============================ THE CHANGES REFERENCE -->
+<section class="page">
+  <h2>3 · The Changes</h2>
+  <div class="two" style="align-items:flex-start">
+    <div style="flex:0 0 78mm"><img src="ch.png" style="width:78mm;border-radius:1mm"></div>
+    <div>
+      <p>The Changes picks the next chord the way a player of the chosen style would. Each style has a table of likely moves (gospel's ii → V → I, house's i → bVI → bVII) and of the extensions it uses. Each new chord takes the inversion that moves the voices least.</p>
+      <p><b>The display</b> shows the chord now playing, its Roman numeral and key, the style, the next chord, and the loop as a row of boxes. The orange box is playing now, and an amber dot means DRIFT rewrote that chord. LINK appears top right when Long Form is connected, and SECTION <i>n</i> shows which section's loop is playing.</p>
+    </div>
+  </div>
+  <table>
+    <tr><th>Control</th><th>What it does</th></tr>
+    <tr><td>STYLE</td><td>Flat, Fit, Folk, Classical, Downbeat, Rock, Detroit, House, Gospel, Funk, Soul, Reggae, Pathet 1–3. The same list as Weighted's profiles. Fit and Downbeat use the Classical chords.</td></tr>
+    <tr><td>KEY</td><td>Around the circle of fifths, like Weighted's Root. Default F.</td></tr>
+    <tr><td>MODE</td><td><i>Style</i> (each style's home mode: House minor, Detroit Dorian, Funk Mixolydian, the rest major), or major, minor, Dorian, Mixolydian.</td></tr>
+    <tr><td>RATE</td><td>Bars per chord when clocked: ½, 1, 2, 4, 8.</td></tr>
+    <tr><td>LOOP</td><td>Off (a new chord every time), 2, 4 or 8 chords. Loops always start on the home chord.</td></tr>
+    <tr><td>FOCUS + CV</td><td>0 = any chord in the key equally likely. 1 = the style as written. 3 = only its favourite moves. Rare chords from outside the style appear only at low Focus.</td></tr>
+    <tr><td>COLOUR + CV</td><td>How far up the chord goes: triad, 7th (from about 9 o'clock), 9th (noon), 11th, 13th (full). Each style only uses the extensions it would, so a reggae I stays a triad and a rock chord is a power chord at minimum Colour.</td></tr>
+    <tr><td>SPREAD + CV</td><td>Close voicing, then drop-2 (from about 10 o'clock), then wide (from about 2 o'clock).</td></tr>
+    <tr><td>DRIFT + CV</td><td>Chance, after each pass of the loop, that one chord (never the first) is rewritten.</td></tr>
+    <tr><td>HOLD</td><td>Stay on this chord. The button latches; the HOLD jack holds while its gate is high. A CHANGE trigger still moves on.</td></tr>
+    <tr><td>NEW</td><td>A fresh loop on the next bar line. With no clock, at once. Blinks while waiting.</td></tr>
+    <tr><td>LOCK</td><td>No drift edits.</td></tr>
+    <tr><td>TENSION lights</td><td>How far the chord is from home, as on the TENSION output.</td></tr>
+  </table>
+  <p class="small">CV inputs: 10 V sweeps the knob's whole range and adds to the knob.</p>
+</section>
+
+<section class="page">
+  <h3 style="margin-top:0">Inputs</h3>
+  <table>
+    <tr><th>Jack</th><th>What it does</th></tr>
+    <tr><td>CLOCK</td><td>16ths by default (right-click for 24 PPQN, 8ths or quarter notes). Ignored when LINK is patched.</td></tr>
+    <tr><td>RESET</td><td>Back to the first chord of the loop on the next clock.</td></tr>
+    <tr><td>CHANGE</td><td>Next chord now (right-click: or on the next beat). With no clock, this is the only way to move on.</td></tr>
+    <tr><td>HOLD</td><td>Gate: stay on this chord while high.</td></tr>
+    <tr><td>TRANSP</td><td>1 V/oct, rounded to semitones. Moves every output and the key sent on HARM.</td></tr>
+    <tr><td>LINK</td><td>From Long Form. Chords change on its bar lines, each section keeps its own loop, and its energy adds colour and tension (right-click to choose which).</td></tr>
+  </table>
+  <h3>Outputs</h3>
+  <table>
+    <tr><th>Jack</th><th>Carries</th></tr>
+    <tr><td>CHORD</td><td>Poly 1 V/oct. Voices: Auto by style (Folk, Rock and Reggae 3; Classical, Funk and Soul 4; Detroit, House and Gospel 5), or 3 to 6 from the right-click menu. With fewer voices than notes, the least important notes go first (the 5th, then the root in Funk, Soul and Gospel, where the bass plays it).</td></tr>
+    <tr><td>BASS</td><td>The root, from C2 to B2. Classical and Gospel sometimes put the 3rd or 5th in the bass (right-click to turn this off).</td></tr>
+    <tr><td>ROOT</td><td>The chord's root, from C4 to B4, whatever the voicing.</td></tr>
+    <tr><td>TOP</td><td>The highest voice, a ready-made top line.</td></tr>
+    <tr><td>GATE</td><td>High while a chord plays, with a 5 ms gap at each change.</td></tr>
+    <tr><td>CHANGE</td><td>A trigger on each new chord.</td></tr>
+    <tr><td>TENSION</td><td>0–10 V. The home chord is 0 V, other chords 4 V, dominants 7 V and passing chords 9 V, with a little more for each extension and for sus chords. Try it on a filter or a reverb send.</td></tr>
+    <tr><td>HARM</td><td>To Weighted (see section 4).</td></tr>
+  </table>
+  <h3>The styles in brief</h3>
+  <table>
+    <tr><th>Style</th><th>Favourite chords and moves</th><th>Extensions as COLOUR rises</th></tr>
+    <tr><td>Folk</td><td>I, IV, V, vi; I→IV, I→V, V→I, vi→IV; the odd bVII</td><td>Triads; sus2, sus4, add9</td></tr>
+    <tr><td>Classical</td><td>Home → away → dominant → home; ii→V, V→I, a deceptive V→vi</td><td>7ths on V and ii only; inversions in the bass</td></tr>
+    <tr><td>Rock</td><td>I→bVII→IV, I→V→vi→IV</td><td>Power chords at minimum; add9, sus4</td></tr>
+    <tr><td>Detroit</td><td>Two-chord vamps: i↔IV, i↔bVII; long holds</td><td>m7, m9, m11</td></tr>
+    <tr><td>House</td><td>i→bVI→bVII, i↔iv</td><td>m7, m9, sus2, maj9 on bVI</td></tr>
+    <tr><td>Gospel</td><td>ii→V→I, IV→#iv°7→I, I→III7→vi, VI7→ii</td><td>9ths and 13ths; 7b9 on secondary chords</td></tr>
+    <tr><td>Funk</td><td>One-chord I7 vamp, stepping to IV7 and back</td><td>9, 13, 7#9</td></tr>
+    <tr><td>Soul</td><td>ii→V, IV→iii→ii, I→vi</td><td>maj7, m7, m9, dominant 9</td></tr>
+    <tr><td>Reggae</td><td>I↔IV, I↔V</td><td>Triads (m7 on ii and vi at most)</td></tr>
+    <tr><td>Pathet 1–3</td><td>A drone moving between the pathet's two main tones (slendro tuning)</td><td>None</td></tr>
+    <tr><td>Flat</td><td>Every chord in the key, no favourites</td><td>Everything, by COLOUR alone</td></tr>
+  </table>
+</section>
+
+<!-- ============================ WEIGHTED -->
+<section class="page">
+  <h2>4 · Weighted: the HARM input and PULL</h2>
+  <div class="two" style="align-items:flex-start">
+    <div style="flex:0 0 58mm"><img src="wt.png" style="width:58mm;border-radius:1mm"></div>
+    <div>
+      <p>Weighted is a quantizer that picks notes by weight. Random CV goes in, and notes come out in your key, with strong notes chosen more often. From 2.5.0 it can also lean on a chord.</p>
+      <p><b>HARM</b> and <b>PULL</b> sit in the grey block at the end of the length/strong row.</p>
+      <table>
+        <tr><th>Control</th><th>What it does</th></tr>
+        <tr><td>HARM in</td><td>A chord, polyphonic 1 V/oct, with channel 1 as the root (up to 6 notes). Any poly chord works; The Changes also sends key, mode and style.</td></tr>
+        <tr><td>PULL</td><td>How much the chord counts. Default +50%. Right of noon: the chord's notes come up more often, up to 4 times as often at full. Noon: no effect. Left of noon: the chord's notes become rarer (a quarter as often at full), so the melody takes the notes between them.</td></tr>
+        <tr><td>Light</td><td>Dim while HARM is patched. Bright when a note lands on a new chord's root or 3rd.</td></tr>
+      </table>
+    </div>
+  </div>
+  <h3>What changes when HARM is patched</h3>
+  <ol>
+    <li><b>Key and style follow The Changes.</b> Root, scale and profile come from the cable, and the display shows HARM in its top line. Right-click → <i>HARM input → Keep my own knobs</i> if you want Weighted's own settings. A plain poly chord from another module never changes the key.</li>
+    <li><b>Chord notes get heavier</b>, by PULL. The display draws an amber line under each chord note's bar, so you can watch the weights move with the harmony.</li>
+    <li><b>Chord changes land.</b> With PULL above noon, the first note after a chord change is drawn towards the new chord's root or 3rd.</li>
+    <li><b>The Chord menu stacks chord notes.</b> With right-click → <i>Chord on V/Oct</i> on, "add the 3rd" and "add the 5th" add the next notes of the current chord instead of scale thirds.</li>
+    <li><b>PULL is a Mod destination.</b> Press MOD A's or MOD B's <span class="k">dest</span> button until the display shows PULL. 10 V sweeps PULL across its whole range.</li>
+  </ol>
+  <h3>The HARM cable, channel by channel</h3>
+  <table>
+    <tr><th>Channel</th><th>Carries</th></tr>
+    <tr><td>1–6</td><td>Chord notes, 1 V/oct. Channel 1 is the root; unused channels repeat it</td></tr>
+    <tr><td>7</td><td>How many chord notes there are, 1 V each</td></tr>
+    <tr><td>8</td><td>Key root, 1/12 V per semitone above C</td></tr>
+    <tr><td>9</td><td>Mode: 0 V major, 1 V minor, 2 V Dorian, 3 V Mixolydian</td></tr>
+    <tr><td>10</td><td>Style: 0.5 V per profile, in Weighted's Profile order</td></tr>
+    <tr><td>11</td><td>Chord change trigger</td></tr>
+  </table>
+  <p class="small">Weighted reads key, mode and style only when the cable has 10 or more channels, so a plain chord cable only sets the chord.</p>
+</section>
+
+<!-- ============================ LONG FORM -->
+<section class="page">
+  <h2>5 · Long Form: what matters for this setup</h2>
+  <div class="fig"><img src="lf.png" style="width:150mm"></div>
+  <p>Long Form is an arrangement conductor. You draw a song form on an 8 × 8 grid, with sections down and lanes across, and it tells everything else when to come in, drop out and build. The full Long Form guide is in its README. These are the parts that matter here.</p>
+  <table>
+    <tr><th>Control</th><th>What it does here</th></tr>
+    <tr><td>Grid</td><td>Which lanes play in each section. Lanes 2 (bass), 6 (chords) and 7 (lead) are the voices in the sample setup. Mixxa mutes and unmutes them for you.</td></tr>
+    <tr><td>LEN</td><td>Section length in bars. The Changes keeps the same loop for the whole section.</td></tr>
+    <tr><td>ENERGY</td><td>0 to 10 per section. Over LINK it adds COLOUR and tension in The Changes (right-click The Changes → <i>Long Form energy drives</i>: colour, tension, both or nothing).</td></tr>
+    <tr><td>STEER / FOLLOW</td><td>Let Long Form choose the next section by energy. Each section still brings back its own chord loop.</td></tr>
+    <tr><td>DRIFT</td><td>Long Form's own drift edits the form. The Changes' DRIFT edits the chords. They are independent.</td></tr>
+    <tr><td>BAR out</td><td>A trigger each bar. In the sample setup it feeds Weighted's ACCENT.</td></tr>
+  </table>
+  <h3>LINK, channel by channel</h3>
+  <table>
+    <tr><th>Channel</th><th>Carries</th><th>Used by</th></tr>
+    <tr><td>1–8</td><td>Lane gates (10 V = play)</td><td>Mixxa</td></tr>
+    <tr><td>9</td><td>Beat trigger</td><td>The Changes (its clock), Mixxa</td></tr>
+    <tr><td>10</td><td>Section change trigger</td><td>The Changes (switch loops), Mixxa</td></tr>
+    <tr><td>11</td><td>Energy, 0–10 V</td><td>The Changes</td></tr>
+    <tr><td>12</td><td>Reset trigger</td><td>The Changes, Mixxa</td></tr>
+    <tr><td>13</td><td>16th trigger</td><td>Mixxa ("next 16th" timing)</td></tr>
+    <tr><td>14</td><td>Section number: 0 V = row 1 to 7 V = row 8 (new in 2.1.0)</td><td>The Changes</td></tr>
+  </table>
+</section>
+
+<!-- ============================ TROUBLESHOOTING -->
+<section class="page">
+  <h2>6 · If something isn't working</h2>
+  <table>
+    <tr><th>What you see</th><th>Why, and what to do</th></tr>
+    <tr><td>The Changes never changes chord</td><td>No clock is reaching it. Patch LINK from Long Form (and make sure Long Form is running), or a 16th clock into CLOCK. HOLD may also be on: its light shows.</td></tr>
+    <tr><td>Chords change in the wrong place</td><td>The clock rate doesn't match. Right-click → <i>Clock input</i> and pick what your clock sends (16ths, 24 PPQN, 8ths or quarters). With LINK patched this doesn't matter.</td></tr>
+    <tr><td>All sections play the same loop</td><td>Long Form is older than 2.1.0 and doesn't send the section number. Install LongFormMixxa 2.1.0.</td></tr>
+    <tr><td>Weighted's ROOT and SCALE knobs do nothing</td><td>HARM from The Changes is setting the key. Change KEY and MODE on The Changes instead, or right-click Weighted → <i>HARM input → Keep my own knobs</i>.</td></tr>
+    <tr><td>The melody ignores the chords</td><td>PULL is at noon or below. Turn it right. Weighted's FOCUS at 0 also flattens every weight.</td></tr>
+    <tr><td>The pad plays too few notes</td><td>The pad VCO must be polyphonic (set its polyphony from the cable or its menu). Voices are set by style unless you choose a number in The Changes' right-click menu.</td></tr>
+    <tr><td>Chords sound too busy</td><td>Turn COLOUR down, choose fewer voices, or turn SPREAD up so the notes have room.</td></tr>
+    <tr><td>The module doesn't appear in Rack</td><td>The plugin file must sit unopened in <b>plugins-mac-arm64</b>, and Rack must be restarted. All of these plugins are numbered 2.x, which Rack 2 needs.</td></tr>
+  </table>
+  <div class="box dark" style="margin-top:6mm">
+    <h3 style="color:#f3efe8">Quick card</h3>
+    <p style="margin:0">Clock → Long Form · Long Form LINK → The Changes LINK (and Mixxa) · The Changes HARM → Weighted HARM · CHORD → pad · BASS → bass · random → Weighted CV, 16ths → TRIG · Weighted V/OCT → lead. Set key, mode and style on The Changes only.</p>
+  </div>
+</section>
+
+</body></html>
