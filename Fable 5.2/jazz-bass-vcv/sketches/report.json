@@ -1,0 +1,419 @@
+{
+ "02_bass-alone-walking-blues": {
+  "beat1_root": "24/24",
+  "chord_tones": "74%",
+  "steps_1_2": "60%",
+  "thirds": "26%",
+  "leaps_5plus": "14%",
+  "repeats": 0,
+  "mean_step": "2.71",
+  "notes": 102,
+  "low": 33,
+  "high": 50,
+  "extras": 6,
+  "dead": 4,
+  "approaches": {
+   "scale above": 8,
+   "fifth above": 3,
+   "scale below": 3,
+   "chromatic above": 7,
+   "chromatic below": 6,
+   "fifth below": 1
+  }
+ },
+ "03_trio-medium-swing": {
+  "beat1_root": "16/16",
+  "chord_tones": "86%",
+  "steps_1_2": "52%",
+  "thirds": "38%",
+  "leaps_5plus": "10%",
+  "repeats": 0,
+  "mean_step": "2.89",
+  "notes": 68,
+  "low": 29,
+  "high": 52,
+  "extras": 4,
+  "dead": 2,
+  "approaches": {
+   "scale below": 4,
+   "scale above": 4,
+   "chromatic below": 3,
+   "chromatic above": 3,
+   "fifth above": 1,
+   "fifth below": 1
+  }
+ },
+ "04_trio-fast-bebop": {
+  "beat1_root": "15/16",
+  "chord_tones": "73%",
+  "steps_1_2": "65%",
+  "thirds": "27%",
+  "leaps_5plus": "8%",
+  "repeats": 0,
+  "mean_step": "2.51",
+  "notes": 65,
+  "low": 31,
+  "high": 48,
+  "extras": 1,
+  "dead": 3,
+  "approaches": {
+   "scale below": 5,
+   "chromatic below": 2,
+   "chromatic above": 2,
+   "fifth below": 2,
+   "scale above": 5
+  }
+ },
+ "05_duo-ballad": {
+  "notes": 34,
+  "low": 34,
+  "high": 46,
+  "extras": 3,
+  "dead": 0,
+  "approaches": {
+   "scale above": 2,
+   "fifth below": 1
+  }
+ },
+ "06_trio-bossa": {
+  "notes": 57,
+  "low": 31,
+  "high": 50,
+  "extras": 25,
+  "dead": 0,
+  "approaches": {}
+ },
+ "07_trio-blues": {
+  "beat1_root": "15/16",
+  "chord_tones": "69%",
+  "steps_1_2": "56%",
+  "thirds": "27%",
+  "leaps_5plus": "17%",
+  "repeats": 0,
+  "mean_step": "2.92",
+  "notes": 73,
+  "low": 29,
+  "high": 53,
+  "extras": 9,
+  "dead": 8,
+  "approaches": {
+   "scale below": 3,
+   "fifth above": 3,
+   "chromatic above": 4,
+   "fifth below": 2,
+   "scale above": 2,
+   "chromatic below": 2
+  }
+ },
+ "08_trio-modal": {
+  "beat1_root": "14/16",
+  "chord_tones": "84%",
+  "steps_1_2": "49%",
+  "thirds": "35%",
+  "leaps_5plus": "16%",
+  "repeats": 0,
+  "mean_step": "3.10",
+  "notes": 69,
+  "low": 33,
+  "high": 53,
+  "extras": 5,
+  "dead": 3,
+  "approaches": {
+   "scale below": 4,
+   "fifth above": 3,
+   "chromatic above": 4,
+   "scale above": 4,
+   "fifth below": 1
+  }
+ },
+ "09_trio-soul": {
+  "notes": 104,
+  "low": 28,
+  "high": 48,
+  "extras": 0,
+  "dead": 8,
+  "approaches": {}
+ },
+ "10_trio-house": {
+  "notes": 75,
+  "low": 28,
+  "high": 52,
+  "extras": 0,
+  "dead": 0,
+  "approaches": {}
+ },
+ "11_activity-two-feel-then-walk-then-busy": [
+  {
+   "notes": 19,
+   "low": 29,
+   "high": 48,
+   "extras": 3,
+   "dead": 0,
+   "approaches": {
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "8/8",
+   "chord_tones": "72%",
+   "steps_1_2": "61%",
+   "thirds": "26%",
+   "leaps_5plus": "13%",
+   "repeats": 0,
+   "mean_step": "2.71",
+   "notes": 33,
+   "low": 33,
+   "high": 49,
+   "extras": 1,
+   "dead": 1,
+   "approaches": {
+    "scale above": 3,
+    "fifth above": 2,
+    "scale below": 1,
+    "chromatic above": 1,
+    "chromatic below": 1
+   }
+  },
+  {
+   "beat1_root": "8/8",
+   "chord_tones": "72%",
+   "steps_1_2": "58%",
+   "thirds": "29%",
+   "leaps_5plus": "13%",
+   "repeats": 0,
+   "mean_step": "2.87",
+   "notes": 47,
+   "low": 33,
+   "high": 49,
+   "extras": 15,
+   "dead": 5,
+   "approaches": {
+    "scale above": 5,
+    "fifth above": 2,
+    "chromatic above": 1
+   }
+  }
+ ],
+ "12_loose-0-machine-then-1-player-then-2-too-loose": [
+  {
+   "beat1_root": "8/8",
+   "chord_tones": "72%",
+   "steps_1_2": "55%",
+   "thirds": "29%",
+   "leaps_5plus": "16%",
+   "repeats": 0,
+   "mean_step": "2.87",
+   "notes": 35,
+   "low": 33,
+   "high": 50,
+   "extras": 3,
+   "dead": 1,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 2,
+    "chromatic above": 2,
+    "chromatic below": 1
+   }
+  },
+  {
+   "beat1_root": "8/8",
+   "chord_tones": "72%",
+   "steps_1_2": "55%",
+   "thirds": "29%",
+   "leaps_5plus": "16%",
+   "repeats": 0,
+   "mean_step": "2.87",
+   "notes": 35,
+   "low": 33,
+   "high": 50,
+   "extras": 3,
+   "dead": 2,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 2,
+    "chromatic above": 2,
+    "chromatic below": 1
+   }
+  },
+  {
+   "beat1_root": "8/8",
+   "chord_tones": "72%",
+   "steps_1_2": "55%",
+   "thirds": "29%",
+   "leaps_5plus": "16%",
+   "repeats": 0,
+   "mean_step": "2.87",
+   "notes": 35,
+   "low": 33,
+   "high": 50,
+   "extras": 3,
+   "dead": 4,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 2,
+    "chromatic above": 2,
+    "chromatic below": 1
+   }
+  }
+ ],
+ "13_tone-gut-then-steel-then-growl-then-pickup-then-old": [
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  }
+ ],
+ "14_pluck-none-then-as-measured-then-exaggerated": [
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  },
+  {
+   "beat1_root": "4/4",
+   "chord_tones": "75%",
+   "steps_1_2": "40%",
+   "thirds": "33%",
+   "leaps_5plus": "27%",
+   "repeats": 0,
+   "mean_step": "3.53",
+   "notes": 17,
+   "low": 33,
+   "high": 48,
+   "extras": 1,
+   "dead": 0,
+   "approaches": {
+    "scale above": 1,
+    "fifth above": 2,
+    "scale below": 1
+   }
+  }
+ ]
+}
