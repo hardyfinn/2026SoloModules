@@ -1,0 +1,89 @@
+FIBONACCI  (A>AB B>A)
+  0: A
+  1: AB
+  2: ABA
+  3: ABAAB
+  4: ABAABABA
+  5: ABAABABAABAAB
+  6: ABAABABAABAABABAABABA
+THUE-MORSE  (A>AB B>BA)
+  0: A
+  1: AB
+  2: ABBA
+  3: ABBABAAB
+  4: ABBABAABBAABABBA
+  5: ABBABAABBAABABBABAABABBAABBABAAB
+DOUBLING  (A>AB B>AA)
+  0: A
+  1: AB
+  2: ABAA
+  3: ABAAABAB
+  4: ABAAABABABAAABAA
+  5: ABAAABABABAAABAAABAAABABABAAABAB
+CANTOR  (A>ABA B>BBB)
+  0: A
+  1: ABA
+  2: ABABBBABA
+  3: ABABBBABABBBBBBBBBABABBBABA
+TRIBONACCI  (A>AB B>AC C>A)
+  0: A
+  1: AB
+  2: ABAC
+  3: ABACABA
+  4: ABACABAABACAB
+  5: ABACABAABACABABACABAABAC
+  6: ABACABAABACABABACABAABACABACABAABACABABACABA
+PADOVAN  (A>B B>C C>AB)
+  0: A
+  1: B
+  2: C
+  3: AB
+  4: BC
+  5: CAB
+  6: ABBC
+HOMECOMING  (1>14 4>25 5>51), F Dorian
+  0: i
+  1: i IV
+  2: i IV ii v
+  3: i IV ii v ii v i
+  4: i IV ii v ii v i ii v i i IV
+  5: i IV ii v ii v i ii v i i IV ii v i i IV i IV ii v
+FALLING  (1>16 6>45 5>1), F Dorian
+  0: i
+  1: i vio
+  2: i vio IV v
+  3: i vio IV v IV i
+  4: i vio IV v IV i IV i vio
+  5: i vio IV v IV i IV i vio IV i vio IV v
+  6: i vio IV v IV i IV i vio IV i vio IV v IV i vio IV v IV i
+  7: i vio IV v IV i IV i vio IV i vio IV v IV i vio IV v IV i IV i vio IV v IV i IV i vio
+CIRCLE  (1>14 4>73 3>62 2>51), F Dorian
+  0: i
+  1: i IV
+  2: i IV VII III
+  3: i IV VII III VII vio ii
+  4: i IV VII III VII vio ii VII vio v i
+  5: i IV VII III VII vio ii VII vio v i VII vio v i IV
+  6: i IV VII III VII vio ii VII vio v i VII vio v i IV VII vio v i IV VII III
+FIBONACCI  (1>15 5>1), F Dorian
+  0: i
+  1: i v
+  2: i v i
+  3: i v i i v
+  4: i v i i v i v i
+  5: i v i i v i v i i v i i v
+  6: i v i i v i v i i v i i v i v i i v i v i
+DRIFT  (1>13 3>64 4>41), F Dorian
+  0: i
+  1: i III
+  2: i III vio IV
+  3: i III vio IV vio IV i
+  4: i III vio IV vio IV i vio IV i i III
+  5: i III vio IV vio IV i vio IV i i III vio IV i i III i III vio IV
+TWO STEP  (1>17 7>61 6>6), F Dorian
+  0: i
+  1: i VII
+  2: i VII vio i
+  3: i VII vio i vio i VII
+  4: i VII vio i vio i VII vio i VII vio i
+  5: i VII vio i vio i VII vio i VII vio i vio i VII vio i vio i VII

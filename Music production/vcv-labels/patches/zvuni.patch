@@ -1,0 +1,338 @@
+diff --git a/res/make_panel.py b/res/make_panel.py
+index 91d9312..2fb37b3 100644
+--- a/res/make_panel.py
++++ b/res/make_panel.py
+@@ -84,96 +84,95 @@ class Panel:
+ # ---------------------------------------------------------------------------
+ # Zvuni, 32 HP
+ # ---------------------------------------------------------------------------
+-p = Panel(162.56)
++p = Panel(203.2)
+ p.border(2.4)
+ p.border(H - 2.4)
+ p.add(text("ZVUNI", 8.0, 9.6, 4.6, FONT_BOLD, INK, anchor="start", spacing=0.14))
+-p.add(text("it rings", 31.5, 9.4, 2.2, FONT_MED, RED, anchor="start"))
+-p.add(text("drone  /  melody  /  partner", p.w - 8.0, 9.4, 2.2, FONT_MED, SOFT, anchor="end"))
+-p.rect(6.0, 12.0, 150.56, 25.0, SCREEN, 1.6)
++p.add(text("it rings", 31.5, 9.4, 2.8, FONT_MED, RED, anchor="start"))
++p.add(text("drone  /  melody  /  partner", p.w - 8.0, 9.4, 2.8, FONT_MED, SOFT, anchor="end"))
++p.rect(6.0, 12.0, 191.2, 25.0, SCREEN, 1.6)
+ 
+ # sections
+-for x, name in ((27, "PARTNER"), (80, "VOICE"), (133, "PHRASE")):
+-    p.add(text(name, x, 41.4, 2.6, FONT_BOLD, RED, spacing=0.18))
+-p.vline(53.3, 39.5, 106)
+-p.vline(106.6, 39.5, 106)
+-
+-rowA_l, rowA_k, rowA_cv = 45.6, 52.5, 65.5
+-rowB_l, rowB_k, rowB_cv = 72.0, 78.5, 90.0
+-rowC_l, rowC_k = 95.8, 101.0
++for x, name in ((35.6, "PARTNER"), (101.6, "VOICE"), (167.6, "PHRASE")):
++    p.add(text(name, x, 41.6, 3.2, FONT_BOLD, RED, spacing=0.18))
++p.vline(68.6, 39.5, 108)
++p.vline(134.6, 39.5, 108)
++
++rowA_l, rowA_k, rowA_cv = 46.2, 52.5, 65.5
++rowB_l, rowB_k, rowB_cv = 73.8, 80.0, 91.5
++rowC_l, rowC_k = 97.9, 103.0
+ cvlab = 60.6      # small labels for the controls in the CV row
+ 
+ # partner
+-p.label("TENSION", 19, rowA_l)
+-p.hint("unison", 9.0, 59.4)
+-p.hint("fifth", 29.4, 59.4)
+-p.label("RING", 43, rowA_l)
+-p.hint("CV  amt", 19, cvlab + 9.0, 1.4)
+-p.label("DRIFT", 11, rowB_l)
+-p.label("CLING", 27, rowB_l)
+-p.label("RANGE", 43, rowB_l)
+-p.hint("pull to", 27, rowB_cv - 1.2)
+-p.hint("the drone", 27, rowB_cv + 1.0)
+-p.hint("fold into", 43, rowB_cv - 1.2)
+-p.hint("a window", 43, rowB_cv + 1.0)
+-p.label("MODE", 11, rowC_l, 2.0)
+-p.label("SIDE", 22, rowC_l, 2.0)
+-p.label("FLIP", 33, rowC_l, 2.0)
+-p.label("ACCENT", 44, rowC_l, 2.0)
+-p.hint("seek", 15.2, rowC_k - 3.0, 1.4)
+-p.hint("cents", 15.6, rowC_k + 0.5, 1.4)
+-p.hint("Hz", 14.4, rowC_k + 4.0, 1.4)
+-p.hint("up = above", 22, rowC_k + 5.8, 1.4)
+-p.hint("gate", 33, rowC_k + 5.8, 1.4)
+-p.hint("gate", 44, rowC_k + 5.8, 1.4)
++p.label("TENSION", 25.6, rowA_l, 3.2)
++p.hint("unison", 7.0, 61.2, 2.2)
++p.hint("fifth", 25.0, 61.2, 2.2)
++p.label("RING", 55.6, rowA_l, 3.2)
++p.hint("CV  amt", 25.6, cvlab + 9.0, 2.2)
++p.label("DRIFT", 15.6, rowB_l, 3.2)
++p.label("CLING", 35.6, rowB_l, 3.2)
++p.label("RANGE", 55.6, rowB_l, 3.2)
++p.hint("pull to", 35.6, rowB_cv - 1.4, 2.2)
++p.hint("the drone", 35.6, rowB_cv + 1.6, 2.2)
++p.hint("fold into", 55.6, rowB_cv - 1.4, 2.2)
++p.hint("a window", 55.6, rowB_cv + 1.6, 2.2)
++p.label("MODE", 15.6, rowC_l, 2.9)
++p.label("SIDE", 29.35, rowC_l, 2.9)
++p.label("FLIP", 43.1, rowC_l, 2.9)
++p.label("ACCENT", 56.85, rowC_l, 2.9)
++p.hint("seek", 20.85, rowC_k - 3.2, 2.2)
++p.hint("cents", 21.35, rowC_k + 0.8, 2.2)
++p.hint("Hz", 19.85, rowC_k + 4.8, 2.2)
++p.hint("up = above", 29.35, rowC_k + 6.6, 2.2)
++p.hint("gate", 43.1, rowC_k + 6.6, 2.2)
++p.hint("gate", 56.85, rowC_k + 6.6, 2.2)
+ 
+ # voice
+-p.label("VOWEL", 64, rowA_l)
+-p.label("OPEN", 80, rowA_l)
+-p.label("TRESENE", 96, rowA_l)
+-p.label("ENSEMBLE", 64, rowB_l)
+-p.label("NASAL", 80, rowB_l)
+-p.label("BREATH", 96, rowB_l)
+-p.hint("a e i o u", 64, cvlab - 0.4, 1.4)
+-p.hint("throat", 80, cvlab - 0.4, 1.4)
+-p.hint("shake", 96, cvlab - 0.4, 1.4)
+-p.hint("1 singer", 80, rowB_cv - 1.2)
+-p.hint("> 6 singers", 80, rowB_cv + 1.0)
+-p.label("DRONE", 64, rowC_l, 2.0)
+-p.label("PARTNER", 80, rowC_l, 2.0)
+-p.label("PARTNER", 96, rowC_l, 2.0)
+-p.hint("level", 64, rowC_k + 5.8, 1.4)
+-p.hint("level", 80, rowC_k + 5.8, 1.4)
+-p.hint("on (gate)", 96, rowC_k + 5.8, 1.4)
++p.label("VOWEL", 81.6, rowA_l, 3.2)
++p.label("OPEN", 101.6, rowA_l, 3.2)
++p.label("TRESENE", 121.6, rowA_l, 3.2)
++p.label("ENSEMBLE", 81.6, rowB_l, 3.2)
++p.label("NASAL", 101.6, rowB_l, 3.2)
++p.label("BREATH", 121.6, rowB_l, 3.2)
++p.hint("a e i o u", 81.6, cvlab - 0.4, 2.2)
++p.hint("throat", 101.6, cvlab - 0.4, 2.2)
++p.hint("shake", 121.6, cvlab - 0.4, 2.2)
++p.hint("1 singer", 101.6, rowB_cv - 1.4, 2.2)
++p.hint("> 6 singers", 101.6, rowB_cv + 1.6, 2.2)
++p.label("DRONE", 81.6, rowC_l, 2.9)
++p.label("PARTNER", 101.6, rowC_l, 2.9)
++p.label("PARTNER", 121.6, rowC_l, 2.9)
++p.hint("level", 81.6, rowC_k + 6.6, 2.2)
++p.hint("level", 101.6, rowC_k + 6.6, 2.2)
++p.hint("on (gate)", 121.6, rowC_k + 6.6, 2.2)
+ 
+ # phrase
+-p.label("HEIGHT", 117, rowA_l)
+-p.label("SNAP", 133, rowA_l)
+-p.label("HOLD", 149, rowA_l)
+-p.label("YELP IN", 117, cvlab, 1.7)
+-p.label("AUTO", 133, cvlab, 1.7)
+-p.label("PARTNER TOO", 149, cvlab, 1.7)
+-p.label("GLIDE", 117, rowB_l)
+-p.label("TO", 133, rowB_l)
+-p.label("RESOLVE", 149, rowB_l)
+-p.hint("octave", 140.2, rowB_k - 3.0, 1.4)
+-p.hint("fifth", 139.2, rowB_k + 0.5, 1.4)
+-p.hint("unison", 140.2, rowB_k + 4.0, 1.4)
+-p.hint("gate in", 149, rowB_k + 6.4, 1.4)
+-p.hint("Aksak END into RESOLVE", 133, rowC_l + 1.0, 1.5)
+-p.hint("= automatic cadences.", 133, rowC_l + 3.1, 1.5)
+-p.hint("Aksak ACCENT into ACCENT", 133, rowC_l + 6.0, 1.5)
+-p.hint("= cling on the strong beats.", 133, rowC_l + 8.1, 1.5)
++p.label("HEIGHT", 147.6, rowA_l, 3.2)
++p.label("SNAP", 167.6, rowA_l, 3.2)
++p.label("HOLD", 187.6, rowA_l, 3.2)
++p.label("YELP IN", 147.6, cvlab, 2.6)
++p.label("AUTO", 167.6, cvlab, 2.6)
++p.label("PARTNER TOO", 187.6, cvlab, 2.6)
++p.label("GLIDE", 147.6, rowB_l, 3.2)
++p.label("TO", 167.6, rowB_l, 3.2)
++p.label("RESOLVE", 187.6, rowB_l, 3.2)
++p.hint("octave", 176.6, rowB_k - 3.2, 2.2)
++p.hint("fifth", 175.35, rowB_k + 0.8, 2.2)
++p.hint("unison", 176.6, rowB_k + 4.8, 2.2)
++p.hint("gate in", 187.6, rowB_k + 7.6, 2.2)
++p.hint("Aksak END into RESOLVE", 167.6, rowC_l + 0.6, 2.2)
++p.hint("= automatic cadences.", 167.6, rowC_l + 3.4, 2.2)
++p.hint("Aksak ACCENT into ACCENT", 167.6, rowC_l + 7.0, 2.2)
++p.hint("= cling on the strong beats.", 167.6, rowC_l + 9.8, 2.2)
+ 
+ # bottom jacks
+-jl = 111.6
+-for x, n in ((11, "DRONE"), (24, "MELODY"), (37, "GATE")):
+-    p.label(n, x, jl, 1.9)
+-p.hint("V/oct  (poly)", 17.5, 124.6, 1.45)
+-p.rect(49.5, 108.0, 108.5, 14.8, OUTBOX)
++jl, jy = 113.4, 118.4
++for x, n in ((12, "DRONE"), (26.5, "MELODY"), (41, "GATE")):
++    p.label(n, x, jl, 2.9)
++p.rect(50.5, 110.2, 148.7, 14.6, OUTBOX)
+ outs = ["DRONE", "MELODY", "PARTNER", "MIX L", "MIX R", "MEL V/O", "PTR V/O", "ROUGH", "INTERVAL"]
+ for i, n in enumerate(outs):
+-    p.add(text(n, 56 + 12 * i, jl, 1.75, FONT_BOLD, OUTINK, spacing=0.04))
++    p.add(text(n, 59 + 16.4 * i, jl, 2.9, FONT_BOLD, OUTINK, spacing=0.03))
+ p.save("Zvuni.svg")
+ 
+ # ---------------------------------------------------------------------------
+@@ -184,15 +183,15 @@ a.border(2.4)
+ a.border(H - 2.4)
+ a.add(text("AKSAK", 25.4, 9.6, 4.2, FONT_BOLD, INK, spacing=0.14))
+ a.rect(4.0, 12.0, 42.8, 16.0, SCREEN, 1.4)
+-a.label("METER", 14, 33.0)
+-a.label("MUTATE", 37, 33.0)
+-a.hint("CV", 14, 57.3)
+-a.hint("CV", 37, 57.3)
+-a.add(text("CUSTOM GROUPS", 25.4, 61.6, 2.0, FONT_BOLD, RED, spacing=0.12))
+-a.hint("tap: off > 2 > 3", 25.4, 81.6, 1.45)
+-a.label("CLOCK", 14, 86.6, 2.0)
+-a.label("RESET", 37, 86.6, 2.0)
+-a.rect(3.5, 98.0, 43.8, 24.6, OUTBOX)
+-for x, y, n in ((14, 101.8, "STEP"), (37, 101.8, "ACCENT"), (14, 113.0, "LONG"), (37, 113.0, "END")):
+-    a.add(text(n, x, y, 1.9, FONT_BOLD, OUTINK, spacing=0.05))
++a.label("METER", 14, 33.6, 3.2)
++a.label("MUTATE", 37, 33.6, 3.2)
++a.hint("CV", 6.2, 52.4, 2.6)
++a.hint("CV", 29.2, 52.4, 2.6)
++a.add(text("CUSTOM GROUPS", 25.4, 61.9, 2.9, FONT_BOLD, RED, spacing=0.06))
++a.hint("tap: off > 2 > 3", 25.4, 82.9, 2.4)
++a.label("CLOCK", 14, 87.5, 2.9)
++a.label("RESET", 37, 87.5, 2.9)
++a.rect(3.5, 97.0, 43.8, 26.6, OUTBOX)
++for x, y, n in ((14, 100.9, "STEP"), (37, 100.9, "ACCENT"), (14, 114.1, "LONG"), (37, 114.1, "END")):
++    a.add(text(n, x, y, 2.9, FONT_BOLD, OUTINK, spacing=0.05))
+ a.save("Aksak.svg")
+diff --git a/src/Aksak.cpp b/src/Aksak.cpp
+index 960a37a..837c68c 100644
+--- a/src/Aksak.cpp
++++ b/src/Aksak.cpp
+@@ -209,10 +209,10 @@ struct AksakWidget : ModuleWidget {
+ 
+ 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(14, 92.3)), module, Aksak::CLOCK_INPUT));
+ 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(37, 92.3)), module, Aksak::RESET_INPUT));
+-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(14, 107.4)), module, Aksak::STEP_OUTPUT));
+-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(37, 107.4)), module, Aksak::ACCENT_OUTPUT));
+-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(14, 118.6)), module, Aksak::LONG_OUTPUT));
+-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(37, 118.6)), module, Aksak::END_OUTPUT));
++		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(14, 105.4)), module, Aksak::STEP_OUTPUT));
++		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(37, 105.4)), module, Aksak::ACCENT_OUTPUT));
++		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(14, 119.0)), module, Aksak::LONG_OUTPUT));
++		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(37, 119.0)), module, Aksak::END_OUTPUT));
+ 	}
+ };
+ 
+diff --git a/src/Zvuni.cpp b/src/Zvuni.cpp
+index c78033c..d5dfe91 100644
+--- a/src/Zvuni.cpp
++++ b/src/Zvuni.cpp
+@@ -357,68 +357,68 @@ struct ZvuniWidget : ModuleWidget {
+ 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+ 
+ 		ZvuniDisplay* d = createWidget<ZvuniDisplay>(mm2px(Vec(6.0, 12.0)));
+-		d->box.size = mm2px(Vec(150.56, 25.0));
++		d->box.size = mm2px(Vec(191.2, 25.0));
+ 		d->module = module;
+ 		addChild(d);
+ 
+-		const float kA = 52.5f, cvA = 65.5f, kB = 78.5f, cvB = 90.0f, kC = 101.0f;
++		const float kA = 52.5f, cvA = 65.5f, kB = 80.0f, cvB = 91.5f, kC = 103.0f;
+ 		auto knob = [&](float x, float y, int p) { addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(x, y)), module, p)); };
+ 		auto small = [&](float x, float y, int p) { addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(x, y)), module, p)); };
+ 		auto in = [&](float x, float y, int i) { addInput(createInputCentered<PJ301MPort>(mm2px(Vec(x, y)), module, i)); };
+ 		auto out = [&](float x, float y, int o) { addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(x, y)), module, o)); };
+ 
+ 		// partner
+-		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(19.f, 53.0f)), module, Zvuni::TENSION_PARAM));
+-		knob(43, kA, Zvuni::RING_PARAM);
+-		in(11, cvA, Zvuni::TENSION_INPUT);
+-		addParam(createParamCentered<Trimpot>(mm2px(Vec(27, cvA)), module, Zvuni::TENSION_ATT_PARAM));
+-		in(43, cvA, Zvuni::RING_INPUT);
+-		knob(11, kB, Zvuni::DRIFT_PARAM);
+-		knob(27, kB, Zvuni::CLING_PARAM);
+-		knob(43, kB, Zvuni::RANGE_PARAM);
+-		in(11, cvB, Zvuni::DRIFT_INPUT);
+-		addParam(createParamCentered<CKSSThree>(mm2px(Vec(11, kC)), module, Zvuni::MODE_PARAM));
+-		addParam(createParamCentered<CKSS>(mm2px(Vec(22, kC)), module, Zvuni::SIDE_PARAM));
+-		in(33, kC, Zvuni::FLIP_INPUT);
+-		in(44, kC, Zvuni::ACCENT_INPUT);
+-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(48.6f, kC - 4.2f)), module, Zvuni::ACCENT_LIGHT));
++		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(15.6f, 53.0f)), module, Zvuni::TENSION_PARAM));
++		knob(55.6, kA, Zvuni::RING_PARAM);
++		in(15.6, cvA, Zvuni::TENSION_INPUT);
++		addParam(createParamCentered<Trimpot>(mm2px(Vec(35.6f, cvA)), module, Zvuni::TENSION_ATT_PARAM));
++		in(55.6, cvA, Zvuni::RING_INPUT);
++		knob(15.6, kB, Zvuni::DRIFT_PARAM);
++		knob(35.6, kB, Zvuni::CLING_PARAM);
++		knob(55.6, kB, Zvuni::RANGE_PARAM);
++		in(15.6, cvB, Zvuni::DRIFT_INPUT);
++		addParam(createParamCentered<CKSSThree>(mm2px(Vec(15.6f, kC)), module, Zvuni::MODE_PARAM));
++		addParam(createParamCentered<CKSS>(mm2px(Vec(29.35f, kC)), module, Zvuni::SIDE_PARAM));
++		in(43.1, kC, Zvuni::FLIP_INPUT);
++		in(56.85, kC, Zvuni::ACCENT_INPUT);
++		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(56.85f + 4.6f, kC - 4.2f)), module, Zvuni::ACCENT_LIGHT));
+ 
+ 		// voice
+-		knob(64, kA, Zvuni::VOWEL_PARAM);
+-		knob(80, kA, Zvuni::OPEN_PARAM);
+-		knob(96, kA, Zvuni::TRES_PARAM);
+-		in(64, cvA, Zvuni::VOWEL_INPUT);
+-		in(80, cvA, Zvuni::OPEN_INPUT);
+-		in(96, cvA, Zvuni::TRES_INPUT);
+-		knob(64, kB, Zvuni::ENS_PARAM);
+-		knob(80, kB, Zvuni::NASAL_PARAM);
+-		knob(96, kB, Zvuni::BREATH_PARAM);
+-		in(64, cvB, Zvuni::ENS_INPUT);
+-		small(64, kC, Zvuni::DRONE_LVL_PARAM);
+-		small(80, kC, Zvuni::PARTNER_LVL_PARAM);
+-		in(96, kC, Zvuni::PARTNER_ON_INPUT);
++		knob(81.6, kA, Zvuni::VOWEL_PARAM);
++		knob(101.6, kA, Zvuni::OPEN_PARAM);
++		knob(121.6, kA, Zvuni::TRES_PARAM);
++		in(81.6, cvA, Zvuni::VOWEL_INPUT);
++		in(101.6, cvA, Zvuni::OPEN_INPUT);
++		in(121.6, cvA, Zvuni::TRES_INPUT);
++		knob(81.6, kB, Zvuni::ENS_PARAM);
++		knob(101.6, kB, Zvuni::NASAL_PARAM);
++		knob(121.6, kB, Zvuni::BREATH_PARAM);
++		in(81.6, cvB, Zvuni::ENS_INPUT);
++		small(81.6, kC, Zvuni::DRONE_LVL_PARAM);
++		small(101.6, kC, Zvuni::PARTNER_LVL_PARAM);
++		in(121.6, kC, Zvuni::PARTNER_ON_INPUT);
+ 
+ 		// phrase
+-		knob(117, kA, Zvuni::HEIGHT_PARAM);
+-		knob(133, kA, Zvuni::SNAP_PARAM);
+-		knob(149, kA, Zvuni::HOLD_PARAM);
+-		in(117, cvA, Zvuni::YELP_INPUT);
+-		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(121.6f, cvA - 4.2f)), module, Zvuni::YELP_LIGHT));
+-		addParam(createParamCentered<CKSS>(mm2px(Vec(133, cvA)), module, Zvuni::AUTO_PARAM));
+-		addParam(createParamCentered<CKSS>(mm2px(Vec(149, cvA)), module, Zvuni::BOTH_PARAM));
+-		knob(117, kB, Zvuni::GLIDE_PARAM);
+-		addParam(createParamCentered<CKSSThree>(mm2px(Vec(133, kB)), module, Zvuni::TO_PARAM));
+-		in(149, kB, Zvuni::RESOLVE_INPUT);
+-		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(153.6f, kB - 4.2f)), module, Zvuni::RESOLVE_LIGHT));
++		knob(147.6, kA, Zvuni::HEIGHT_PARAM);
++		knob(167.6, kA, Zvuni::SNAP_PARAM);
++		knob(187.6, kA, Zvuni::HOLD_PARAM);
++		in(147.6, cvA, Zvuni::YELP_INPUT);
++		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(147.6f + 4.6f, cvA - 4.2f)), module, Zvuni::YELP_LIGHT));
++		addParam(createParamCentered<CKSS>(mm2px(Vec(167.6f, cvA)), module, Zvuni::AUTO_PARAM));
++		addParam(createParamCentered<CKSS>(mm2px(Vec(187.6f, cvA)), module, Zvuni::BOTH_PARAM));
++		knob(147.6, kB, Zvuni::GLIDE_PARAM);
++		addParam(createParamCentered<CKSSThree>(mm2px(Vec(167.6f, kB)), module, Zvuni::TO_PARAM));
++		in(187.6, kB, Zvuni::RESOLVE_INPUT);
++		addChild(createLightCentered<SmallLight<RedLight>>(mm2px(Vec(187.6f + 4.6f, kB - 4.2f)), module, Zvuni::RESOLVE_LIGHT));
+ 
+ 		// bottom row
+-		const float jy = 117.6f;
+-		in(11, jy, Zvuni::DRONE_INPUT);
+-		in(24, jy, Zvuni::MELODY_INPUT);
+-		in(37, jy, Zvuni::GATE_INPUT);
++		const float jy = 118.4f;
++		in(12, jy, Zvuni::DRONE_INPUT);
++		in(26.5, jy, Zvuni::MELODY_INPUT);
++		in(41, jy, Zvuni::GATE_INPUT);
+ 		const int outs[9] = {Zvuni::DRONE_OUTPUT, Zvuni::MELODY_OUTPUT, Zvuni::PARTNER_OUTPUT, Zvuni::MIX_L_OUTPUT, Zvuni::MIX_R_OUTPUT,
+ 			Zvuni::MEL_VOCT_OUTPUT, Zvuni::PTR_VOCT_OUTPUT, Zvuni::ROUGH_OUTPUT, Zvuni::INTERVAL_OUTPUT};
+-		for (int i = 0; i < 9; i++) out(56 + 12 * i, jy, outs[i]);
++		for (int i = 0; i < 9; i++) out(59 + 16.4f * i, jy, outs[i]);
+ 	}
+ 
+ 	void appendContextMenu(Menu* menu) override {

@@ -1,0 +1,232 @@
+<title>Bigger Panel Labels</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one reading column; each module is a before/after pair, widths to scale with HP */
+:root {
+  --bg: #EEF0F2; --surface: #FFFFFF; --ink: #1B1F24; --soft: #5B6570; --line: #D5DAE0;
+  --accent: #B8670C; --strong: #1F7A4D; --good: #2C6DB5; --opt: #8A6A12; --none: #7A838D;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --text: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15181C; --surface: #1E2227; --ink: #E9ECEF; --soft: #9AA4AF; --line: #2E343B;
+  --accent: #F2A93B; --strong: #5CC48E; --good: #73A9EA; --opt: #D9B44A; --none: #8A939C; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15181C; --surface: #1E2227; --ink: #E9ECEF; --soft: #9AA4AF; --line: #2E343B;
+  --accent: #F2A93B; --strong: #5CC48E; --good: #73A9EA; --opt: #D9B44A; --none: #8A939C; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--text); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+h1 { font-family: var(--display); font-size: 2rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-size: 1.3rem; margin: 0; }
+.eyebrow { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 6px; }
+.intro p { max-width: 66ch; margin: 8px 0 0; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.rule { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.rule b { display: block; font-family: var(--display); font-size: 1.15rem; }
+.rule span { color: var(--soft); font-size: .88rem; }
+.num { font-variant-numeric: tabular-nums; }
+.tablebox { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+a { color: var(--accent); }
+.pill { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; letter-spacing: .02em; }
+.pill.strong { color: var(--strong); } .pill.good { color: var(--good); } .pill.opt { color: var(--opt); } .pill.none { color: var(--none); }
+.mod { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 16px; }
+.mod header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.hp { color: var(--soft); font-size: .9rem; } .hp em { font-style: normal; color: var(--accent); font-weight: 600; margin-left: 6px; }
+.panels { display: flex; flex-direction: column; gap: 12px; }
+figure { margin: 0; max-width: 100%; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); }
+figcaption { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); font-weight: 600; margin-bottom: 4px; }
+dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+@media (max-width: 700px) { dl { grid-template-columns: 1fr; } }
+dl div { min-width: 0; } dt { font-weight: 600; font-size: .85rem; display: flex; gap: 8px; align-items: center; } dd { margin: 4px 0 0; color: var(--ink); }
+.note { color: var(--soft); font-size: .9rem; max-width: 70ch; }
+</style>
+<div class="wrap">
+  <div class="intro">
+    <p class="eyebrow">Mockups for review · nothing is released yet</p>
+    <h1>Bigger labels on the other 18 panels</h1>
+    <p>Every panel below uses the label sizes you approved for Weighted. Where the labels didn't fit, the panel got wider instead of more crowded. The jacks, knobs and buttons are the same ones as now; only their places move. Each module also has a suggestion for cutting down the number of jacks, like the Mod A/B change on Weighted.</p>
+  </div>
+  <div class="rules">
+    <div class="rule"><b>3.2 mm</b><span>knob, button and section labels (they were 1.6 to 2.3 mm)</span></div>
+    <div class="rule"><b>2.9 mm</b><span>jack labels and small-control labels</span></div>
+    <div class="rule"><b>2.0 to 2.6 mm</b><span>range ends and short hints; longer hints moved into the tooltips</span></div>
+  </div>
+  <p class="note">Wider panels push neighbouring modules along when an old patch opens, but every patch still loads with its cables in place. Merging jacks is different: a cable plugged into a jack that goes away would be lost, which is why those are only suggestions for now.</p>
+  <div class="tablebox"><table>
+    <thead><tr><th>Module</th><th>Width (HP)</th><th>Fewer jacks?</th></tr></thead>
+    <tbody><tr><td><a href="#Seuperclidean">Seuperclidean</a></td><td class="num">34&nbsp;→&nbsp;38</td><td><span class="pill strong">Strong case</span></td></tr><tr><td><a href="#Seuperclidean4">Seuperclidean 4</a></td><td class="num">24&nbsp;→&nbsp;28</td><td><span class="pill strong">Strong case</span></td></tr><tr><td><a href="#Sophie">Sophie</a></td><td class="num">40&nbsp;→&nbsp;48</td><td><span class="pill strong">Strong case</span></td></tr><tr><td><a href="#Alexa02">Alexa02</a></td><td class="num">42&nbsp;→&nbsp;44</td><td><span class="pill strong">Strong case</span></td></tr><tr><td><a href="#Zvuni">Zvuni</a></td><td class="num">32&nbsp;→&nbsp;40</td><td><span class="pill good">Good case</span></td></tr><tr><td><a href="#Randrum">Randrum</a></td><td class="num">28&nbsp;→&nbsp;28</td><td><span class="pill good">Good case</span></td></tr><tr><td><a href="#SixCopains">Six Copains</a></td><td class="num">36&nbsp;→&nbsp;42</td><td><span class="pill good">Good case</span></td></tr><tr><td><a href="#Ensemble">Drift Ensemble</a></td><td class="num">18&nbsp;→&nbsp;22</td><td><span class="pill opt">Optional</span></td></tr><tr><td><a href="#Tapejeans">Tapejeans</a></td><td class="num">30&nbsp;→&nbsp;36</td><td><span class="pill opt">Optional</span></td></tr><tr><td><a href="#JustFiends">Just Fiends</a></td><td class="num">28&nbsp;→&nbsp;34</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#Metroplex">Metroplex</a></td><td class="num">50&nbsp;→&nbsp;58</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#Tetrapods">Tetrapods</a></td><td class="num">32&nbsp;→&nbsp;40</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#Governor">Governor</a></td><td class="num">18&nbsp;→&nbsp;22</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#FrancoisMarkovian">Francois Markovian</a></td><td class="num">29&nbsp;→&nbsp;34</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#DungRevisions">Dung Revisions</a></td><td class="num">26&nbsp;→&nbsp;28</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#Interlock">Interlock</a></td><td class="num">16&nbsp;→&nbsp;16</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#TunedPerc">Tuned Perc</a></td><td class="num">12&nbsp;→&nbsp;12</td><td><span class="pill none">No change</span></td></tr><tr><td><a href="#Aksak">Aksak</a></td><td class="num">10&nbsp;→&nbsp;10</td><td><span class="pill none">No change</span></td></tr></tbody>
+  </table></div>
+  <section class="mod" id="Seuperclidean">
+<header><h2>Seuperclidean</h2><span class="hp num">34 HP → 38 HP <em>+4 HP</em></span></header>
+<div class="panels">
+<figure style="width:89.47%"><figcaption>Now</figcaption><img loading="lazy" src="img/Seuperclidean-before.jpg" alt="Seuperclidean panel as it is now, 34 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Seuperclidean-after.jpg" alt="Seuperclidean mockup with bigger labels, 38 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 4 HP more; the display is slightly shorter.</dd></div>
+<div><dt>Fewer jacks? <span class="pill strong">Strong case</span></dt><dd>The 12 per-channel CV jacks (FILL, ROT, BIAS for each of 4 channels) become 3 poly jacks, one per parameter, where channel 1 drives voice 1 and so on. Or use two Mod A/B jacks with a destination button that picks the channel and parameter. Saves 9 or 10 jacks, and the panel could go back to about 34 HP.</dd></div></dl>
+</section>
+<section class="mod" id="Seuperclidean4">
+<header><h2>Seuperclidean 4</h2><span class="hp num">24 HP → 28 HP <em>+4 HP</em></span></header>
+<div class="panels">
+<figure style="width:85.71%"><figcaption>Now</figcaption><img loading="lazy" src="img/Seuperclidean4-before.jpg" alt="Seuperclidean 4 panel as it is now, 24 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Seuperclidean4-after.jpg" alt="Seuperclidean 4 mockup with bigger labels, 28 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 4 HP more.</dd></div>
+<div><dt>Fewer jacks? <span class="pill strong">Strong case</span></dt><dd>The same idea as Seuperclidean: the 12 per-channel CV jacks become 3 poly jacks (FILL, ROT, BIAS) or two Mod A/B jacks. Saves 9 or 10 jacks.</dd></div></dl>
+</section>
+<section class="mod" id="Sophie">
+<header><h2>Sophie</h2><span class="hp num">40 HP → 48 HP <em>+8 HP</em></span></header>
+<div class="panels">
+<figure style="width:83.33%"><figcaption>Now</figcaption><img loading="lazy" src="img/Sophie-before.jpg" alt="Sophie panel as it is now, 40 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Sophie-after.jpg" alt="Sophie mockup with bigger labels, 48 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Pad names on the pad grid stay at 2.0 mm, because larger names don&#x27;t fit in the pads.</dd></div>
+<div><dt>Fewer jacks? <span class="pill strong">Strong case</span></dt><dd>The 10 CV jacks with their 10 amount trimpots (Tune, Decay, Model, Color, Metal, Feedback, Sweep, Crush, Drive, Cutoff) become Mod A and Mod B, each with a jack, an amt knob and a dest button. Poly per-pad CV still works through them. Saves 8 jacks and 8 trimpots, so the panel could go back to about 40 HP.</dd></div></dl>
+</section>
+<section class="mod" id="Alexa02">
+<header><h2>Alexa02</h2><span class="hp num">42 HP → 44 HP <em>+2 HP</em></span></header>
+<div class="panels">
+<figure style="width:95.45%"><figcaption>Now</figcaption><img loading="lazy" src="img/Alexa02-before.jpg" alt="Alexa02 panel as it is now, 42 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Alexa02-after.jpg" alt="Alexa02 mockup with bigger labels, 44 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Voice columns are 1 mm wider so the voice names fit.</dd></div>
+<div><dt>Fewer jacks? <span class="pill strong">Strong case</span></dt><dd>Alexa02 already has 5 assignable MOD CV jacks. The ACC, V/OCT and MORPH rows (18 jacks) could become 3 poly jacks, where channel 1 drives voice 1 and so on. The 7 trigger jacks and 6 outputs stay as they are. Saves 15 jacks, and the panel could shrink to about 36 HP.</dd></div></dl>
+</section>
+<section class="mod" id="Zvuni">
+<header><h2>Zvuni</h2><span class="hp num">32 HP → 40 HP <em>+8 HP</em></span></header>
+<div class="panels">
+<figure style="width:80.00%"><figcaption>Now</figcaption><img loading="lazy" src="img/Zvuni-before.jpg" alt="Zvuni panel as it is now, 32 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Zvuni-after.jpg" alt="Zvuni mockup with bigger labels, 40 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Dropped the “V/oct (poly)” hint. The tooltip still says it.</dd></div>
+<div><dt>Fewer jacks? <span class="pill good">Good case</span></dt><dd>The 7 CV jacks for Tension, Ring, Drift, Vowel, Open, Tresene and Ensemble become Mod A/B. Gates, pitch and clock stay as they are. Saves 5 jacks.</dd></div></dl>
+</section>
+<section class="mod" id="Randrum">
+<header><h2>Randrum</h2><span class="hp num">28 HP → 28 HP <em>same width</em></span></header>
+<div class="panels">
+<figure style="width:100.00%"><figcaption>Now</figcaption><img loading="lazy" src="img/Randrum-before.jpg" alt="Randrum panel as it is now, 28 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Randrum-after.jpg" alt="Randrum mockup with bigger labels, 28 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Same width. Dropped the “mono if R empty” hint, which stays in the tooltip.</dd></div>
+<div><dt>Fewer jacks? <span class="pill good">Good case</span></dt><dd>The 7 CV jacks for Sample, Decay, Start, Chance, Pan, Mutate and Ratchet become Mod A/B. V/OCT, Velocity, Pattern, Trig, Reset and Re-roll stay as they are. Saves 5 jacks.</dd></div></dl>
+</section>
+<section class="mod" id="SixCopains">
+<header><h2>Six Copains</h2><span class="hp num">36 HP → 42 HP <em>+6 HP</em></span></header>
+<div class="panels">
+<figure style="width:85.71%"><figcaption>Now</figcaption><img loading="lazy" src="img/SixCopains-before.jpg" alt="Six Copains panel as it is now, 36 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/SixCopains-after.jpg" alt="Six Copains mockup with bigger labels, 42 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 6 HP more.</dd></div>
+<div><dt>Fewer jacks? <span class="pill good">Good case</span></dt><dd>The 7 CV jacks for Ramp, Curve, FM index, Slope, Time, Intone and Morph become Mod A/B. V/OCT, Gate, Velocity and the Banks jacks stay as they are. Saves 5 jacks.</dd></div></dl>
+</section>
+<section class="mod" id="Ensemble">
+<header><h2>Drift Ensemble</h2><span class="hp num">18 HP → 22 HP <em>+4 HP</em></span></header>
+<div class="panels">
+<figure style="width:81.82%"><figcaption>Now</figcaption><img loading="lazy" src="img/Ensemble-before.jpg" alt="Drift Ensemble panel as it is now, 18 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Ensemble-after.jpg" alt="Drift Ensemble mockup with bigger labels, 22 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 4 HP more.</dd></div>
+<div><dt>Fewer jacks? <span class="pill opt">Optional</span></dt><dd>The 5 CV jacks for Together, Spread, Feel, Swing and Energy become Mod A/B. Saves 3 jacks.</dd></div></dl>
+</section>
+<section class="mod" id="Tapejeans">
+<header><h2>Tapejeans</h2><span class="hp num">30 HP → 36 HP <em>+6 HP</em></span></header>
+<div class="panels">
+<figure style="width:83.33%"><figcaption>Now</figcaption><img loading="lazy" src="img/Tapejeans-before.jpg" alt="Tapejeans panel as it is now, 30 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Tapejeans-after.jpg" alt="Tapejeans mockup with bigger labels, 36 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Dropped the “hw:” lines under the knobs. The tooltips keep the hardware mapping.</dd></div>
+<div><dt>Fewer jacks? <span class="pill opt">Optional</span></dt><dd>Vari-speed keeps its own jack for 1 V/oct. The S.O.S., Gene size, Morph, Slide and Organize CVs could become Mod A/B. The module is close to the original hardware, so you may prefer to keep one jack per control.</dd></div></dl>
+</section>
+<section class="mod" id="JustFiends">
+<header><h2>Just Fiends</h2><span class="hp num">28 HP → 34 HP <em>+6 HP</em></span></header>
+<div class="panels">
+<figure style="width:82.35%"><figcaption>Now</figcaption><img loading="lazy" src="img/JustFiends-before.jpg" alt="Just Fiends panel as it is now, 28 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/JustFiends-after.jpg" alt="Just Fiends mockup with bigger labels, 34 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Dropped the “shape 0 to 8 V / sound ±5 V” hint, which stays in the tooltips.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>The inputs match the hardware it is based on, and Intone, Ramp and Curve already have amount knobs. I would leave them.</dd></div></dl>
+</section>
+<section class="mod" id="Metroplex">
+<header><h2>Metroplex</h2><span class="hp num">50 HP → 58 HP <em>+8 HP</em></span></header>
+<div class="panels">
+<figure style="width:86.21%"><figcaption>Now</figcaption><img loading="lazy" src="img/Metroplex-before.jpg" alt="Metroplex panel as it is now, 50 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Metroplex-after.jpg" alt="Metroplex mockup with bigger labels, 58 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>The bottom row needed the room: ten input labels, Mutate, the snapshot buttons and the outputs all sit there.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>The four CTRL CV inputs are already assignable from each CTRL menu, so there is nothing to merge.</dd></div></dl>
+</section>
+<section class="mod" id="Tetrapods">
+<header><h2>Tetrapods</h2><span class="hp num">32 HP → 40 HP <em>+8 HP</em></span></header>
+<div class="panels">
+<figure style="width:80.00%"><figcaption>Now</figcaption><img loading="lazy" src="img/Tetrapods-before.jpg" alt="Tetrapods panel as it is now, 32 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Tetrapods-after.jpg" alt="Tetrapods mockup with bigger labels, 40 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 8 HP more.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>The 9 inputs are 4 track clocks plus root, reseed, pattern, next and reset. Each does its own job.</dd></div></dl>
+</section>
+<section class="mod" id="Governor">
+<header><h2>Governor</h2><span class="hp num">18 HP → 22 HP <em>+4 HP</em></span></header>
+<div class="panels">
+<figure style="width:81.82%"><figcaption>Now</figcaption><img loading="lazy" src="img/Governor-before.jpg" alt="Governor panel as it is now, 18 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Governor-after.jpg" alt="Governor mockup with bigger labels, 22 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 4 HP more.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>8 of the 10 inputs are the trigger inputs Governor listens to, so they are the module&#x27;s core.</dd></div></dl>
+</section>
+<section class="mod" id="FrancoisMarkovian">
+<header><h2>Francois Markovian</h2><span class="hp num">29 HP → 34 HP <em>+5 HP</em></span></header>
+<div class="panels">
+<figure style="width:85.29%"><figcaption>Now</figcaption><img loading="lazy" src="img/FrancoisMarkovian-before.jpg" alt="Francois Markovian panel as it is now, 29 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/FrancoisMarkovian-after.jpg" alt="Francois Markovian mockup with bigger labels, 34 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Labels fit after 5 HP more.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>Only 4 inputs.</dd></div></dl>
+</section>
+<section class="mod" id="DungRevisions">
+<header><h2>Dung Revisions</h2><span class="hp num">26 HP → 28 HP <em>+2 HP</em></span></header>
+<div class="panels">
+<figure style="width:92.86%"><figcaption>Now</figcaption><img loading="lazy" src="img/DungRevisions-before.jpg" alt="Dung Revisions panel as it is now, 26 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/DungRevisions-after.jpg" alt="Dung Revisions mockup with bigger labels, 28 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>The direction switch hint now reads “up: bus 1 / mid: off / down: bus 2”.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>Only 6 inputs.</dd></div></dl>
+</section>
+<section class="mod" id="Interlock">
+<header><h2>Interlock</h2><span class="hp num">16 HP → 16 HP <em>same width</em></span></header>
+<div class="panels">
+<figure style="width:100.00%"><figcaption>Now</figcaption><img loading="lazy" src="img/Interlock-before.jpg" alt="Interlock panel as it is now, 16 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Interlock-after.jpg" alt="Interlock mockup with bigger labels, 16 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Same width. Rows moved to make room.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>9 inputs, mostly clocks and gates.</dd></div></dl>
+</section>
+<section class="mod" id="TunedPerc">
+<header><h2>Tuned Perc</h2><span class="hp num">12 HP → 12 HP <em>same width</em></span></header>
+<div class="panels">
+<figure style="width:100.00%"><figcaption>Now</figcaption><img loading="lazy" src="img/TunedPerc-before.jpg" alt="Tuned Perc panel as it is now, 12 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/TunedPerc-after.jpg" alt="Tuned Perc mockup with bigger labels, 12 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Same width. Only the sizes changed.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>Only 3 inputs.</dd></div></dl>
+</section>
+<section class="mod" id="Aksak">
+<header><h2>Aksak</h2><span class="hp num">10 HP → 10 HP <em>same width</em></span></header>
+<div class="panels">
+<figure style="width:100.00%"><figcaption>Now</figcaption><img loading="lazy" src="img/Aksak-before.jpg" alt="Aksak panel as it is now, 10 HP"></figure>
+<figure><figcaption>Bigger labels</figcaption><img loading="lazy" src="img/Aksak-after.jpg" alt="Aksak mockup with bigger labels, 10 HP"></figure>
+</div>
+<dl><div><dt>Layout notes</dt><dd>Same width. CV labels sit left of their jacks, and the outputs moved down a little.</dd></div>
+<div><dt>Fewer jacks? <span class="pill none">No change</span></dt><dd>Only 4 inputs.</dd></div></dl>
+</section>
+
+  <p class="note">Pollen isn't here because its source files aren't in the project. Weighted is already done.</p>
+</div>
