@@ -1,0 +1,23 @@
+{
+  "slug": "Keel",
+  "name": "Keel",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Keel",
+      "name": "Keel",
+      "description": "Kick drum tuning: follows the key or chord and sends V/OCT to any kick, steps an interval pattern with MUTATE + LOCK, hears the kick's pitch (AUTO correct, LEARN) and swaps its low end for a tuned sub",
+      "tags": ["Drum", "Tuner", "Quantizer", "Utility", "Random"]
+    }
+  ]
+}
