@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#2b2b2b;font-family:Helvetica,Arial,sans-serif;color:#ddd}
+.dev{width:1100px;height:338px;display:flex;gap:14px;padding:8px;box-sizing:border-box;background:#3a3a3a}
+.col{display:flex;flex-direction:column;gap:8px}
+.lbl{font-size:20px;color:#bbb;text-align:center}
+.val{font-size:20px;color:#fff;text-align:center}
+.btn{background:#5a5a5a;border-radius:3px;color:#ddd;font-weight:bold;font-size:22px;display:flex;align-items:center;justify-content:center;height:46px}
+.on{background:#f0a020;color:#222}
+.rec{background:#d23b3b;color:#fff}
+.knob{width:70px;height:70px;border-radius:50%;margin:0 auto;box-sizing:border-box;border:9px solid #f0a020;border-bottom-color:#555;}
+.screen{background:#1b1b1b;width:520px;height:322px;box-sizing:border-box;padding:10px;position:relative}
+.ttl{display:flex;justify-content:space-between;font-size:24px;font-weight:bold}
+.wave{position:absolute;left:10px;right:10px;top:50px;height:200px}
+.small{font-size:17px;color:#999}
+.radio{display:flex;gap:4px}.radio .btn{flex:1;font-size:18px;height:40px}
+</style></head><body><div class="dev">
+<div class="screen">
+ <div class="ttl"><span style="color:#f0a020">PASS 3 · C → G</span><span style="color:#888">124.0 BPM</span></div>
+ <svg class="wave" viewBox="0 0 500 200">
+  <rect x="62.5" y="0" width="156" height="200" fill="#7a4a1a" opacity=".75"/>
+  <rect x="187.5" y="0" width="31" height="200" fill="#f0a020" opacity=".35"/>
+  <g id="w"></g>
+  <line x1="140" x2="140" y1="0" y2="200" stroke="#f0a020" stroke-width="3"/>
+ </svg>
+ <div style="position:absolute;left:10px;right:10px;bottom:10px;display:flex;justify-content:space-between;font-size:18px">
+  <span><b style="color:#d8a060">■</b> loop 4 beats <b style="color:#f0a020">■</b> + shift</span><span style="color:#888">16-beat buffer</span></div>
+</div>
+<div class="col" style="width:150px">
+ <div class="btn rec" style="height:70px">● CAPTURE</div>
+ <div class="lbl">Buffer</div>
+ <div class="radio"><div class="btn">8</div><div class="btn on">16</div><div class="btn">32</div></div>
+ <div class="lbl">Loop</div><div class="btn" style="font-size:26px">◂ 4 beats ▸</div>
+</div>
+<div class="col" style="width:200px">
+ <div class="lbl">Shift</div>
+ <div class="radio"><div class="btn">ms</div><div class="btn on">beat</div></div>
+ <div class="radio"><div class="btn">1/32</div><div class="btn">1/16</div><div class="btn">1/8</div></div>
+ <div class="radio"><div class="btn">1/4</div><div class="btn">1/2</div><div class="btn on">1</div></div>
+ <div class="radio"><div class="btn on">▶ fwd</div><div class="btn">◀ back</div></div>
+</div>
+<div class="col" style="width:170px">
+ <div class="lbl">Fade</div><div class="knob"></div><div class="val">20 ms</div>
+ <div class="lbl">At end</div>
+ <div class="radio"><div class="btn on">wrap</div><div class="btn">stop</div></div>
+ <div class="btn" style="font-size:19px">⟲ restart</div>
+</div>
+</div>
+<script>
+let g='';for(let i=0;i<500;i+=2){let b=i%31.25;let a=Math.max(8,90*Math.exp(-b/7)*(0.6+0.4*Math.abs(Math.sin(i*1.7))));
+if(i%62.5<4)a=95;g+=`<line x1="${i}" x2="${i}" y1="${100-a}" y2="${100+a}" stroke="#b9c4cc" stroke-width="1.6"/>`}
+for(let k=0;k<=16;k++)g+=`<line x1="${k*31.25}" x2="${k*31.25}" y1="0" y2="200" stroke="${k%4?'#333':'#666'}"/>`;
+document.getElementById('w').innerHTML=g;
+</script></body></html>

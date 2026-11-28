@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><title>DriftMatrix guide</title>
+<style>
+@page{size:A4;margin:16mm 16mm}
+body{font-family:Inter,Helvetica,Arial,sans-serif;color:#26262a;font-size:9.8pt;line-height:1.38}
+h1{font-size:24pt;margin:0;letter-spacing:.04em}h1+p{color:#6b6660;margin-top:2px}
+h2{font-size:12.5pt;color:#cf5a2e;border-bottom:1.5px solid #cf5a2e;padding-bottom:2px;margin-top:12px}
+h3{font-size:11pt;margin:12px 0 4px}
+img{width:52%;display:block;margin:0 auto;border-radius:4px}
+.box{background:#ece5d8;border-radius:6px;padding:3px 12px;margin:6px 0;break-inside:avoid}
+.box h3{margin-top:2px}
+table{border-collapse:collapse;width:100%}td{padding:2px 6px;vertical-align:top;border-bottom:1px solid #e2dacb}td:first-child{font-weight:700;white-space:nowrap;width:24%}
+.pg{break-before:page}
+</style></head><body>
+<h1>DRIFTMATRIX</h1><p>32 x 32 matrix mixer with a matrix you never see · Haer · v2.0.0</p>
+<img src="panel-preview.png">
+<h2>The idea</h2>
+<p>Every one of the 32 inputs can reach every one of the 32 outputs: 1024 crosspoints. You don't set them. Each crosspoint has two hidden dice: one says whether it's on, the other says how loud. You play the <b>shape</b> of the randomness: how dense it is, how much it changes when you reseed, and which saved versions you're morphing between.</p>
+<h2>Controls</h2>
+<table>
+<tr><td>MODE</td><td><b>ON/OFF</b>: active crosspoints at full level (clean routing, good for gates and pitch). <b>0-100%</b>: each active crosspoint at its own random level (good for mixing audio and blending CVs).</td></tr>
+<tr><td>CHANCE + CV</td><td>How likely each crosspoint is to be on. Turning up adds crosspoints one by one; turning down removes the same ones in reverse, so it behaves like a density fader, not a dice roll.</td></tr>
+<tr><td>RADICAL + CV</td><td>How much a reseed changes. Full = a whole new matrix. 5-10 % = a small mutation, so the patch evolves the way an Autechre pattern does.</td></tr>
+<tr><td>RESEED + TRIG</td><td>Roll new dice (as much as RADICAL says). The button flashes.</td></tr>
+<tr><td>SLEW + CV</td><td>1 ms to 2 s for every change. Short keeps audio click-free; long makes routings glide like slow crossfades.</td></tr>
+<tr><td>GAIN</td><td><b>AUTO</b> keeps every output at about single-input level however many inputs pile on. <b>SUM</b> adds them (use the right-click soft clip for hot audio).</td></tr>
+<tr><td>STORE, slots 1-8</td><td>Tap STORE (blinks), then a slot to save the LIVE matrix. Tap a slot on its own to load it back into LIVE, then reseed it gently with low RADICAL.</td></tr>
+<tr><td>A, B</td><td>Pick two matrices: <b>L</b> (live) or slots 1-8. A lights orange, B cyan, stored slots glow dim.</td></tr>
+<tr><td>MIX + CV</td><td>Morph from A to B.</td></tr>
+<tr><td>SMOOTH / COIN</td><td><b>SMOOTH</b>: every level crossfades. <b>COIN</b>: each crosspoint jumps from A to B at its own point as MIX turns, so the routing changes piece by piece.</td></tr>
+<tr><td>A/B CV</td><td>Moves both A and B one place along (L, 1 … 8, round again) per volt. A stepped CV walks through your snapshots.</td></tr>
+</table>
+<p>Snapshots remember the dice, so CHANCE and MODE keep shaping them live. Only patched inputs count.</p>
+
+<h2 class="pg">Patch ideas</h2>
+<div class="box"><h3>1. Self-mutating drum bus</h3>
+<p>Kick, hats, clap, perc and two Francois Markovian trigger lanes into IN 1-8. OUT 1-8 into eight drum voices (Boohm, 808 Metal, Tuned Perc…). MODE <b>ON/OFF</b>, CHANCE 12-18 %, RADICAL 8 %. Clock ÷16 (one bar) into TRIG. Every bar a couple of triggers find a new voice; the groove stays recognisable but never repeats.</p>
+<p><i>Try:</i> store a good bar in slot 1, set A=1, B=L and ride MIX in COIN mode to fall back to the "home" groove.</p></div>
+<div class="box"><h3>2. Modulation switchboard</h3>
+<p>LFOs, Marbles-style random, envelopes and Kleener's pitch outputs into IN 1-12. OUT 1-10 into cutoffs, wavefolds and FM depths of Buchla 259t, TwinPeaks and Mixxa. MODE <b>0-100%</b>, GAIN AUTO, SLEW 400 ms-1 s. Reseed every 8 bars with RADICAL 20 %: the modulation sources wander between destinations without jumps.</p></div>
+<div class="box"><h3>3. Feedback ecology</h3>
+<p>Patch OUT 1-4 back into IN 1-4 through TwinPeaks, a delay and a wavefolder; feed a Buchla 259t into IN 5. CHANCE 8-15 %, 0-100%, GAIN AUTO (it keeps the loop from running away), right-click soft clip on. Slowly sweep CHANCE with a very slow LFO: the network tips between silence, drones and squeals.</p></div>
+<div class="box"><h3>4. Arrangement scenes</h3>
+<p>Build four snapshots: sparse intro (CHANCE 10 %), groove, peak (CHANCE 35 %), break. A stepped CV that rises 1 V per section (from any sequencer) into A/B CV with A=L, B=1: each new section steps the pair along. MIX on a slow ramp in SMOOTH mode morphs into each scene rather than cutting.</p></div>
+<div class="box"><h3>5. Pitch scrambler</h3>
+<p>Four chord-tone CVs (The Changes, or Hapax via the disting NT) into IN 1-4. OUT 1-4 to four oscillators. ON/OFF mode, GAIN AUTO, CHANCE about 30 %. With AUTO gain, an output with two inputs plays their average: in-between notes. Put a quantiser after each output for in-key voicings that reshuffle on every RESEED.</p></div>
+<h2>Starting points</h2>
+<table>
+<tr><td>Gentle evolution</td><td>RADICAL 5-10 %, reseed every bar or two, SLEW 50-200 ms.</td></tr>
+<tr><td>Hard cuts</td><td>ON/OFF, RADICAL 100 %, SLEW minimum (keep 5 ms+ for audio).</td></tr>
+<tr><td>Morph performance</td><td>Store 2-4 slots, MIX on a fader or MIDI-CC via the disting NT.</td></tr>
+</table>
+</body></html>

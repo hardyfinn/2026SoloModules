@@ -1,0 +1,68 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#2b2b30;font:13px -apple-system,Helvetica,Arial,sans-serif;color:#e8e8ea}
+.win{width:1180px;margin:30px;background:#1d1d21;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px #0008}
+.bar{height:38px;background:#2a2a2f;display:flex;align-items:center;padding:0 14px;gap:8px}
+.d{width:12px;height:12px;border-radius:50%}.t{flex:1;text-align:center;color:#aaa;font-weight:600}
+.main{display:flex;height:700px}
+.side{width:280px;background:#232328;padding:14px;border-right:1px solid #333}
+h3{margin:4px 0 10px;font-size:11px;letter-spacing:.08em;color:#8a8a95;text-transform:uppercase}
+.drop{border:2px dashed #555;border-radius:8px;padding:16px;text-align:center;color:#999;margin-bottom:10px}
+.f{padding:6px 8px;border-radius:5px;background:#2c2c32;margin-bottom:4px;display:flex;justify-content:space-between}
+.f span{color:#8a8a95}
+.sl{margin:14px 0}.sl label{display:flex;justify-content:space-between}.sl label b{color:#f0b24a}
+.track{height:4px;background:#444;border-radius:2px;margin-top:8px;position:relative}
+.track i{position:absolute;left:0;top:0;height:4px;background:#f0b24a;border-radius:2px}
+.track em{position:absolute;top:-5px;width:14px;height:14px;border-radius:50%;background:#eee}
+.btn{background:#f0b24a;color:#1d1d21;font-weight:700;text-align:center;padding:10px;border-radius:7px;margin-top:16px}
+.btn2{border:1px solid #555;text-align:center;padding:9px;border-radius:7px;margin-top:8px}
+.prog{font-size:12px;color:#9a9;margin-top:8px}
+.res{flex:1;display:flex;flex-direction:column}
+.tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid #333}
+.tab{padding:6px 12px;border-radius:14px;background:#2c2c32}.tab.on{background:#f0b24a;color:#1d1d21;font-weight:700}
+.list{padding:8px 14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:8px;border-radius:7px;margin-bottom:4px;background:#24242a}
+.row.sel{outline:2px solid #f0b24a}
+.star{width:18px;color:#f0b24a;font-size:16px}.star.off{color:#555}
+.g{width:74px;font-size:11px;padding:3px 0;border-radius:4px;text-align:center;font-weight:700}
+.wf{width:260px;height:36px}
+.n{flex:1}.n small{display:block;color:#8a8a95}
+.stk{color:#f0b24a;font-size:12px}
+.ms{width:60px;text-align:right;color:#aaa}
+.sub{margin-left:40px;background:#202025}
+.foot{margin-top:auto;padding:10px 14px;border-top:1px solid #333;color:#8a8a95;display:flex;justify-content:space-between}
+</style></head><body><div class="win">
+<div class="bar"><div class="d" style="background:#ff5f57"></div><div class="d" style="background:#febc2e"></div><div class="d" style="background:#28c840"></div><div class="t">Sample Harvester</div></div>
+<div class="main"><div class="side">
+<h3>Sources</h3>
+<div class="drop">Drop folders or files here<br><small>or click to choose…</small></div>
+<div class="f">Jam 2026-11-20.wav<span>12 min</span></div>
+<div class="f">Field recordings/<span>38 files</span></div>
+<div class="f">Hapax loops/<span>112 files</span></div>
+<h3 style="margin-top:18px">Settings</h3>
+<div class="sl"><label>Longest hit <b>3.0 s</b></label><div class="track"><i style="width:100%"></i><em style="left:96%"></em></div></div>
+<div class="sl"><label>Silence level <b>−54 dB</b></label><div class="track"><i style="width:65%"></i><em style="left:62%"></em></div></div>
+<div class="sl"><label>Clean tail needed <b>80 ms</b></label><div class="track"><i style="width:30%"></i><em style="left:27%"></em></div></div>
+<div class="sl"><label>Stack similar <b>Tight</b></label><div class="track"><i style="width:70%"></i><em style="left:67%"></em></div></div>
+<div class="btn">Harvest</div>
+<div class="prog">✓ Scanned 151 files · found 436 hits in 41 stacks</div>
+<div class="btn2">Export ★ starred (9)…</div>
+<div class="btn2">Export all stacks (best of each)…</div>
+</div>
+<div class="res"><div class="tabs">
+<div class="tab">All 436</div><div class="tab on">Kick 148</div><div class="tab">Snare/Clap 61</div><div class="tab">Hat/Metal 97</div><div class="tab">Perc 74</div><div class="tab">Tonal 32</div><div class="tab">Vocal 24</div></div>
+<div class="list" id="L"></div>
+<div class="foot"><span>Space = play · ↑↓ = next · S = star · drag a row into Ableton</span><span>Exports to Kick/Jam 2026-11-20 kick 01.wav</span></div>
+</div></div></div>
+<script>
+const rows=[["★","Kick 01","Jam 2026-11-20.wav @ 3:12.4","+14 similar",420,1,0],
+["★","Kick 02","Hapax loops/Detroit 128.wav @ 0:01.9","+31 similar",310,0,0],
+["☆","Kick 03","Field recordings/door slam.wav @ 0:00.6","",880,0,0],
+["★","Kick 04","Hapax loops/broken 140.wav @ 0:03.3","+7 similar",260,0,0],
+["☆","Kick 05","Jam 2026-11-20.wav @ 9:58.0","+3 similar",1210,0,0],
+["☆","Kick 06","Hapax loops/dub 72.wav @ 0:02.2","+22 similar",650,0,0],
+["☆","Kick 07","Field recordings/bin lid.wav @ 0:04.7","",190,0,0],
+["☆","Kick 08","Hapax loops/acid 132.wav @ 0:00.0","+11 similar",350,0,0],["☆","Kick 09","Field recordings/drum lid.wav @ 0:01.1","",540,0,0],["☆","Kick 10","Hapax loops/electro 125.wav @ 0:00.4","+5 similar",280,0,0]];
+let h="";rows.forEach((r,i)=>{let pts="";for(let x=0;x<=260;x+=2){const t=x/260,env=Math.exp(-t*(r[4]<400?9:5))*(t<0.02?t/0.02:1);const y=18+Math.sin(x*0.9+i)*16*env*Math.cos(x*0.13);pts+=x+","+y.toFixed(1)+" "}
+h+=`<div class="row ${r[5]?'sel':''} ${r[6]?'sub':''}"><div class="star ${r[0]=='☆'?'off':''}">${r[0]}</div><div class="g" style="background:#7a3b2e">KICK</div><svg class="wf"><polyline points="${pts}" fill="none" stroke="#f0b24a" stroke-width="1.2"/></svg><div class="n">${r[1]}<small>${r[2]}</small></div><div class="stk">${r[3]}</div><div class="ms">${r[4]} ms</div></div>`});
+document.getElementById("L").innerHTML=h;
+</script></body></html>

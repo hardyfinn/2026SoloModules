@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@page{size:A4;margin:16mm}
+body{font-family:Inter,DejaVu Sans,sans-serif;color:#1b1b1b;font-size:10.5pt;line-height:1.45}
+h1{font-size:26pt;margin:0;letter-spacing:.04em} .sub{color:#555;margin:2px 0 14px}
+h2{font-size:13pt;margin:18px 0 6px;border-bottom:2px solid #151b30;padding-bottom:2px}
+img{width:100%;border-radius:4px} table{border-collapse:collapse;width:100%} td{padding:4px 6px;border-bottom:1px solid #ddd;vertical-align:top}
+td:first-child{font-weight:bold;white-space:nowrap;width:24%} .tip{background:#f4f1e8;padding:8px 10px;border-left:4px solid #ffb347;margin:8px 0}
+.pb{page-break-before:always}
+</style></head><body>
+<h1>STELLA</h1><div class="sub">Sample map player for VCV Rack · 36 HP · Hær</div>
+<img src="../panel-preview.png">
+<h2>What it does</h2>
+<p>Point Stella at a folder of one-shots. It listens to every sample and lays them out on a map by how they sound, so kicks gather in one place, hats in another, and the in-between sounds sit between them. Each of the four voices has a point on the map. A trigger plays the sample nearest that point, or, if you turn up CHANCE, sometimes a neighbour inside its ring instead.</p>
+<h2>Getting started</h2>
+<ol>
+<li>Press <b>LOAD</b> and choose a folder, or drag one or more folders (or any file in them) onto the module. All the dropped folders go onto one map. Hold <b>shift</b> while dropping to add them to the folders already loaded. The screen shows "analysing…" and then the dots. Up to 1000 WAV/AIFF files, subfolders included, each trimmed to 2 seconds.</li>
+<li>Patch a clock or gate pattern into voice 1 <b>TRIG</b> and the <b>MIX</b> out to your mixer.</li>
+<li>Turn <b>X</b> and <b>Y</b>, or just click and drag on the map: the nearest voice's crosshair follows the mouse, and the name of the sample under it shows at the bottom of the screen.</li>
+<li>Turn up <b>CHANCE</b> and <b>SPREAD</b> to let the voice wander among similar sounds.</li>
+</ol>
+<h2>Controls</h2>
+<table>
+<tr><td>AXIS</td><td><b>AUTO</b>: arranged by overall similarity across five measurements (brightness, noisiness, attack, length and low-end weight). <b>FIXED</b>: X is dark to bright, Y is short to long, the same for every folder. Flip it and the dots glide to their new places.</td></tr>
+<tr><td>LOAD</td><td>Opens the folder chooser and replaces the map. The folders are saved with the patch and reloaded next time.</td></tr>
+<tr><td>DRIFT + CV</td><td>Every voice's point wanders slowly around where you set it. Fully up, it roams a fair way in a few seconds; low settings take minutes. ±5 V on CV adds or removes 50%.</td></tr>
+<tr><td>GRAVITY</td><td>Each hit pulls that voice's point a little towards the sample it just played, so a voice that strays to a neighbour tends to stay there for a while. With DRIFT and GRAVITY both at zero, the points spring back to the knobs.</td></tr>
+<tr><td>TRIG</td><td>Plays a sample. A new hit fades the previous one out over 5 ms.</td></tr>
+<tr><td>X, Y + CV</td><td>The voice's point. ±5 V of CV moves it across the whole map.</td></tr>
+<tr><td>SPREAD</td><td>Size of the dashed ring around the crosshair.</td></tr>
+<tr><td>CHANCE + CV</td><td>How often a sample inside the ring plays instead of the nearest one. Closer samples are more likely. At 0 the voice always plays the nearest sample. ±5 V CV adds or removes 50%.</td></tr>
+<tr><td>OUT / MIX</td><td>Each voice has its own out. Patching it takes that voice out of MIX, as on the 727.</td></tr>
+</table>
+<p><b>Right-click menu:</b> load a folder (replace), <b>Add folder…</b> (adds to the map), <b>Remove folder</b>, re-scan, include subfolders (on), even out sample levels (on: every sample is turned up to the same peak level).</p>
+<h2 class="pb">Patch ideas</h2>
+<div class="tip"><b>One folder, whole kit.</b> Put voice 1 on the kicks, 2 on the snares, 3 on the hats and 4 on percussion. Drive them from Pam's or a drum sequencer. CHANCE around 20% with a small SPREAD gives you natural variation, like round robin.</div>
+<div class="tip"><b>Mutating hats (the Autechre side).</b> Voice 3 on 16ths, CHANCE 60%, SPREAD 40%, DRIFT 30%, GRAVITY 50%. The hats find a pocket of similar sounds, stay a while, then slide to a new one.</div>
+<div class="tip"><b>Sequenced timbre.</b> Patch a slow random or stepped CV (Marbles X, or Random8) into X CV. FIXED axes make it predictable: higher voltage means brighter samples.</div>
+<div class="tip"><b>Arrangement moves.</b> Send a Long Form or LFO CV into CHANCE CV, near 0 in the verse and higher in the breakdown, so the kit gets looser as the track builds without changing the pattern.</div>
+<h2>Good to know</h2>
+<ul>
+<li>Analysis runs in the background, so audio doesn't stop while a big folder loads. Around a few hundred samples takes a second or two.</li>
+<li>Samples are played mono at their own sample rate. Anything longer than 2 seconds is cut, with a short fade.</li>
+<li>On macOS, Rack may need permission to read the folder (System Settings › Privacy & Security › Files and Folders).</li>
+</ul>
+</body></html>

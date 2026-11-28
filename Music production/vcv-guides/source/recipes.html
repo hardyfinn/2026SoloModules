@@ -1,0 +1,279 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Recipes: The Changes, Weighted, Long Form and Francois Markovian</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.pat { border-collapse: separate; border-spacing: .8mm; width: auto; margin: 1mm 0 2.5mm; font-size: 8.4pt; }
+.pat td { border: none; padding: 0; }
+.pat td.lab { padding-right: 2mm; font-weight: 600; white-space: nowrap; min-width: 18mm; }
+.pat td.c { width: 7.5mm; height: 5.4mm; border-radius: .8mm; background: #e9e3d7; text-align: center; font-size: 6.6pt; color: #fff; font-weight: 700; line-height: 5.4mm; }
+.pat th { background: none; border: none; padding: 0 0 .5mm; font-size: 7.4pt; color: var(--quiet); text-align: center; font-weight: 600; }
+.pat td.note { padding-left: 2.5mm; color: var(--quiet); font-weight: 400; white-space: normal; }
+.fmstrip { display: flex; gap: 3mm; align-items: flex-end; }
+.fmstrip img { height: 58mm; border-radius: 1mm; box-shadow: 0 .6mm 2mm rgba(0,0,0,.18); }
+.tag { display:inline-block; font-size: 7.6pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--acc); border-radius: 1mm; padding: .3mm 1.6mm; margin-right: 1.5mm; vertical-align: .4mm; }
+.tag.c { background: var(--cyan); }
+.set td:first-child { width: 30mm; }
+h4 { font-size: 10.4pt; margin: 3mm 0 1mm; }
+</style>
+<script>
+// Pattern grids: data-p = "Label|v1,...,v8|note;Label|..."  (values are % chances)
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-p]').forEach(el => {
+    const t = document.createElement('table'); t.className = 'pat';
+    let h = '<tr><th></th>' + [1,2,3,4,5,6,7,8].map(i => '<th>' + i + '</th>').join('') + '<th></th></tr>';
+    el.dataset.p.split(';').forEach(row => {
+      const [lab, vals, note] = row.split('|');
+      h += '<tr><td class="lab">' + lab + '</td>';
+      vals.split(',').forEach(v => {
+        v = +v;
+        const bg = v ? 'rgba(207,90,46,' + (0.18 + 0.82 * v / 100).toFixed(2) + ')' : '#e9e3d7';
+        h += '<td class="c" style="background:' + bg + '">' + (v && v < 100 ? v : '') + '</td>';
+      });
+      h += '<td class="note">' + (note || '') + '</td></tr>';
+    });
+    t.innerHTML = h; el.replaceWith(t);
+  });
+});
+</script>
+</head>
+<body>
+
+<!-- ============================ COVER -->
+<section class="page cover">
+  <div>
+    <div class="kicker">Haer · VCV Rack 2 modules · recipes</div>
+    <h1>Recipes</h1>
+    <p class="lead">Four complete setups for <b>The Changes</b>, <b>Weighted</b> and <b>Long Form</b>, now with drums from the <b>Francois Markovian</b> plugin. Long Form runs the song, The Changes plays the chords, Weighted writes the melody, and Markovian, Interlock, Rewrite and Governor play a drum part that follows the form.</p>
+    <p class="small" style="max-width:150mm">The first recipe comes as a ready-made Rack patch, <b>house-f-minor.vcv</b>. The user guide explains every control of The Changes, Weighted and Long Form; this document is about putting them to work.</p>
+  </div>
+  <div>
+    <div class="fmstrip"><img src="FrancoisMarkovian.png"><img src="Interlock.png"></div>
+    <div class="fmstrip" style="margin-top:3mm"><img src="Rewrite.png"><img src="Governor.png"></div>
+    <div class="cap">The Francois Markovian plugin: Francois Markovian (34 HP), Interlock (16 HP), Rewrite (28 HP) and Governor (22 HP). Panel renders, not Rack screenshots.</div>
+  </div>
+  <div class="small">For Weighted plugin 2.6.0, LongFormMixxa 2.1.0 and Francois Markovian 2.5.0. November 2026.</div>
+</section>
+
+<!-- ============================ THE BIGGER SYSTEM -->
+<section class="page">
+  <h2>The whole system</h2>
+  <p>The top row makes the music's shape and harmony. The middle row is the drummer. Long Form sits over both: it tells The Changes when to change and which loop to play, and tells the drums which parts play and how busy to be.</p>
+  <svg viewBox="0 0 760 400" width="76%" style="margin:0 12% 1mm;display:block" font-family="Inter, Helvetica, Arial" font-size="13">
+    <defs>
+      <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b6660"/></marker>
+      <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1f8fa0"/></marker>
+      <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#cf5a2e"/></marker>
+      <marker id="v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3f9a4f"/></marker>
+      <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8b4ade"/></marker>
+    </defs>
+    <g fill="none" stroke-width="1.6">
+      <rect x="20" y="20" width="120" height="56" rx="8" stroke="#6b6660"/>
+      <rect x="200" y="20" width="170" height="56" rx="8" stroke="#26262a" fill="#ece5d8"/>
+      <rect x="420" y="20" width="150" height="56" rx="8" stroke="#26262a" fill="#ece5d8"/>
+      <rect x="610" y="20" width="130" height="56" rx="8" stroke="#26262a" fill="#ece5d8"/>
+      <rect x="20" y="170" width="150" height="56" rx="8" stroke="#26262a" fill="#f4dccf"/>
+      <rect x="210" y="170" width="120" height="56" rx="8" stroke="#26262a" fill="#f4dccf"/>
+      <rect x="370" y="170" width="120" height="56" rx="8" stroke="#26262a" fill="#f4dccf"/>
+      <rect x="530" y="170" width="120" height="56" rx="8" stroke="#26262a" fill="#f4dccf"/>
+      <rect x="210" y="308" width="150" height="52" rx="8" stroke="#6b6660"/>
+      <rect x="420" y="308" width="150" height="52" rx="8" stroke="#6b6660"/>
+      <rect x="610" y="308" width="110" height="52" rx="8" stroke="#6b6660"/>
+    </g>
+    <g text-anchor="middle" fill="#26262a">
+      <text x="80" y="45" font-weight="700">Clock</text><text x="80" y="63" font-size="11" fill="#6b6660">16ths</text>
+      <text x="285" y="45" font-weight="700">Long Form</text><text x="285" y="63" font-size="11" fill="#6b6660">the song's sections</text>
+      <text x="495" y="45" font-weight="700">The Changes</text><text x="495" y="63" font-size="11" fill="#6b6660">chords</text>
+      <text x="675" y="45" font-weight="700">Weighted</text><text x="675" y="63" font-size="11" fill="#6b6660">melody</text>
+      <text x="95" y="195" font-weight="700">Markovian</text><text x="95" y="213" font-size="11" fill="#6b6660">writes the beat</text>
+      <text x="270" y="195" font-weight="700">Interlock</text><text x="270" y="213" font-size="11" fill="#6b6660">parts answer</text>
+      <text x="430" y="195" font-weight="700">Rewrite</text><text x="430" y="213" font-size="11" fill="#6b6660">parts grow</text>
+      <text x="590" y="195" font-weight="700">Governor</text><text x="590" y="213" font-size="11" fill="#6b6660">keeps it on target</text>
+      <text x="285" y="331" font-weight="700">Drum voices</text><text x="285" y="348" font-size="11" fill="#6b6660">kick, hats, clap, perc</text>
+      <text x="495" y="331" font-weight="700">Synth voices</text><text x="495" y="348" font-size="11" fill="#6b6660">bass, pad, lead</text>
+      <text x="665" y="339" font-weight="700">Mixxa</text>
+    </g>
+    <g fill="none" stroke-width="1.6">
+      <path d="M140 48H198" stroke="#6b6660" marker-end="url(#g)"/>
+      <path d="M80 76V168" stroke="#6b6660" marker-end="url(#g)"/>
+      <path d="M370 48H418" stroke="#1f8fa0" stroke-width="2.4" marker-end="url(#c)"/>
+      <path d="M570 48H608" stroke="#cf5a2e" stroke-width="2.4" marker-end="url(#o)"/>
+      <path d="M250 76V168" stroke="#3f9a4f" stroke-width="2.2" marker-end="url(#v)"/>
+      <path d="M320 76V128H600V168" stroke="#8b4ade" stroke-width="2" marker-end="url(#p)"/>
+      <path d="M170 198H208" stroke="#cf5a2e" stroke-width="2" marker-end="url(#o)"/>
+      <path d="M330 198H368" stroke="#cf5a2e" stroke-width="2" marker-end="url(#o)"/>
+      <path d="M490 198H528" stroke="#cf5a2e" stroke-width="2" marker-end="url(#o)"/>
+      <path d="M600 226V256H110V228" stroke="#8b4ade" stroke-width="2" marker-end="url(#p)"/>
+      <path d="M430 226V282H300V306" stroke="#6b6660" marker-end="url(#g)"/>
+      <path d="M510 76V100H515V306" stroke="#6b6660" marker-end="url(#g)"/>
+      <path d="M740 76V290H555V306" stroke="#6b6660" marker-end="url(#g)"/>
+      <path d="M570 334H608" stroke="#6b6660" marker-end="url(#g)"/>
+      <path d="M285 360V384H665V362" stroke="#6b6660" marker-end="url(#g)"/>
+    </g>
+    <g font-size="11" font-weight="700">
+      <text x="394" y="40" text-anchor="middle" fill="#1f8fa0">LINK</text>
+      <text x="589" y="40" text-anchor="middle" fill="#cf5a2e">HARM</text>
+      <text x="88" y="120" fill="#6b6660">clock to all four</text>
+      <text x="257" y="150" fill="#3f9a4f">ACT</text>
+      <text x="330" y="122" fill="#8b4ade">ENERGY → density target</text>
+      <text x="183" y="190" fill="#cf5a2e">TRIG</text><text x="337" y="190" fill="#cf5a2e">TRIG</text><text x="497" y="190" fill="#cf5a2e">TRIG</text>
+      <text x="300" y="250" fill="#8b4ade">density CTRL → EVOLVE</text>
+      <text x="318" y="277" fill="#6b6660">A–E outs</text>
+      <text x="522" y="272" fill="#6b6660">CHORD, BASS</text>
+      <text x="680" y="305" fill="#6b6660">V/OCT</text>
+    </g>
+  </svg>
+  <table>
+    <tr><th>Cable</th><th>From → to</th><th>What it does</th></tr>
+    <tr><td><span class="jack">LINK</span></td><td>Long Form → The Changes, Mixxa</td><td>Bar lines, section changes, energy and the section number. Mixxa mutes its channels from Long Form's lanes.</td></tr>
+    <tr><td><span class="jack" style="color:var(--acc)">HARM</span></td><td>The Changes → Weighted</td><td>The chord, key, mode and style, so the melody leans on the chord.</td></tr>
+    <tr><td><span class="jack" style="color:#3f9a4f">ACT</span></td><td>Long Form → Interlock ACT IN</td><td>Long Form's lanes 1 to 6 mute and unmute drum tracks A to F. The mutes travel on down the chain.</td></tr>
+    <tr><td><span class="jack" style="color:#8b4ade">ENERGY</span></td><td>Long Form → Governor density TARGET</td><td>Each section asks for its own amount of drums: sparse in the Intro, full at the Peak.</td></tr>
+    <tr><td><span class="jack" style="color:#8b4ade">CTRL</span></td><td>Governor density → Markovian EVOLVE CV</td><td>Governor moves Markovian between snapshot X (plain) and Y (busy) until the drums are as busy as the section asks.</td></tr>
+    <tr><td><span class="jack">DIV</span></td><td>Markovian → Weighted TRIG</td><td>An 8th-note clock for the melody, in step with the drums.</td></tr>
+  </table>
+  <h3 style="margin-top:3mm">Lanes and tracks line up</h3>
+  <p>Long Form's lanes, Markovian's tracks and Mixxa's channels share one numbering, so one grid in Long Form arranges everything.</p>
+  <table>
+    <tr><th>Lane</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+    <tr><td>Long Form</td><td>kick</td><td>bass</td><td>hats</td><td>clap</td><td>perc</td><td>chords</td><td>lead</td><td>texture</td></tr>
+    <tr><td>Markovian</td><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>–</td><td>–</td></tr>
+    <tr><td>Mixxa channel</td><td>1 (ducks)</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
+  </table>
+  <p class="small">Track B plays the bass rhythm (on The Changes' BASS notes). Track F is free: the pad's gate comes from The Changes, so use F for a stab or a fill.</p>
+</section>
+
+<!-- ============================ ADDING FM -->
+<section class="page">
+  <h2>Adding the Francois Markovian modules</h2>
+  <p>Start from the sample setup in the user guide (Long Form, The Changes, Weighted, three synth voices and Mixxa). These six steps add the drum brain. You can stop after step 3 and add Rewrite and Governor later.</p>
+  <div class="step"><span class="num">1</span><div><b>Clock.</b> The same 16th clock that drives Long Form → <span class="jack">CLOCK</span> on Markovian, Interlock, Rewrite and Governor. If your clock has a reset, send it to every <span class="jack">RESET</span> too, so all five start on bar 1 together.</div></div>
+  <div class="step"><span class="num">2</span><div><b>The chain.</b> Markovian <span class="jack">TRIG</span> (poly) → Interlock <span class="jack">TRIG IN</span>. Interlock <span class="jack">TRIG</span> → Rewrite <span class="jack">TRIG</span>, and Interlock <span class="jack">ACT</span> → Rewrite <span class="jack">ACT</span>. Rewrite <span class="jack">TRIG</span> → Governor <span class="jack">TRIG</span>, and Rewrite <span class="jack">ACT</span> → Governor <span class="jack">ACT</span>.</div></div>
+  <div class="step"><span class="num">3</span><div><b>Long Form arranges the drums.</b> Long Form <span class="jack">ACT</span> → Interlock <span class="jack">ACT IN</span>. Long Form's lanes 1 to 6 now mute tracks A to F, and Rewrite and Governor hear the same mutes. Markovian's own letter mutes still work on top, for playing live.</div></div>
+  <div class="step"><span class="num">4</span><div><b>Drum outs.</b> Rewrite's mono outs <b>A</b> → kick, <b>C</b> → hats, <b>D</b> → clap, <b>E</b> → perc, each into Mixxa channels 1, 3, 4 and 5. Rewrite <b>B</b> → the bass envelope's gate: the bass now plays the drummer's rhythm, on The Changes' notes.</div></div>
+  <div class="step"><span class="num">5</span><div><b>Energy.</b> Long Form <span class="jack">ENERGY</span> → Governor's density <span class="jack">TARGET</span> CV, with the density TARGET knob fully left. Governor density <span class="jack">CTRL</span> → Markovian <span class="jack">EVOLVE</span> CV, with the EVOLVE knob fully left. Make snapshot Y the busier one.</div></div>
+  <div class="step"><span class="num">6</span><div><b>Melody timing.</b> Markovian <span class="jack">DIV</span> (set to <b>/2</b>) → Weighted <span class="jack">TRIG</span> and your random source's trigger. Long Form <span class="jack">BAR</span> stays on Weighted's <span class="jack">ACCENT</span>.</div></div>
+
+  <h3>Settings that matter</h3>
+  <table class="set">
+    <tr><th>Module</th><th>Setting</th></tr>
+    <tr><td>Francois Markovian</td><td>DIV /2, OFFSET 0. The 8 steps are 8 sixteenths, which is half a bar, so step 1 and step 5 are the beats. Keep X close to straight and draw your fills into Y.</td></tr>
+    <tr><td>Interlock</td><td>AMOUNT about 70%, MEMORY 1. Start with a handful of cells (below), not a full grid.</td></tr>
+    <tr><td>Rewrite</td><td>LOCK on A (kick) and D (clap) so the floor stays put. Leave the other tracks growing at the default rules. Rewrite passes triggers straight through until you press <b>SEED</b>.</td></tr>
+    <tr><td>Governor</td><td>WINDOW 32, density TARGET fully left (Long Form sets it), variety TARGET 30%, RESPONSE default, WOBBLE 0.</td></tr>
+  </table>
+  <div class="two">
+    <div>
+      <h4>A first Interlock grid</h4>
+      <table>
+        <tr><th>Cell</th><th>Value</th><th>You hear</th></tr>
+        <tr><td>A → E</td><td>+40</td><td>The perc answers the kick</td></tr>
+        <tr><td>D → C</td><td>−60</td><td>The hat drops out after the clap</td></tr>
+        <tr><td>C → C</td><td>−30</td><td>Fewer hat rolls</td></tr>
+        <tr><td>E → B</td><td>+30</td><td>Ghost bass notes after the perc</td></tr>
+      </table>
+    </div>
+    <div>
+      <h4>Optional extra links</h4>
+      <ul>
+        <li>Governor variety <span class="jack">ERR</span> → The Changes <span class="jack">DRIFT</span> CV: when the drums have been repeating, the chords drift more.</li>
+        <li>Long Form <span class="jack">FILL</span> → Markovian <span class="jack">EVOLVE</span> CV: snapshot Y plays at the end of every section.</li>
+        <li>The Changes <span class="jack">TENSION</span> → Interlock <span class="jack">AMOUNT</span> CV: the parts answer each other more on tense chords.</li>
+        <li>Governor <span class="jack">SAME</span> → Rewrite <span class="jack">REWRITE NOW</span>, <span class="jack">VARIED</span> → <span class="jack">HOLD</span>: the drums grow only when they've gone stale.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ RECIPE 1: HOUSE -->
+<section class="page">
+  <h2><span class="tag">Recipe 1</span>House in F minor: the ready-made patch</h2>
+  <p>The patch <b>house-f-minor.vcv</b> holds the whole system: the user guide's sample setup plus the drum brain, with simple drum and synth voices from VCV Fundamental. Open it with <b>File → Open</b> in Rack. You need the Weighted, LongFormMixxa and Francois Markovian plugins installed, plus VCV Fundamental, which comes with Rack.</p>
+  <div class="box"><b>Before you press anything:</b> click the Audio module (bottom row, right of Mixxa) and choose your audio device. Rack starts running straight away, so the track begins as soon as sound can get out.</div>
+  <h3>What's in the patch</h3>
+  <table>
+    <tr><th>Row</th><th>Modules</th></tr>
+    <tr><td>1</td><td>LFO (the 124 BPM 16th clock), Long Form, The Changes, Weighted, Random</td></tr>
+    <tr><td>2</td><td>Francois Markovian, Interlock, Rewrite, Governor</td></tr>
+    <tr><td>3</td><td>Drum voices: kick (VCO, ADSR, VCA), hats and clap (one Noise into two filters), perc</td></tr>
+    <tr><td>4</td><td>Bass, pad and lead voices (VCO, VCF, ADSR, VCA each), Delay on the lead</td></tr>
+    <tr><td>5</td><td>Mixxa (kick ducks the bass, pad and lead; GLUE 30%) and Audio</td></tr>
+  </table>
+  <p>Cables are colour-coded: red clock, yellow LINK, purple HARM, green pitch, blue gates, orange triggers, light green ACT, violet CVs, white audio.</p>
+  <h3>The beat (Markovian, snapshot X)</h3>
+  <div data-p="A kick|100,0,0,0,100,0,0,0|four on the floor;B bass|0,0,100,0,0,0,100,25|off-beat 8ths;C hats|0,30,100,30,0,30,100,30|open off-beats, light 16ths;D clap|0,0,0,0,100,0,0,0|beats 2 and 4;E perc|0,20,0,40,0,0,30,35|"></div>
+  <p class="small">Numbers are chances in %; a full square always plays. Snapshot Y is busier, with more hats and perc and a few jumps in the matrix (step 4 sometimes repeats, step 8 sometimes jumps back). Governor moves towards Y as Long Form's energy rises.</p>
+</section>
+
+<section class="page">
+  <h3 style="margin-top:0">Settings in the patch</h3>
+  <table class="set">
+    <tr><td>The Changes</td><td>House, KEY F, MODE Style (minor), RATE 1 bar, LOOP 4, FOCUS 1, COLOUR noon, SPREAD 30%, DRIFT 20%. TENSION opens the pad filter a little.</td></tr>
+    <tr><td>Weighted</td><td>PULL +50%, STEP 50%, RANGE 2, OCTAVE +1. Triggered by Markovian DIV (8ths), accent from Long Form BAR.</td></tr>
+    <tr><td>Long Form</td><td>The default form (Intro 16, Groove 32, Build 8, Peak 32, Break 16, Drop 8, Peak 2 32, Outro 16), DRIFT 15%.</td></tr>
+    <tr><td>Drums</td><td>Interlock grid as on the previous page, AMOUNT 70%, MEMORY 1. Rewrite: A and D locked. Governor: WINDOW 32, variety 30%, SAME → REWRITE NOW, VARIED → HOLD.</td></tr>
+  </table>
+  <h3>Playing it</h3>
+  <ol>
+    <li>Let the Intro and the start of the Groove play. When you like the groove, press Rewrite's <b>SEED</b>. From then on the hats, perc and bass rhythm grow slowly, but only when Governor hears them repeating.</li>
+    <li>Hold Rewrite's <b>REWIND</b> for a second at the Drop, so the drop lands on the bare seed.</li>
+    <li>Press <b>NEW</b> on The Changes for a fresh chord loop in the current section, or <b>LOCK</b> to keep the one you have.</li>
+    <li>Turn Weighted's PULL left in the Break for a floating melody, and back right for the Drop.</li>
+    <li>Edit the grid in Long Form to change who plays where. The drums, bass, pad and lead all follow it.</li>
+  </ol>
+</section>
+
+<!-- ============================ RECIPES 2 + 3 -->
+<section class="page">
+  <h2><span class="tag">Recipe 2</span>Sunday gospel</h2>
+  <p>A slow 4/4 in Ab at about 84 BPM, with rich chords that move every bar and a drummer who fills at the end of each section.</p>
+  <table class="set">
+    <tr><td>The Changes</td><td>STYLE Gospel, KEY Ab, COLOUR three o'clock (11ths and 13ths), SPREAD noon, LOOP 8, RATE 1, FOCUS 1.5. Right-click → Voices 6.</td></tr>
+    <tr><td>Weighted</td><td>PULL +75%, STEP 70%, right-click → Chord on V/Oct → "add the 3rd".</td></tr>
+    <tr><td>Long Form</td><td>Energy low in the verses, high at the Peak. Long Form <span class="jack">FILL</span> → Markovian <span class="jack">EVOLVE</span> CV, instead of Governor.</td></tr>
+    <tr><td>Interlock</td><td>D → E +60 (a ghost note after the backbeat), A → B +40 (the bass follows the kick). MEMORY 1.</td></tr>
+    <tr><td>Rewrite, Governor</td><td>Not needed. Patch Interlock's outs straight to the voices.</td></tr>
+  </table>
+  <div data-p="A kick|100,0,0,30,0,0,60,0|;B bass|100,0,0,0,0,0,50,0|with the kick;C hats|90,0,70,0,90,0,70,0|8ths;D snare|0,0,0,0,100,0,0,0|backbeat;E ghost|0,30,0,0,0,40,0,35|soft snare"></div>
+  <p class="small">In snapshot Y, give row 8 of the matrix a 40% jump to itself and E high chances on steps 6 to 8: those are the fills that FILL brings in. Listen for Bbm11 → Eb9 → Abmaj9 (ii, V, I) and the passing Ddim7 between IV and I. BASS sometimes takes the 3rd or 5th, as a gospel pianist's left hand would.</p>
+
+  <h2 style="margin-top:7mm"><span class="tag">Recipe 3</span>One-chord funk</h2>
+  <p>E at about 100 BPM. One chord, a busy 16th groove, and a melody that only speaks in the gaps the drums leave.</p>
+  <table class="set">
+    <tr><td>The Changes</td><td>STYLE Funk, KEY E, LOOP 2, RATE 2, COLOUR noon, FOCUS 2 (long vamps). Patch <span class="jack">TOP</span> → a clavinet-like voice with a short envelope triggered by track C.</td></tr>
+    <tr><td>Weighted</td><td>PULL −40% for bluesy notes around the chord, RANGE 1. <span class="jack">TRIG</span> from Interlock's out <b>F</b>, not DIV.</td></tr>
+    <tr><td>Markovian</td><td>Matrix: straight, with a 20% jump to itself on steps 4 and 8 (stutters).</td></tr>
+    <tr><td>Interlock</td><td>B → A −100 (no kick straight after a bass note), A → F −100 (the lead never lands on the kick), E → D +40 (ghost snare after the perc). MEMORY 1.</td></tr>
+    <tr><td>Governor</td><td>Variety TARGET 20%. <span class="jack">VARIED</span> → Markovian <span class="jack">FREEZE</span> gate: when it gets too busy the groove locks into a loop, and lets go once it's been repeating.</td></tr>
+  </table>
+  <div data-p="A kick|100,0,0,60,0,0,50,0|;B bass|100,0,50,0,0,40,0,60|;C hats|80,60,80,60,80,60,80,60|and clav;D snare|0,0,0,0,100,0,0,20|;E perc|0,40,0,0,0,40,0,0|ghosts;F lead|0,0,60,0,0,0,0,60|melody in the gaps"></div>
+  <p class="small">The loop sits on E9, sometimes E7#9, stepping to A9 and back. Turn PULL further left for more grit.</p>
+</section>
+
+<!-- ============================ RECIPE 4 + WITHOUT LONG FORM -->
+<section class="page">
+  <h2><span class="tag">Recipe 4</span>Detroit drift</h2>
+  <p>C Dorian at about 128 BPM. Two-chord vamps and a drum part that grows on its own, with the chords and drums nudging each other.</p>
+  <table class="set">
+    <tr><td>The Changes</td><td>STYLE Detroit, KEY C, LOOP 4, RATE 2, COLOUR three o'clock (m11), SPREAD full, DRIFT 30%. Patch <span class="jack">TENSION</span> → the pad filter's cutoff CV.</td></tr>
+    <tr><td>Long Form</td><td>A long Groove (32 bars) and STEER low, so the form wanders between the calmer sections.</td></tr>
+    <tr><td>Rewrite</td><td>LOCK A and D. Track C: HIT BECOMES ●● (a roll), REST BECOMES ·●, EVERY 4, AMOUNT 40%. Track E: HIT BECOMES ·● (pushed late), EVERY 2. FIT: SQZ.</td></tr>
+    <tr><td>Governor</td><td>WINDOW 32, variety TARGET 30%. <span class="jack">SAME</span> → Rewrite <span class="jack">REWRITE NOW</span>, <span class="jack">VARIED</span> → Rewrite <span class="jack">HOLD</span>. Variety <span class="jack">ERR</span> → The Changes <span class="jack">DRIFT</span> CV.</td></tr>
+  </table>
+  <div data-p="A kick|100,0,0,0,100,0,0,0|;B bass|0,0,100,0,0,0,100,30|;C hats|0,0,100,0,0,0,100,0|Rewrite grows these;D clap|0,0,0,0,100,0,0,0|;E perc|0,0,0,50,0,0,0,50|and these"></div>
+  <p class="small">Press SEED after a few bars. Governor waits until the hats and perc have been repeating, then lets Rewrite grow them. While the drums repeat, its variety ERR is positive and the chords drift more; once the drums change, the chords settle. Press The Changes' LOCK when it lands somewhere you love, and right-click → <i>Restore this loop</i> to go back.</p>
+
+  <h3 style="margin-top:6mm">Without Long Form</h3>
+  <p>The Changes works on its own: clock 16ths into its <span class="jack">CLOCK</span> jack, and it changes chord every RATE bars with a single free-running loop. With no clock at all, each trigger at <span class="jack">CHANGE</span> moves to the next chord, handy for playing chords by hand from a button or a sequencer. The drum chain runs from the same clock. Without Long Form's ACT, Markovian's letter mutes arrange the drums, and its <span class="jack">ACT</span> out goes into Interlock instead.</p>
+
+  <h3>If the drums misbehave</h3>
+  <table>
+    <tr><th>What you see</th><th>Why, and what to do</th></tr>
+    <tr><td>Drums don't follow Long Form's grid</td><td>Long Form <span class="jack">ACT</span> must go into Interlock's <span class="jack">ACT IN</span>, and Interlock's and Rewrite's ACT outs on down the chain.</td></tr>
+    <tr><td>Rewrite never changes anything</td><td>It passes triggers through until you press <b>SEED</b>. Also check that HOLD isn't on and that the track isn't locked.</td></tr>
+    <tr><td>The drums are always busy (or always sparse)</td><td>Governor's density TARGET knob adds to Long Form's energy: turn it fully left. Check its POL switch is down (+), and that Y is the busier snapshot.</td></tr>
+    <tr><td>Hits fall off the grid</td><td>Every module in the chain needs the same clock. Interlock in particular rolls its ghost hits just after the clock.</td></tr>
+    <tr><td>The patch opens with missing modules</td><td>Rack lists the plugins it can't find. Install Weighted 2.6.0, LongFormMixxa 2.1.0 and Francois Markovian 2.5.0 (all mac-arm64 files from the builds folder), then reopen.</td></tr>
+  </table>
+</section>
+
+</body></html>
