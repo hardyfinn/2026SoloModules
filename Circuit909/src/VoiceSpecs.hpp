@@ -14,7 +14,7 @@ inline const VoiceSpec& spec() {
 		{"ACCENT", "ACCENT", "Accent (the 909's TOTAL ACCENT: how much louder an accented hit is)", 0.600000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 0, 0, false},
 		{"LEVEL", "LEVEL", "Level", 1.000000f, DISP_PCT, 0.0f, 100.0f, "%", 1, 1, 0, true},
 		{"AGE", "AGE", "Age (0 = new unit on spec; up = this unit's part tolerances, hit-to-hit drift, worn caps at the top)", 0.000000f, DISP_PCT, 0.0f, 100.0f, "%", 4, 1, 0, true},
-		{"BASE", "BASE", "Base (the note the sweep lands on; a trimmer on the 909)", 0.425112f, DISP_EXP, 25.0f, 140.0f, " Hz", 2, 0, 0, false},
+		{"BASE", "BASE", "Base (the note the sweep lands on; a trimmer on the 909, stock 49.5 Hz as measured)", 0.396512f, DISP_EXP, 25.0f, 140.0f, " Hz", 2, 0, 0, false},
 		{"SWEEP", "SWEEP", "Sweep (how far above BASE the hit starts)", 0.450000f, DISP_LIN, 0.0f, 4.0f, " oct", 2, 1, 0, false},
 		{"BEND", "BEND", "Bend (a slower last drop into the note)", 0.100000f, DISP_LIN, 0.0f, 1.5f, " oct", 2, 2, 0, false},
 		{"PULSE", "PULSE", "Pulse (the click's square pulse)", 0.500000f, DISP_PCT, 0.0f, 100.0f, "%", 3, 0, 0, false},

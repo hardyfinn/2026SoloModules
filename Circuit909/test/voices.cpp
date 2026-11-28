@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
 		auto s = render<KickEngine>(stockKnobs<KickEngine>(), 0.f, 1.f);
 		float f0 = cycleHz(s, 0.f), f1 = pitch(s, 0.25f, 0.6f);
 		printf("  kick: first cycle %.0f Hz, settled %.1f Hz\n", f0, f1);
-		check(std::fabs(f1 / 52.f - 1.f) < 0.06f, "kick settles near 52 Hz");
+		check(std::fabs(f1 / 49.5f - 1.f) < 0.02f, "kick settles near 49.5 Hz (measured 909)");
 		check(f0 > 2.f * f1, "kick sweep starts more than an octave up");
 		auto k = stockKnobs<KickEngine>(); k[ki<KickEngine>("TUNE")] = 1.f;
 		auto l = render<KickEngine>(k, 0.f, 1.f);
