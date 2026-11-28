@@ -43,7 +43,7 @@ struct RateQuantity : ParamQuantity {
 		if (hz < 100) hz *= 1000.0;                       // "32" means 32 kHz
 		int m = model();
 		double v = std::log(hz / greybox::FS_MIN) / std::log(greybox::FS_MAX[m] / greybox::FS_MIN);
-		setValue((float)clamp(v, 0.0, 1.0));
+		setValue((float)std::min(std::max(v, 0.0), 1.0));
 	}
 };
 
