@@ -1,0 +1,35 @@
+{
+ "plugin": "BulgariaFable",
+ "model": "Horo",
+ "version": "2.1.0",
+ "params": [
+  {
+   "value": 2.0,
+   "id": 0
+  },
+  {
+   "value": 5.0,
+   "id": 1
+  },
+  {
+   "value": 0.0,
+   "id": 2
+  },
+  {
+   "value": 1.0,
+   "id": 3
+  },
+  {
+   "value": 0.0,
+   "id": 4
+  }
+ ],
+ "data": {
+  "user1": "3+3+2",
+  "user2": "2+3+3",
+  "user3": "3+2+3",
+  "user4": "2+2+2+2",
+  "phraseMode": 2,
+  "changeAtPhrase": false
+ }
+}

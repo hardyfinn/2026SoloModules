@@ -1,7 +1,7 @@
 {
   "slug": "BulgariaFable",
   "name": "Bulgaria Fable",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "GPL-3.0-or-later",
   "brand": "Haer",
   "author": "Haer",
@@ -17,7 +17,22 @@
       "slug": "Bulgaria",
       "name": "Bulgaria",
       "description": "Harmonises one melody the way Bulgarian village choirs do: a drone and up to seven more voices that sit a deliberately mistuned second from the lead. Rub set in cents or as a beat rate in Hz, village tunings, slides, throat shakes and the phrase-end whoop. Pitch, gate and push CV out; makes no sound itself.",
-      "tags": ["Polyphonic", "Quantizer", "Utility", "Random"]
+      "tags": [
+        "Polyphonic",
+        "Quantizer",
+        "Utility",
+        "Random"
+      ]
+    },
+    {
+      "slug": "Horo",
+      "name": "Horo",
+      "description": "Clock and accent sequencer for Bulgarian uneven dance metres. Feed it a fast clock, pick ruchenitsa, daichovo, kopanitsa, buchimish or your own grouping of 2s and 3s; get beat and long-beat gates, bar and phrase triggers, an accent CV, and a pulse clock whose long beats can be stretched. The phrase trigger is made for Bulgaria's PHRASE input.",
+      "tags": [
+        "Clock modulator",
+        "Sequencer",
+        "Utility"
+      ]
     }
   ]
 }

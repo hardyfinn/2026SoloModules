@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # docs/MANUAL.md -> docs/Bulgaria-Manual.pdf   (pip install markdown; needs node + playwright)
-import os, subprocess, markdown
+#   python3 tools/make_pdf.py [source.md output.pdf]   e.g. docs/HORO-MANUAL.md docs/Horo-Manual.pdf
+import os, sys, subprocess, markdown
 HERE = os.path.dirname(os.path.abspath(__file__))
 DOCS = os.path.join(HERE, "..", "docs")
-md = open(os.path.join(DOCS, "MANUAL.md")).read()
+SRC = os.path.abspath(sys.argv[1]) if len(sys.argv) > 2 else os.path.join(DOCS, "MANUAL.md")
+PDF = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else os.path.join(DOCS, "Bulgaria-Manual.pdf")
+md = open(SRC).read()
 body = markdown.markdown(md, extensions=["tables", "fenced_code"])
 css = """body{font-family:Inter,Helvetica,Arial,sans-serif;font-size:10.5pt;line-height:1.45;color:#1b1b1b;margin:18mm 16mm}
 h1{font-size:24pt;margin:0 0 4mm}h2{font-size:15pt;color:#9C2F28;border-bottom:1px solid #ccc;padding-bottom:1mm;margin-top:8mm;page-break-after:avoid}
@@ -13,6 +16,6 @@ img{width:100%;display:block;margin:4mm auto}code{background:#F6E7C8;padding:0 1
 html = f"<html><head><meta charset='utf-8'><style>{css}</style></head><body>{body}</body></html>"
 p = os.path.join(DOCS, "manual.html")
 open(p, "w").write(html)
-subprocess.run(["node", os.path.join(HERE, "pdf.js"), os.path.abspath(p), os.path.abspath(os.path.join(DOCS, "Bulgaria-Manual.pdf"))], check=True)
+subprocess.run(["node", os.path.join(HERE, "pdf.js"), os.path.abspath(p), PDF], check=True)
 os.remove(p)
 print("ok")

@@ -10,3 +10,5 @@ test/render
 test/test
 test/tool
 __pycache__/
+test/horo_test
+test/horo_tool
