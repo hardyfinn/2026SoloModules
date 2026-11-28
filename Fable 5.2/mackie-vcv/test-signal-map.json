@@ -1,0 +1,446 @@
+{
+ "sr": 48000,
+ "samples": 8686044,
+ "sections": [
+  {
+   "name": "marker_start",
+   "start": 48000,
+   "length": 72000
+  },
+  {
+   "name": "ref_1k_-20",
+   "start": 144000,
+   "length": 240000
+  },
+  {
+   "name": "sweep_-40",
+   "start": 432000,
+   "length": 384000,
+   "level": -40,
+   "f0": 20,
+   "f1": 20000,
+   "dur": 8
+  },
+  {
+   "name": "sweep_-20",
+   "start": 864000,
+   "length": 384000,
+   "level": -20,
+   "f0": 20,
+   "f1": 20000,
+   "dur": 8
+  },
+  {
+   "name": "sweep_-6",
+   "start": 1296000,
+   "length": 384000,
+   "level": -6,
+   "f0": 20,
+   "f1": 20000,
+   "dur": 8
+  },
+  {
+   "name": "sweep_-1",
+   "start": 1728000,
+   "length": 384000,
+   "level": -1,
+   "f0": 20,
+   "f1": 20000,
+   "dur": 8
+  },
+  {
+   "name": "steps_50",
+   "start": 2160000,
+   "length": 499200,
+   "freq": 50,
+   "levels": [
+    -50,
+    -48,
+    -46,
+    -44,
+    -42,
+    -40,
+    -38,
+    -36,
+    -34,
+    -32,
+    -30,
+    -28,
+    -26,
+    -24,
+    -22,
+    -20,
+    -18,
+    -16,
+    -14,
+    -12,
+    -10,
+    -8,
+    -6,
+    -4,
+    -2,
+    -1
+   ],
+   "step": 0.4
+  },
+  {
+   "name": "steps_1000",
+   "start": 2673600,
+   "length": 499200,
+   "freq": 1000,
+   "levels": [
+    -50,
+    -48,
+    -46,
+    -44,
+    -42,
+    -40,
+    -38,
+    -36,
+    -34,
+    -32,
+    -30,
+    -28,
+    -26,
+    -24,
+    -22,
+    -20,
+    -18,
+    -16,
+    -14,
+    -12,
+    -10,
+    -8,
+    -6,
+    -4,
+    -2,
+    -1
+   ],
+   "step": 0.4
+  },
+  {
+   "name": "steps_5000",
+   "start": 3187200,
+   "length": 499200,
+   "freq": 5000,
+   "levels": [
+    -50,
+    -48,
+    -46,
+    -44,
+    -42,
+    -40,
+    -38,
+    -36,
+    -34,
+    -32,
+    -30,
+    -28,
+    -26,
+    -24,
+    -22,
+    -20,
+    -18,
+    -16,
+    -14,
+    -12,
+    -10,
+    -8,
+    -6,
+    -4,
+    -2,
+    -1
+   ],
+   "step": 0.4
+  },
+  {
+   "name": "triangle_30",
+   "start": 3700800,
+   "length": 144000
+  },
+  {
+   "name": "ramp_220",
+   "start": 3859200,
+   "length": 480000,
+   "from_db": -60,
+   "to_db": -1
+  },
+  {
+   "name": "imd_60_7000",
+   "start": 4353600,
+   "length": 264000,
+   "levels": [
+    -30,
+    -27,
+    -24,
+    -21,
+    -18,
+    -15,
+    -12,
+    -9,
+    -6,
+    -3,
+    -1
+   ],
+   "step": 0.5
+  },
+  {
+   "name": "imd_19k_20k",
+   "start": 4632000,
+   "length": 264000,
+   "levels": [
+    -30,
+    -27,
+    -24,
+    -21,
+    -18,
+    -15,
+    -12,
+    -9,
+    -6,
+    -3,
+    -1
+   ],
+   "step": 0.5
+  },
+  {
+   "name": "recovery_5ms",
+   "start": 4910400,
+   "length": 14640,
+   "hot_ms": 5
+  },
+  {
+   "name": "recovery_20ms",
+   "start": 4939440,
+   "length": 15360,
+   "hot_ms": 20
+  },
+  {
+   "name": "recovery_100ms",
+   "start": 4969200,
+   "length": 19200,
+   "hot_ms": 100
+  },
+  {
+   "name": "square_5",
+   "start": 5002800,
+   "length": 96000
+  },
+  {
+   "name": "pink_-20rms",
+   "start": 5113200,
+   "length": 240000
+  },
+  {
+   "name": "hit_kick808_-18",
+   "start": 5401200,
+   "length": 43200,
+   "level": -18
+  },
+  {
+   "name": "hit_kick808_-12",
+   "start": 5451600,
+   "length": 43200,
+   "level": -12
+  },
+  {
+   "name": "hit_kick808_-6",
+   "start": 5502000,
+   "length": 43200,
+   "level": -6
+  },
+  {
+   "name": "hit_kick808_-1",
+   "start": 5552400,
+   "length": 43200,
+   "level": -1
+  },
+  {
+   "name": "hit_kick909_-18",
+   "start": 5602800,
+   "length": 21600,
+   "level": -18
+  },
+  {
+   "name": "hit_kick909_-12",
+   "start": 5631600,
+   "length": 21600,
+   "level": -12
+  },
+  {
+   "name": "hit_kick909_-6",
+   "start": 5660400,
+   "length": 21600,
+   "level": -6
+  },
+  {
+   "name": "hit_kick909_-1",
+   "start": 5689200,
+   "length": 21600,
+   "level": -1
+  },
+  {
+   "name": "hit_snare_-18",
+   "start": 5718000,
+   "length": 14400,
+   "level": -18
+  },
+  {
+   "name": "hit_snare_-12",
+   "start": 5739600,
+   "length": 14400,
+   "level": -12
+  },
+  {
+   "name": "hit_snare_-6",
+   "start": 5761200,
+   "length": 14400,
+   "level": -6
+  },
+  {
+   "name": "hit_snare_-1",
+   "start": 5782800,
+   "length": 14400,
+   "level": -1
+  },
+  {
+   "name": "hit_hat_closed_-18",
+   "start": 5804400,
+   "length": 3840,
+   "level": -18
+  },
+  {
+   "name": "hit_hat_closed_-12",
+   "start": 5815440,
+   "length": 3840,
+   "level": -12
+  },
+  {
+   "name": "hit_hat_closed_-6",
+   "start": 5826480,
+   "length": 3840,
+   "level": -6
+  },
+  {
+   "name": "hit_hat_closed_-1",
+   "start": 5837520,
+   "length": 3840,
+   "level": -1
+  },
+  {
+   "name": "hit_hat_open_-18",
+   "start": 5848560,
+   "length": 19200,
+   "level": -18
+  },
+  {
+   "name": "hit_hat_open_-12",
+   "start": 5874960,
+   "length": 19200,
+   "level": -12
+  },
+  {
+   "name": "hit_hat_open_-6",
+   "start": 5901360,
+   "length": 19200,
+   "level": -6
+  },
+  {
+   "name": "hit_hat_open_-1",
+   "start": 5927760,
+   "length": 19200,
+   "level": -1
+  },
+  {
+   "name": "hit_clap_-18",
+   "start": 5954160,
+   "length": 14400,
+   "level": -18
+  },
+  {
+   "name": "hit_clap_-12",
+   "start": 5975760,
+   "length": 14400,
+   "level": -12
+  },
+  {
+   "name": "hit_clap_-6",
+   "start": 5997360,
+   "length": 14400,
+   "level": -6
+  },
+  {
+   "name": "hit_clap_-1",
+   "start": 6018960,
+   "length": 14400,
+   "level": -1
+  },
+  {
+   "name": "drums_A_-12",
+   "start": 6040560,
+   "length": 202057,
+   "level": -12
+  },
+  {
+   "name": "drums_A_-6",
+   "start": 6257017,
+   "length": 202057,
+   "level": -6
+  },
+  {
+   "name": "drums_A_-1",
+   "start": 6473474,
+   "length": 202057,
+   "level": -1
+  },
+  {
+   "name": "acid_-12",
+   "start": 6689931,
+   "length": 197257,
+   "level": -12
+  },
+  {
+   "name": "acid_-6",
+   "start": 6901588,
+   "length": 197257,
+   "level": -6
+  },
+  {
+   "name": "acid_-1",
+   "start": 7113245,
+   "length": 197257,
+   "level": -1
+  },
+  {
+   "name": "drums_808_-6",
+   "start": 7324902,
+   "length": 202057,
+   "level": -6
+  },
+  {
+   "name": "drums_808_-1",
+   "start": 7541359,
+   "length": 202057,
+   "level": -1
+  },
+  {
+   "name": "validation_mix_-9",
+   "start": 7757816,
+   "length": 380114,
+   "level": -9,
+   "held_back": true
+  },
+  {
+   "name": "validation_mix_-1",
+   "start": 8161930,
+   "length": 380114,
+   "level": -1,
+   "held_back": true
+  },
+  {
+   "name": "marker_end",
+   "start": 8566044,
+   "length": 72000
+  }
+ ]
+}
