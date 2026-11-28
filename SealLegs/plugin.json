@@ -1,0 +1,27 @@
+{
+  "slug": "SealLegs",
+  "name": "SealLegs",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "SealLegs",
+      "name": "SealLegs",
+      "description": "Stereo character delay: tape, bucket-brigade and digital models, wow and flutter, loop filters, drive, noise, plate fog, freeze, reverse, half and double speed, tape stop, duck, mutate",
+      "tags": [
+        "Delay",
+        "Effect",
+        "Reverb"
+      ]
+    }
+  ]
+}
