@@ -1,0 +1,110 @@
+{
+ "01_trio-with-the-listening-drummer": {
+  "preset": "01_Medium Swing",
+  "feel": "swing",
+  "bpm": 132,
+  "bars": 16,
+  "drum_notes": 217,
+  "pushes": 16,
+  "caught": 10,
+  "comps": 21,
+  "comps_on_piano": 12,
+  "fills": 3
+ },
+ "02_same-take-drummer-not-listening": {
+  "preset": "01_Medium Swing",
+  "feel": "swing",
+  "bpm": 132,
+  "bars": 16,
+  "drum_notes": 212,
+  "pushes": 15,
+  "caught": 0,
+  "comps": 13,
+  "comps_on_piano": 1,
+  "fills": 3
+ },
+ "03_energy-low": {
+  "preset": "01_Medium Swing",
+  "feel": "swing",
+  "bpm": 132,
+  "bars": 16,
+  "drum_notes": 205,
+  "pushes": 16,
+  "caught": 9,
+  "comps": 15,
+  "comps_on_piano": 9,
+  "fills": 2
+ },
+ "04_energy-high": {
+  "preset": "01_Medium Swing",
+  "feel": "swing",
+  "bpm": 132,
+  "bars": 16,
+  "drum_notes": 169,
+  "pushes": 15,
+  "caught": 15,
+  "comps": 26,
+  "comps_on_piano": 15,
+  "fills": 2
+ },
+ "05_drums-alone-medium-swing": {
+  "preset": "01_Medium Swing",
+  "feel": "swing",
+  "bpm": 132,
+  "bars": 16,
+  "drum_notes": 217,
+  "pushes": 16,
+  "caught": 10,
+  "comps": 21,
+  "comps_on_piano": 12,
+  "fills": 3
+ },
+ "06_blues-building-from-quiet-to-loud": {
+  "preset": "07_Blues Shells",
+  "feel": "swing",
+  "bpm": 120,
+  "bars": 16,
+  "drum_notes": 216,
+  "pushes": 12,
+  "caught": 8,
+  "comps": 21,
+  "comps_on_piano": 10,
+  "fills": 3
+ },
+ "07_fast-bebop": {
+  "preset": "02_Fast Bebop Shells",
+  "feel": "swing",
+  "bpm": 208,
+  "bars": 16,
+  "drum_notes": 225,
+  "pushes": 15,
+  "caught": 12,
+  "comps": 20,
+  "comps_on_piano": 12,
+  "fills": 2
+ },
+ "08_ballad-brushes": {
+  "preset": "03_Ballad",
+  "feel": "ballad",
+  "bpm": 62,
+  "bars": 16,
+  "drum_notes": 222,
+  "pushes": 0,
+  "caught": 28,
+  "comps": 0,
+  "comps_on_piano": 0,
+  "fills": 4
+ },
+ "09_bossa": {
+  "preset": "04_Bossa",
+  "feel": "bossa",
+  "bpm": 126,
+  "bars": 16,
+  "drum_notes": 268,
+  "pushes": 0,
+  "caught": 0,
+  "comps": 0,
+  "comps_on_piano": 0,
+  "fills": 1
+ }
+}
