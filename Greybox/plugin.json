@@ -1,0 +1,27 @@
+{
+  "slug": "Greybox",
+  "name": "Greybox",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Greybox",
+      "name": "Greybox",
+      "description": "12-bit sampler voice in the style of the late-80s rack samplers and drum-machine samplers: variable-clock pitch, 36 dB tracking filter, cyclic time-stretch, companded 12-bit mode, live sampling, age, mutate",
+      "tags": [
+        "Sampler",
+        "Drum",
+        "Distortion"
+      ]
+    }
+  ]
+}
