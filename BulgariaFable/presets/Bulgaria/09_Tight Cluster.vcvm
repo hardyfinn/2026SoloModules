@@ -1,0 +1,70 @@
+{
+ "plugin": "BulgariaFable",
+ "model": "Bulgaria",
+ "version": "2.0.0",
+ "params": [
+  {
+   "value": 0.0,
+   "id": 0
+  },
+  {
+   "value": 0.0,
+   "id": 1
+  },
+  {
+   "value": 3.0,
+   "id": 2
+  },
+  {
+   "value": 1.0,
+   "id": 3
+  },
+  {
+   "value": 8.0,
+   "id": 4
+  },
+  {
+   "value": 1.0,
+   "id": 5
+  },
+  {
+   "value": 0.422222,
+   "id": 6
+  },
+  {
+   "value": 0.0,
+   "id": 7
+  },
+  {
+   "value": 0.0,
+   "id": 8
+  },
+  {
+   "value": 0.5,
+   "id": 9
+  },
+  {
+   "value": 0.0,
+   "id": 10
+  },
+  {
+   "value": 0.2,
+   "id": 11
+  },
+  {
+   "value": 0.0,
+   "id": 12
+  },
+  {
+   "value": 0.4,
+   "id": 13
+  },
+  {
+   "value": 0.3,
+   "id": 14
+  }
+ ],
+ "data": {
+  "seed": "0000000000b0a008"
+ }
+}

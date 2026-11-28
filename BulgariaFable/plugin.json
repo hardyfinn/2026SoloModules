@@ -1,0 +1,23 @@
+{
+  "slug": "BulgariaFable",
+  "name": "Bulgaria Fable",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Bulgaria",
+      "name": "Bulgaria",
+      "description": "Harmonises one melody the way Bulgarian village choirs do: a drone and up to seven more voices that sit a deliberately mistuned second from the lead. Rub set in cents or as a beat rate in Hz, village tunings, slides, throat shakes and the phrase-end whoop. Pitch, gate and push CV out; makes no sound itself.",
+      "tags": ["Polyphonic", "Quantizer", "Utility", "Random"]
+    }
+  ]
+}
