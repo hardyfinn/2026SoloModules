@@ -1,0 +1,27 @@
+{
+  "slug": "Crate",
+  "name": "Crate",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Crate",
+      "name": "Crate",
+      "description": "12-bit 26 kHz sampler voice in the style of the classic hip-hop drum sampler: drop-sample pitch aliasing, 33-to-45 trick, channel filters, live sampling, age, mutate",
+      "tags": [
+        "Sampler",
+        "Drum",
+        "Distortion"
+      ]
+    }
+  ]
+}
