@@ -1,0 +1,22 @@
+FLATNESS (DECAY 0, filter open, chromatic)
+  20-60 Hz: mean -1.0 dB, min -4.4, max +2.5
+  60-6000 Hz: mean -1.4 dB, min -4.0, max +0.9
+  6000-18000 Hz: mean -2.5 dB, min -4.0, max +2.4
+BANDS PER SCALE (count, lowest and highest in Hz)
+  chromatic: 48 bands, 32.7 to 7902 Hz
+  major: 48 bands, 32.7 to 7902 Hz
+  pentatonic: 41 bands, 32.7 to 8372 Hz
+  whole_tone: 45 bands, 32.7 to 8372 Hz
+  tetratonic: 32 bands, 32.7 to 7902 Hz
+  fifths: 17 bands, 32.7 to 8372 Hz
+  octaves: 9 bands, 32.7 to 8372 Hz
+FILTER CURVE (DECAY 0, cutoff 1 kHz, resonance 0): level in dB at 125, 250, 500, 1k, 2k, 4k, 8k
+  low-pass: -2.8, -1.4, -3.2, -4.5, -15.2, -25.7, -38.4
+  band-pass: -17.9, -10.4, -6.2, -1.4, -6.2, -10.5, -16.6
+  high-pass: -38.7, -25.5, -15.1, -4.4, -3.1, -1.4, -0.7
+  low-pass, resonance 70%: -2.6, -1.0, -0.2, +12.0, -12.9, -23.8, -37.4
+TUNING AND RING TIME (octaves scale, impulse in; band at C4 = 261.6 Hz)
+  DECAY 0.25: design T60 0.22 s, measured 0.22 s, peak at 261.1 Hz
+  DECAY 0.50: design T60 1.00 s, measured 0.99 s, peak at 261.4 Hz
+  DECAY 0.75: design T60 4.47 s, measured 4.36 s, peak at 261.6 Hz
+  DECAY 1.00: design T60 20.00 s, measured 19.42 s, peak at 261.6 Hz

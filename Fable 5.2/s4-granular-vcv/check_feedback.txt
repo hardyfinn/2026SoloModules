@@ -1,0 +1,16 @@
+FEEDBACK, GRAIN mode (1 s tone burst at -12 dB peak, then silence). Output level in dB at 1-2 s, 5-6 s, 11-12 s, and overall peak. WET 1.
+  coherent, overlap 4, FEEDBACK 0.5:  -34.1, -131.0, -239.9, peak -18.1
+  coherent, overlap 4, FEEDBACK 0.8:  -27.6,  -59.5, -107.2, peak -17.8
+  coherent, overlap 4, FEEDBACK 1.0:  -22.8,  -24.8,  -27.2, peak -17.4
+  sprayed, overlap 4, FEEDBACK 0.5:  -31.7, -101.7, -199.8, peak -14.7
+  sprayed, overlap 4, FEEDBACK 0.8:  -24.9,  -38.3,  -46.3, peak -12.3
+  sprayed, overlap 4, FEEDBACK 1.0:  -19.0,  -14.3,  -14.1, peak -2.3
+  sparse, overlap 1, FEEDBACK 0.5:  -21.6,  -26.3,  -30.0, peak -13.0
+  sparse, overlap 1, FEEDBACK 0.8:  -17.5,  -10.8,  -11.4, peak -3.2
+  sparse, overlap 1, FEEDBACK 1.0:  -15.2,   -8.7,   -9.1, peak -2.0
+  dense sprayed, overlap 16, FEEDBACK 0.5:  -27.8,  -66.0, -114.4, peak -18.9
+  dense sprayed, overlap 16, FEEDBACK 0.8:  -27.1,  -36.3,  -42.3, peak -19.2
+  dense sprayed, overlap 16, FEEDBACK 1.0:  -25.8,  -21.3,  -13.7, peak -2.4
+  octave up, overlap 4, FEEDBACK 0.5:  -51.1, -177.2, -240.0, peak -24.4
+  octave up, overlap 4, FEEDBACK 0.8:  -41.3,  -45.0,  -48.1, peak -22.2
+  octave up, overlap 4, FEEDBACK 1.0:  -24.8,  -13.7,  -13.2, peak -2.9

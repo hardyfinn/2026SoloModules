@@ -1,0 +1,6 @@
+AGE on the grains (wet only, pitch 0, delay 0.25 s, 16 grains/s of 0.25 s)
+  AGE 0.00: noise in, 8-12 kHz against 0.2-2 kHz   -1.9 dB; silence in, output  -240.0 dB; 440 Hz tone, 90% of its energy within   0.7 Hz
+  AGE 0.25: noise in, 8-12 kHz against 0.2-2 kHz   -6.2 dB; silence in, output   -86.8 dB; 440 Hz tone, 90% of its energy within   0.7 Hz
+  AGE 0.50: noise in, 8-12 kHz against 0.2-2 kHz   -6.2 dB; silence in, output   -77.7 dB; 440 Hz tone, 90% of its energy within   0.7 Hz
+  AGE 0.75: noise in, 8-12 kHz against 0.2-2 kHz   -8.4 dB; silence in, output   -68.6 dB; 440 Hz tone, 90% of its energy within  10.7 Hz
+  AGE 1.00: noise in, 8-12 kHz against 0.2-2 kHz  -12.5 dB; silence in, output   -60.0 dB; 440 Hz tone, 90% of its energy within  14.0 Hz
