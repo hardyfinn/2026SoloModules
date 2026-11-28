@@ -1,0 +1,23 @@
+{
+  "slug": "Tiers",
+  "name": "Tiers",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Tiers",
+      "name": "Tiers",
+      "description": "Gate pattern generator over 16 or 32 steps: set how often 1/2, 1/4, 1/8, 1/16 and 1/32 steps play, then GENERATE, MUTATE + LOCK, swing, accents, and 41 house, techno, funk and disco preset figures",
+      "tags": ["Sequencer", "Random", "Drum", "Clock modulator"]
+    }
+  ]
+}
