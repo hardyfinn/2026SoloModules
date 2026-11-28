@@ -3,7 +3,7 @@
 **Load a breakbeat. Breaker finds every hit in it, sorts each one into kick, snare,
 hat or other, and plays brand-new drum patterns built from those hits.**
 
-36 HP · plugin version 2.0.0 · MIT · untested in Rack so far
+36 HP · plugin version 2.1.0 · MIT · untested in Rack so far
 
 ![Breaker panel](panel-preview.png)
 
@@ -70,6 +70,10 @@ played, swing included; handy when Breaker is the master).
 - **Load break**
 - **Break length**: Breaker guesses how many bars the loop is from the tempo
   (whichever of 1, 2, 4 or 8 bars lands nearest 125 BPM). If it guesses wrong, set it here.
+- **Sort hits by sound** (for samples that aren't drum breaks: voices, synths, field
+  recordings): instead of looking for kicks and snares, Breaker ranks the hits against each
+  other. The quietest fifth become hats, then the darkest third of the rest kicks, the
+  brightest third snares and the middle third other. Every lane gets sounds to play.
 - **Undo my hit corrections**
 - **Lock a lane**, **Clear mutation** (back to the last NEW), **Clear my step edits**
 

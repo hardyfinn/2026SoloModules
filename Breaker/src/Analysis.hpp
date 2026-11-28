@@ -90,8 +90,12 @@ struct Override {
 };
 
 // sens 0..1 (more = more hits). barsOverride 0 = guess.
+// bySound: for samples that aren't drum breaks (voices, synths, field recordings).
+// Instead of looking for kick/snare/hat sounds, it ranks the hits against each
+// other: the quietest fifth become HAT, then of the rest the darkest third KICK,
+// the brightest third SNARE and the middle third OTHER. Every lane gets sounds.
 inline BreakData* analyse(std::shared_ptr<const Audio> audio, const std::string& name, float sens,
-		int barsOverride, const std::vector<Override>& overrides) {
+		int barsOverride, const std::vector<Override>& overrides, bool bySound = false) {
 	BreakData* d = new BreakData();
 	d->audio = audio;
 	d->name = name;
@@ -251,6 +255,22 @@ inline BreakData* analyse(std::shared_ptr<const Audio> audio, const std::string&
 			if (h.type != KICK && s > bs) { bs = s; best = (int) i; }
 		}
 		if (best >= 0) d->hits[best].type = d->hits[best].autoType = SNARE;
+	}
+	if (bySound && !d->hits.empty()) {
+		std::vector<int> idx(d->hits.size());
+		for (size_t i = 0; i < idx.size(); i++) idx[i] = (int) i;
+		std::sort(idx.begin(), idx.end(), [&](int a, int b) { return d->hits[a].loud < d->hits[b].loud; });
+		size_t quiet = idx.size() >= 5 ? idx.size() / 5 : 0;
+		std::vector<int> rest(idx.begin() + quiet, idx.end());
+		for (size_t i = 0; i < quiet; i++) d->hits[idx[i]].type = d->hits[idx[i]].autoType = HAT;
+		auto bright = [&](const Hit& h) { return h.mid + 2.f * h.air - h.body - 1.5f * h.sub; };
+		std::sort(rest.begin(), rest.end(), [&](int a, int b) { return bright(d->hits[a]) < bright(d->hits[b]); });
+		size_t n = rest.size();
+		for (size_t i = 0; i < n; i++) {
+			int t = i < n / 3 ? KICK : i >= n - n / 3 ? SNARE : OTHER;
+			if (n < 3) t = i == 0 ? KICK : SNARE;
+			d->hits[rest[i]].type = d->hits[rest[i]].autoType = t;
+		}
 	}
 	// your clicks win
 	for (auto& o : overrides)

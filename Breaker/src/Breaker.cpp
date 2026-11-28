@@ -38,6 +38,7 @@ struct BreakerModule : Module {
 	std::string path;
 	std::vector<Override> overrides;
 	int barsOverride = 0;                        // 0 = guess
+	bool bySound = false;                        // sort hits by sound (not a drum break)
 	float analysedSens = -1.f;
 	bool newHeld = false;
 	float newFlash = 0.f;
@@ -94,7 +95,7 @@ struct BreakerModule : Module {
 		if (!audio) return;
 		float sens = params[SENS_PARAM].getValue();
 		analysedSens = sens;
-		BreakData* d = analyse(audio, system::getFilename(path), sens, barsOverride, overrides);
+		BreakData* d = analyse(audio, system::getFilename(path), sens, barsOverride, overrides, bySound);
 		delete pending.exchange(d);
 	}
 	bool loadFile(const std::string& p) {
@@ -183,6 +184,7 @@ struct BreakerModule : Module {
 		json_t* root = json_object();
 		json_object_set_new(root, "path", json_string(path.c_str()));
 		json_object_set_new(root, "barsOverride", json_integer(barsOverride));
+		json_object_set_new(root, "bySound", json_boolean(bySound));
 		json_t* ov = json_array();
 		for (auto& o : overrides) {
 			json_t* e = json_array();
@@ -210,6 +212,7 @@ struct BreakerModule : Module {
 	}
 	void dataFromJson(json_t* root) override {
 		if (json_t* b = json_object_get(root, "barsOverride")) barsOverride = (int) json_integer_value(b);
+		bySound = json_is_true(json_object_get(root, "bySound"));
 		if (json_t* pat = json_object_get(root, "pattern")) {
 			Pattern P = engine.pat;
 			for (int i = 0; i < NUM_LANES * CELLS && i < (int) json_array_size(pat); i++) {
@@ -314,7 +317,7 @@ struct WaveDisplay : Widget {
 		}
 		char buf[160];
 		std::string nm = b->name.size() > 34 ? b->name.substr(0, 33) + "~" : b->name;
-		snprintf(buf, sizeof(buf), "%s   %d BAR%s   %.1f BPM%s", nm.c_str(), b->loopBars, b->loopBars > 1 ? "S" : "", b->bpm, b->barsGuessed ? "" : " (set)");
+		snprintf(buf, sizeof(buf), "%s   %d BAR%s   %.1f BPM%s%s", nm.c_str(), b->loopBars, b->loopBars > 1 ? "S" : "", b->bpm, b->barsGuessed ? "" : " (set)", module->bySound ? "   BY SOUND" : "");
 		nvgFillColor(vg, nvgRGB(0xF2, 0xEF, 0xE6));
 		nvgText(vg, x0, mm2px(4.2f), buf, NULL);
 		// counts, right aligned
@@ -561,6 +564,8 @@ struct BreakerWidget : ModuleWidget {
 				sub->addChild(createCheckMenuItem(names[i], "", [=]() { return m->barsOverride == vals[i]; },
 					[=]() { m->barsOverride = vals[i]; m->reanalyse(); }));
 		}));
+		menu->addChild(createBoolMenuItem("Sort hits by sound (for samples that aren't drums)", "",
+			[=]() { return m->bySound; }, [=](bool v) { m->bySound = v; m->reanalyse(); }));
 		menu->addChild(createMenuItem("Undo my hit corrections", "", [=]() { m->overrides.clear(); m->reanalyse(); }, m->overrides.empty()));
 		menu->addChild(new MenuSeparator);
 		menu->addChild(createMenuLabel("Lock a lane (or click its letter)"));
