@@ -1,0 +1,23 @@
+{
+  "slug": "Breaker",
+  "name": "Breaker",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Breaker",
+      "name": "Breaker",
+      "description": "Load a breakbeat WAV: Breaker finds every hit, sorts it into kick, snare, hat or other, and plays new patterns built from those hits (Break, Breaks, Jungle, Hip hop, Broken techno) with density, ghosts, fills, swing, MUTATE and LOCK",
+      "tags": ["Drum", "Sampler", "Sequencer", "Random"]
+    }
+  ]
+}
