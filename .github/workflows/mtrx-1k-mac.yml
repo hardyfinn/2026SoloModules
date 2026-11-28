@@ -1,0 +1,104 @@
+# Builds MTRX-1K (github.com/gprmusicproject/mtrx-1k, GPL v3) for Apple Silicon
+# Macs: AU, VST3 and standalone app, ad hoc signed, zipped with an install script.
+# The zip goes to the run's Artifacts and to the "mtrx-1k-mac" release.
+name: Build MTRX-1K for Mac
+
+on:
+  push:
+    branches: ["claude/project-thread-sjbahg"]
+    paths: ["MTRX1K-mac/**", ".github/workflows/mtrx-1k-mac.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  MTRX_COMMIT: 1a360da
+
+jobs:
+  build-mac-arm64:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get MTRX-1K source
+        run: |
+          git clone https://github.com/gprmusicproject/mtrx-1k "$RUNNER_TEMP/mtrx"
+          cd "$RUNNER_TEMP/mtrx"
+          git checkout "$MTRX_COMMIT"
+          git submodule update --init --recursive --depth 1
+          for p in "$GITHUB_WORKSPACE"/MTRX1K-mac/patches/*.patch; do
+            [ -f "$p" ] && git apply -v "$p"
+          done
+          git log --oneline -1
+
+      - name: Install tools
+        run: brew list ninja >/dev/null 2>&1 || brew install ninja
+
+      - name: Configure
+        run: |
+          cmake -S "$RUNNER_TEMP/mtrx" -B "$RUNNER_TEMP/build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build AU, VST3 and app
+        run: |
+          cmake --build "$RUNNER_TEMP/build" --target Retromulator_AU Retromulator_VST3 Retromulator_Standalone -- -k 0 > "$RUNNER_TEMP/build.log" 2>&1 || { tail -50 "$RUNNER_TEMP/build.log"; exit 1; }
+          tail -5 "$RUNNER_TEMP/build.log"
+
+      - name: Show errors
+        if: failure()
+        run: grep -n -B2 -A8 "error:" "$RUNNER_TEMP/build.log" | head -400 || true
+
+      - name: Package
+        run: |
+          set -e
+          ART="$RUNNER_TEMP/build/Retromulator_artefacts/Release"
+          ls -R "$ART" | head -40
+          PKG="$RUNNER_TEMP/MTRX-1K-mac-arm64"
+          mkdir -p "$PKG"
+          cp -R "$ART/AU/MTRX-1K.component" "$ART/VST3/MTRX-1K.vst3" "$ART/Standalone/MTRX-1K.app" "$PKG/"
+          for b in "$PKG/MTRX-1K.component" "$PKG/MTRX-1K.vst3" "$PKG/MTRX-1K.app"; do
+            codesign --force --deep --sign - "$b"
+            codesign --verify --verbose "$b"
+            lipo -archs "$b"/Contents/MacOS/* || true
+          done
+          cp "MTRX1K-mac/Install MTRX-1K.command" "$PKG/"
+          chmod +x "$PKG/Install MTRX-1K.command"
+          cp MTRX1K-mac/README.txt "$PKG/" || true
+          cp "$RUNNER_TEMP/mtrx/LICENSE.txt" "$PKG/LICENSE (GPL v3).txt"
+          cp "$RUNNER_TEMP/mtrx/installer/third_party_notices.txt" "$PKG/Third-party notices.txt"
+          cd "$RUNNER_TEMP" && ditto -c -k --sequesterRsrc --keepParent MTRX-1K-mac-arm64 "$GITHUB_WORKSPACE/MTRX-1K-mac-arm64.zip"
+          ls -l "$GITHUB_WORKSPACE/MTRX-1K-mac-arm64.zip"
+
+      - name: Validate the AU (auval)
+        continue-on-error: true
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "$RUNNER_TEMP/MTRX-1K-mac-arm64/MTRX-1K.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          sleep 3
+          auval -a | grep -i gprm || true
+          auval -v aumu Ts1k Gprm
+
+      - name: Smoke test (app starts and stays up)
+        continue-on-error: true
+        run: |
+          "$RUNNER_TEMP/MTRX-1K-mac-arm64/MTRX-1K.app/Contents/MacOS/MTRX-1K" &
+          PID=$!
+          sleep 15
+          if kill -0 $PID 2>/dev/null; then echo "App is running"; kill $PID; else echo "App exited early"; wait $PID; exit 1; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MTRX-1K-mac-arm64
+          path: MTRX-1K-mac-arm64.zip
+
+      - name: Publish to the "mtrx-1k-mac" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view mtrx-1k-mac >/dev/null 2>&1 || gh release create mtrx-1k-mac --prerelease --target "$GITHUB_SHA" --title "MTRX-1K for Mac (Apple Silicon)" --notes "MTRX-1K by GPR Music Project (GPL v3), built for Apple Silicon from github.com/gprmusicproject/mtrx-1k commit $MTRX_COMMIT. Unofficial build. No firmware included."
+          gh release upload mtrx-1k-mac MTRX-1K-mac-arm64.zip --clobber

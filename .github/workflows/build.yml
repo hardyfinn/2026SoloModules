@@ -5,7 +5,8 @@ name: Build plugins
 
 on:
   push:
-    branches: [main, "claude/**"]
+    # claude/project-thread-sjbahg only builds MTRX-1K for Mac (see mtrx-1k-mac.yml)
+    branches: [main, "claude/**", "!claude/project-thread-sjbahg"]
   workflow_dispatch:
 
 permissions:
