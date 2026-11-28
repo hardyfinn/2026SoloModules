@@ -1,0 +1,29 @@
+{
+  "slug": "Cubit",
+  "name": "Cubit",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Haer",
+  "author": "Haer",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/hardyfinn/2026SoloModules",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Cubit",
+      "name": "Cubit",
+      "description": "8-bit wavetable VCO: the clock is the pitch, 512 waves in an 8x8x8 cube, bit taps, splice / stuck bit / resolution / depth bends, pattern tables for slow clocking, load your own ROM, mutate",
+      "tags": [
+        "Oscillator",
+        "Digital",
+        "Low-frequency oscillator",
+        "Sequencer",
+        "Polyphonic"
+      ]
+    }
+  ]
+}

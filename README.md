@@ -29,6 +29,7 @@ without stepping on each other.
 | [Rimbaud](Rimbaud/) | Rimbaud | Physical model of a snare drum: coupled heads, colliding snare wires, rimshot, cross-stick, buzz strokes, top/bottom mics |
 | [Lilt](Lilt/) | Lilt | Relabi generator: four summed LFOs crossing four thresholds make triggers that drift around the pulse |
 | [Peal](Peal/) | Peal, Bell Foundry | Change ringing sequencer (methods, calls, open handstroke) and a 12-bell modal voice to ring it |
+| [Cubit](Cubit/) | Cubit | 8-bit wavetable VCO where the clock is the pitch: 512 waves in an 8×8×8 cube, bit taps, splice / stuck bit / resolution / depth bends, drum and arp tables for slow clocking, your own ROM or WAV, mutate |
 
 Every push builds all plugins for Apple Silicon Macs (GitHub Actions). Branch
 builds go to the **preview** release, `main` builds to **latest**.
