@@ -50,7 +50,7 @@ struct Bulgaria : Module {
 		POLY_GATE_OUTPUT, POLY_PUSH_OUTPUT, NUM_OUTPUTS };
 	enum LightIds { ENUMS(VOICE_LIGHT, NV * 2), NUM_LIGHTS };
 
-	Engine e;
+	bulgaria::Engine e;
 	uint64_t seed = 1;
 	double rate = 0;
 	bool needInit = true;
@@ -109,7 +109,7 @@ struct Bulgaria : Module {
 
 	void process(const ProcessArgs& args) override {
 		if (needInit || args.sampleRate != rate) { rate = args.sampleRate; e.init(rate, seed); needInit = false; }
-		Params p;
+		bulgaria::Params p;
 		p.root = (int)std::lround(params[ROOT_P].getValue());
 		p.oct = (int)std::lround(params[OCT_P].getValue());
 		p.mode = clamp((int)std::lround(params[MODE_P].getValue()), 0, NUM_MODES - 1);
@@ -127,7 +127,7 @@ struct Bulgaria : Module {
 		p.whoop = params[WHOOP_P].getValue();
 		p.loose = clamp(params[LOOSE_P].getValue() + cv(LOOSE_INPUT), 0.f, 1.f);
 
-		Inputs in;
+		bulgaria::Inputs in;
 		in.voct = inputs[VOCT_INPUT].getVoltage();
 		in.gate = inputs[GATE_INPUT].getVoltage();
 		in.gatePatched = inputs[GATE_INPUT].isConnected();
