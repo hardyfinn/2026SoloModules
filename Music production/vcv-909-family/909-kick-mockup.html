@@ -1,0 +1,45 @@
+<html><head><style>
+body{margin:0;background:#888}
+.p{width:711px;height:642px;background:#D9D8D3;position:relative;font-family:Inter,Helvetica,Arial,sans-serif;color:#2A2A2A;border-radius:4px;overflow:hidden}
+.t{position:absolute;left:30px;top:26px;font-size:36px;font-weight:800;letter-spacing:1px}
+.st{position:absolute;right:22px;top:40px;font-size:12px;color:#666}
+.bar{position:absolute;left:0;right:0;top:0;height:12px;background:#E5631F}
+.sec{position:absolute;font-size:12px;font-weight:700;letter-spacing:1.5px;color:#D0521A}
+.line{position:absolute;height:1px;background:#B5B3AC}
+.k{position:absolute;width:100px;text-align:center;font-size:15px;font-weight:700;letter-spacing:.5px}
+.kn{width:46px;height:46px;border-radius:50%;margin:6px auto 0;background:radial-gradient(circle at 40% 35%,#555,#1c1c1c);position:relative;box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.kn i{position:absolute;left:22px;top:4px;width:3px;height:18px;background:#eee;transform-origin:1.5px 19px}
+.dot{position:absolute;width:7px;height:7px;border-radius:50%;background:#E5631F}
+.j{position:absolute;width:100px;text-align:center;font-size:14px;font-weight:700}
+.jk{width:34px;height:34px;border-radius:50%;margin:8px auto 0;background:radial-gradient(circle,#111 35%,#ccc 38%,#888 70%,#ddd 72%)}
+.out{background:#E5631F;border-radius:6px;color:#fff}
+.flow{position:absolute;left:215px;top:302px;width:478px;height:92px;background:#C9C7C0;border-radius:6px;font-size:12px;text-align:center;color:#333}
+.hit{width:34px;height:34px;border-radius:50%;margin:10px auto 0;background:#E5631F;border:4px solid #222}
+.logo{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-weight:900;font-size:20px}
+</style></head><body><div class="p" id="p"><div class="bar"></div>
+<div class="t">909 KICK</div><div class="st">TR-909 bass drum circuit</div>
+<div id="c"></div>
+<div class="flow"><div style="margin-top:18px;font-weight:700;font-size:11.5px;letter-spacing:.5px">TRIG → PITCH ENV → VCO (saw) → SHAPER → VCA → + CLICK → OUT</div>
+<div style="margin-top:8px">click = pulse + filtered noise (ATTACK) · VCO reset on every hit</div>
+<div style="margin-top:8px"><span style="color:#D0521A">●</span> = stock 909 setting · from the TR-909 service-notes schematic</div></div>
+<div class="logo">Hær</div></div>
+<script>
+const C=[0,100,200,300,400,500,600].map(x=>x+5);const c=document.getElementById('c');
+function sec(n,x,y,w){c.innerHTML+=`<div class="sec" style="left:${x}px;top:${y}px">${n}</div><div class="line" style="left:${x+n.length*10+12}px;top:${y+8}px;width:${w}px"></div>`}
+function k(n,i,y,v,d,lo,hi){const a=-150+300*v;c.innerHTML+=`<div class="k" style="left:${C[i]}px;top:${y}px">${n}<div class="kn"><i style="transform:rotate(${a}deg)"></i></div></div>`;
+ if(d!=null){const ad=(-150+300*d-90)*Math.PI/180;c.innerHTML+=`<div class="dot" style="left:${C[i]+50+31*Math.cos(ad)-3.5}px;top:${y+24+29+31*Math.sin(ad)-3.5}px"></div>`}
+ if(lo)c.innerHTML+=`<div style="position:absolute;font-size:10px;color:#666;left:${C[i]+2}px;top:${y+70}px">${lo}</div><div style="position:absolute;font-size:10px;color:#666;left:${C[i]+78}px;top:${y+70}px">${hi}</div>`}
+sec('STOCK 909',18,78,600);
+[['TUNE',.5,.5],['ATTACK',.6,.6],['DECAY',.5,.5],['ACCENT',.6,.6],['LEVEL',1,null],['AGE',0,0]].forEach((a,i)=>k(a[0],i,96,a[1],a[2],i==5?'NEW':'',i==5?'OLD':''));
+c.innerHTML+=`<div class="k" style="left:${C[6]}px;top:96px">HIT<div class="hit"></div></div>`;
+sec('PITCH',18,186,250);sec('CLICK',380,186,230);
+[['BASE',.35,.35],['SWEEP',.45,.45],['BEND',.5,.5]].forEach((a,i)=>k(a[0],i,204,a[1],a[2]));
+[['PULSE',.5,.5],['NOISE',.5,.5],['NOISE LP',.55,.55],['SNAP',.4,.4]].forEach((a,i)=>k(a[0],i+3,204,a[1],a[2]));
+sec('BODY',18,292,120);
+k('SHAPE',0,310,.3,.3);k('DRIVE',1,310,0,0);
+sec('CV IN',18,404,600);
+['V/OCT','TUNE','DECAY','ATTACK','SWEEP','SHAPE','DRIVE'].forEach((n,i)=>c.innerHTML+=`<div class="j" style="left:${C[i]}px;top:420px">${n}<div class="jk"></div></div>`);
+[['TRIG',0],['ACCENT',1],['ENV',5]].forEach(a=>c.innerHTML+=`<div class="j" style="left:${C[a[1]]}px;top:508px">${a[0]}<div class="jk"></div></div>`);
+c.innerHTML+=`<div style="position:absolute;left:220px;top:540px;width:270px;text-align:center;font-size:12px;color:#555">ACCENT: gate = accented, 0-5 V = how much</div>`;
+c.innerHTML+=`<div class="j out" style="left:${C[6]-4}px;top:500px;width:96px;height:90px;padding-top:8px">OUT<div class="jk"></div></div>`;
+</script></body></html>

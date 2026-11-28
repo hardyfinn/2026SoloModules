@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"><style>
+.top{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid #333}
+.drop{border:2px dashed #555;border-radius:8px;padding:7px 14px;color:#999}
+.cols{display:flex;gap:8px;padding:12px;height:600px}
+.col{flex:1;background:#232328;border-radius:9px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.col h4{margin:0 0 4px;display:flex;justify-content:space-between;font-size:14px}
+.col h4 span{color:#8a8a95;font-weight:400;font-size:12px}
+.card{background:#2c2c32;border-radius:7px;padding:7px;position:relative}
+.card.sel{outline:2px solid #f0b24a}
+.card svg{width:100%;height:30px;display:block}
+.card .l{display:flex;justify-content:space-between;font-size:12px;margin-top:3px}
+.card .l small{color:#8a8a95}
+.card .s{color:#f0b24a;position:absolute;right:7px;top:5px}
+.deck{box-shadow:4px 4px 0 -1px #3a3a42,8px 8px 0 -2px #333339}
+.foot{padding:10px 14px;border-top:1px solid #333;color:#8a8a95;display:flex;justify-content:space-between;align-items:center}
+</style></head><body><div class="win">
+<div class="bar"><div class="d" style="background:#ff5f57"></div><div class="d" style="background:#febc2e"></div><div class="d" style="background:#28c840"></div><div class="t">Sample Harvester</div></div>
+<div class="top"><div class="drop">⤓ Drop folders / files · 3 sources</div>
+<div class="chip">Longest <b>3.0 s</b></div><div class="chip">Silence <b>−54 dB</b></div><div class="chip">Tail <b>80 ms</b></div><div class="chip">Stack <b>Tight</b></div>
+<div style="flex:1"></div><div class="btn">Harvest</div></div>
+<div class="cols" id="C"></div>
+<div class="foot"><span>Each column = one group, best of each stack on top · click to play · drag a card to Ableton or another column to re-file it</span><div style="display:flex;gap:8px"><div class="btn2">Export ★ (9)</div><div class="btn2">Export best of each</div></div></div>
+</div><script>
+const G=[["Kick","#7a3b2e",148,9],["Snare/Clap","#2e5a7a",61,7],["Hat/Metal","#5a6a2e",97,8],["Perc","#6a2e7a",74,6],["Tonal","#2e7a6a",32,5],["Vocal","#7a6a2e",24,4]];
+let h="";G.forEach((g,gi)=>{h+=`<div class="col"><h4>${g[0]}<span>${g[2]} hits</span></h4>`;
+for(let i=0;i<g[3]&&i<7;i++){let pts="";const dec=[9,7,14,10,4,3][gi];for(let x=0;x<=200;x+=2){const t=x/200,env=Math.exp(-t*dec);const y=15+Math.sin(x*(gi==2?2.7:0.9)+i)*13*env;pts+=x+","+y.toFixed(1)+" "}
+const n=[14,3,0,7,22,1,11][(i+gi)%7];
+h+=`<div class="card ${n?'deck':''} ${gi==0&&i==0?'sel':''}"><span class="s">${(i+gi)%3==0?'★':''}</span><svg viewBox="0 0 200 30" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${g[1].replace('#','#')}" stroke-width="1.5" style="stroke:#f0b24a"/></svg><div class="l">${g[0].split('/')[0]} ${String(i+1).padStart(2,'0')}<small>${n?'+'+n+' similar':''}</small></div></div>`}
+h+="</div>"});document.getElementById("C").innerHTML=h;
+</script></body></html>

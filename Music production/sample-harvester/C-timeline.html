@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"><style>
+.main{display:flex;height:700px}
+.side{width:230px;background:#232328;padding:14px;border-right:1px solid #333}
+.f{padding:6px 8px;border-radius:5px;background:#2c2c32;margin-bottom:4px;font-size:12px}
+.f.on{outline:2px solid #f0b24a}
+.drop{border:2px dashed #555;border-radius:8px;padding:10px;text-align:center;color:#999;margin-bottom:10px;font-size:12px}
+.sl{margin:12px 0;font-size:12px}.sl label{display:flex;justify-content:space-between}.sl b{color:#f0b24a}
+.track{height:4px;background:#444;border-radius:2px;margin-top:7px;position:relative}.track i{position:absolute;height:4px;background:#f0b24a;border-radius:2px;left:0}
+.r{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px}
+.tl{background:#232328;border-radius:9px;padding:10px}
+.tl svg{width:100%;height:120px;display:block}
+.tabs{display:flex;gap:6px}
+.pads{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;flex:1}
+.pad{border-radius:9px;padding:8px;display:flex;flex-direction:column;justify-content:space-between;position:relative}
+.pad svg{width:100%;height:34px}
+.pad .n{font-weight:700;font-size:13px}.pad small{color:#ddd9;font-size:11px}
+.pad.sel{outline:3px solid #f0b24a}
+.pad .s{position:absolute;right:8px;top:6px;color:#f0b24a}
+.foot{display:flex;justify-content:space-between;color:#8a8a95;align-items:center}
+</style></head><body><div class="win">
+<div class="bar"><div class="d" style="background:#ff5f57"></div><div class="d" style="background:#febc2e"></div><div class="d" style="background:#28c840"></div><div class="t">Sample Harvester</div></div>
+<div class="main"><div class="side"><h3>Sources</h3><div class="drop">Drop folders or files</div>
+<div class="f on">Jam 2026-11-20.wav</div><div class="f">Field recordings/ (38)</div><div class="f">Hapax loops/ (112)</div>
+<h3 style="margin-top:16px">Settings</h3>
+<div class="sl"><label>Longest hit <b>3.0 s</b></label><div class="track"><i style="width:100%"></i></div></div>
+<div class="sl"><label>Silence level <b>−54 dB</b></label><div class="track"><i style="width:65%"></i></div></div>
+<div class="sl"><label>Clean tail <b>80 ms</b></label><div class="track"><i style="width:30%"></i></div></div>
+<div class="sl"><label>Stack similar <b>Tight</b></label><div class="track"><i style="width:70%"></i></div></div>
+<div class="btn" style="margin-top:14px">Harvest</div></div>
+<div class="r"><div class="tl"><h3>Jam 2026-11-20.wav · 12:04 · 61 hits found (click a marker to hear it, drag edges to adjust)</h3><svg id="W" viewBox="0 0 900 120" preserveAspectRatio="none"></svg></div>
+<div class="tabs"><div class="chip" style="background:#f0b24a;color:#1d1d21"><b style="color:#1d1d21">All</b></div><div class="chip">Kick 148</div><div class="chip">Snare/Clap 61</div><div class="chip">Hat/Metal 97</div><div class="chip">Perc 74</div><div class="chip">Tonal 32</div><div class="chip">Vocal 24</div></div>
+<div class="pads" id="P"></div>
+<div class="foot"><span>Each pad = one stack (best hit). Keys 1–6 / Q–Y / A–H play pads · shift-click opens the stack</span><div style="display:flex;gap:8px"><div class="btn2">Export ★ (9)</div><div class="btn2">Export all pads</div></div></div>
+</div></div></div><script>
+let w="";for(let x=0;x<900;x++){const a=(Math.sin(x*0.07)*0.5+0.6)*(0.4+0.6*Math.abs(Math.sin(x*1.7)))*45*(1-Math.exp(-((x*37)%60)/6))*Math.exp(-((x*37)%60)/25);w+=`<line x1="${x}" x2="${x}" y1="${60-a}" y2="${60+a}" stroke="#666" />`}
+const cols=["#c0563f","#3f86c0","#8aa040","#a24ac0","#3fc0a5","#c0a53f"];
+for(let i=0;i<26;i++){const x=20+i*33+(i*13)%11,c=cols[(i*7)%6],wd=8+(i*5)%14;w+=`<rect x="${x}" y="2" width="${wd}" height="116" fill="${c}" opacity=".35"/><rect x="${x}" y="2" width="2" height="116" fill="${c}"/>`}
+document.getElementById("W").innerHTML=w;
+const G=[["Kick","#7a3b2e"],["Snare","#2e5a7a"],["Hat","#5a6a2e"],["Perc","#6a2e7a"],["Tonal","#2e7a6a"],["Vocal","#7a6a2e"]];
+let p="";for(let i=0;i<18;i++){const g=G[(i*7)%6],n=[14,3,0,7,22,1,11,0,5][i%9];let pts="";for(let x=0;x<=100;x++){const y=17+Math.sin(x*1.3+i)*15*Math.exp(-x/(10+i%5*8));pts+=x+","+y.toFixed(1)+" "}
+p+=`<div class="pad ${i==0?'sel':''}" style="background:${g[1]}"><span class="s">${i%4==0?'★':''}</span><div class="n">${g[0]} ${String(Math.floor(i/5)+1).padStart(2,'0')}</div><svg viewBox="0 0 100 34" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#fff" stroke-width="1.2"/></svg><small>${n?'+'+n+' similar':'single'}</small></div>`}
+document.getElementById("P").innerHTML=p;
+</script></body></html>

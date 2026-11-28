@@ -1,0 +1,337 @@
+<title>Comper Fable Quartet Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column; panels of the four modules drawn to HP scale as the opening picture; a four-lane form chart in the middle. */
+:root {
+  --bg: #F3F1EC; --surface: #FFFFFF; --ink: #1E2125; --soft: #5C6068; --line: #D8D4CB;
+  --panel: #23262B; --panel-ink: #EFE9DD; --amber: #B7842A; --amber-hi: #D9A441; --amber-ground: #F6E9CF;
+  --rest: #E6E2D9; --drums: #6F7F96; --piano: #8C6F9A;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16181C; --surface: #1E2126; --ink: #ECE7DD; --soft: #A8A397; --line: #343840;
+  --panel: #2A2E34; --panel-ink: #EFE9DD; --amber: #E0AE52; --amber-hi: #E8B95E; --amber-ground: #3A3120;
+  --rest: #262A30; --drums: #7E90AA; --piano: #A486B2; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #16181C; --surface: #1E2126; --ink: #ECE7DD; --soft: #A8A397; --line: #343840;
+  --panel: #2A2E34; --panel-ink: #EFE9DD; --amber: #E0AE52; --amber-hi: #E8B95E; --amber-ground: #3A3120;
+  --rest: #262A30; --drums: #7E90AA; --piano: #A486B2; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 4rem; }
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 3.2rem; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 800; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+section { display: grid; gap: 1.1rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); }
+code, .k { font-family: var(--mono); font-size: 0.86em; }
+.k { background: var(--amber-ground); color: var(--ink); padding: 0.05em 0.35em; border-radius: 3px; white-space: nowrap; }
+header { padding-top: 3rem; display: grid; gap: 1rem; }
+.lede { font-size: 1.15rem; color: var(--soft); max-width: 60ch; }
+
+/* the rack row, to HP scale */
+.rack { background: var(--panel); border-radius: 6px; padding: 14px; overflow-x: auto; }
+.row { display: flex; gap: 3px; min-width: 520px; }
+.mod { background: #2E3238; border: 1px solid #3D424A; border-radius: 2px; padding: 10px 10px 12px; display: grid; gap: 6px; align-content: start; min-height: 150px; color: var(--panel-ink); }
+.mod b { font-family: var(--display); font-size: 1.05rem; }
+.mod span { font-family: var(--mono); font-size: 0.7rem; color: var(--amber-hi); letter-spacing: 0.06em; }
+.mod i { font-style: normal; font-size: 0.78rem; color: #A8A397; line-height: 1.35; }
+.mod.solo { border-color: var(--amber-hi); }
+.link { margin-top: 10px; font-family: var(--mono); font-size: 0.72rem; color: #A8A397; display: flex; align-items: center; gap: 8px; min-width: 520px; }
+.link::before, .link::after { content: ""; flex: 1; height: 0; border-top: 1px dashed var(--amber-hi); }
+.caption { font-size: 0.85rem; color: var(--soft); }
+
+/* instrument sections */
+.inst { display: grid; gap: 1rem; border-top: 2px solid var(--ink); padding-top: 1.2rem; }
+.inst-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 1rem; }
+.inst-head .hp { font-family: var(--mono); font-size: 0.8rem; color: var(--soft); }
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem 1.6rem; }
+.group h4 { margin: 0 0 0.35rem; font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.1em; color: var(--amber); font-weight: 500; }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 0.8rem; font-size: 0.92rem; }
+dt { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; padding-top: 0.15em; }
+dd { margin: 0; color: var(--soft); min-width: 0; }
+
+/* tables */
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); font-weight: 500; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* the form chart */
+.form { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+.grid { display: grid; grid-template-columns: 78px repeat(24, minmax(16px, 1fr)); gap: 3px; min-width: 620px; font-size: 0.72rem; }
+.grid .lab { font-family: var(--mono); color: var(--soft); align-self: center; }
+.grid .part { font-family: var(--mono); color: var(--ink); border-bottom: 2px solid var(--ink); padding-bottom: 2px; letter-spacing: 0.04em; }
+.c { height: 22px; border-radius: 2px; background: var(--rest); }
+.c.on { background: var(--amber-hi); }
+.c.lead { background: var(--amber); }
+.c.dr { background: var(--drums); }
+.c.pn { background: var(--piano); }
+.c.hit { background: linear-gradient(90deg, var(--ink) 0 3px, var(--rest) 3px); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; font-size: 0.82rem; color: var(--soft); margin-top: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+
+.note { background: var(--amber-ground); border-radius: 4px; padding: 0.9rem 1rem; font-size: 0.95rem; }
+ol.steps, ul.plain { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; max-width: 68ch; }
+.recipes { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.recipe { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; display: grid; gap: 0.5rem; align-content: start; }
+.recipe p { font-size: 0.92rem; color: var(--soft); }
+footer { color: var(--soft); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+a { color: var(--amber); }
+a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">Comper Fable 2.5.0 · VCV Rack 2</div>
+  <h1>A jazz quartet in four modules</h1>
+  <p class="lede">Comper plays piano chords, Walker plays upright bass, Rider plays drums and Soloist plays a horn. Put them next to each other and they find each other without cables. They share one clock and one chart, listen to each other and play a whole tune together.</p>
+</header>
+
+<section aria-labelledby="row">
+  <h2 id="row">The row</h2>
+  <div class="rack">
+    <div class="row">
+      <div class="mod" style="flex:38"><span>38 HP</span><b>Comper</b><i>Piano player. Owns the clock and the chart. Notes out, for Joanna or any poly voice.</i></div>
+      <div class="mod" style="flex:36"><span>36 HP</span><b>Walker</b><i>Bass player on a modelled upright. Audio and notes out.</i></div>
+      <div class="mod" style="flex:30"><span>30 HP</span><b>Rider</b><i>Drummer on a modelled jazz kit. Stereo and triggers out.</i></div>
+      <div class="mod solo" style="flex:30"><span>30 HP</span><b>Soloist</b><i>Horn player: tenor sax, trumpet or trombone. Stereo and notes out.</i></div>
+    </div>
+    <div class="link">the link: touching modules pass it along, in any order</div>
+  </div>
+  <p class="caption">Panels drawn to scale by width. The link travels through Rack's expander connection, so the modules must touch. Any order works, and other modules can't sit in between.</p>
+</section>
+
+<section aria-labelledby="start">
+  <h2 id="start">Getting a tune going</h2>
+  <ol class="steps">
+    <li>Place <b>Comper</b>, then <b>Walker</b>, <b>Rider</b> and <b>Soloist</b> touching it in a row.</li>
+    <li>Patch Comper's <span class="k">V/OCT</span>, <span class="k">GATE</span> and <span class="k">VEL</span> into a polyphonic piano. Joanna is the intended partner; its <span class="k">PEDAL</span> input takes Comper's <span class="k">PEDAL</span> out.</li>
+    <li>Patch Walker's <span class="k">OUT</span>, Rider's <span class="k">L</span>/<span class="k">R</span> and Soloist's <span class="k">L</span>/<span class="k">R</span> into a mixer.</li>
+    <li>Pick a progression on Comper's screen (the arrows step through all 44; tap the name for a list by genre), pick a <span class="k">GROOVE</span> and press <span class="k">RUN</span>.</li>
+    <li>Everyone starts on the same beat. Walker and Rider follow Comper's groove while their FEEL is at 0. Soloist plays the head, solos, trades, plays the head out, and the band ends on the last chord.</li>
+  </ol>
+  <p class="note">Each module still works alone. Without Comper, Walker, Rider and Soloist each take a <span class="k">CLOCK</span> and <span class="k">RESET</span> cable (pulses per beat in the right-click menu). Walker and Soloist can also take chords from a cable.</p>
+</section>
+
+<section aria-labelledby="players">
+  <h2 id="players">The players</h2>
+
+  <article class="inst" aria-labelledby="comper">
+    <div class="inst-head"><h3 id="comper">Comper: piano</h3><span class="hp">38 HP · notes out</span></div>
+    <p>Comper comps the way a jazz pianist accompanies. It voices chords with the smallest moves between them and plays swung two-bar rhythm figures that push into the next chord. Its hands are loose and human, and it leaves room for a soloist. It makes notes, not sound, so patch it into a piano.</p>
+    <div class="groups">
+      <div class="group"><h4>CHART</h4><dl>
+        <dt>Screen</dt><dd>44 progressions: jazz, blues, house, gospel, disco, soul, funk and reggae. Tap a step to edit it.</dd>
+        <dt>EDIT ROOT / QUAL</dt><dd>Set the tapped step</dd>
+        <dt>BEATS, KEY</dt><dd>Beats per step; transpose the chart</dd>
+      </dl></div>
+      <div class="group"><h4>VOICING</h4><dl>
+        <dt>STYLE</dt><dd>Shell, Rootless, Quartal, Spread, Mixed</dd>
+        <dt>SPREAD, REGISTER</dt><dd>Close to open; where the top note sits</dd>
+        <dt>VOICES, LEAD</dt><dd>Notes per chord; how smoothly voices move</dd>
+        <dt>AUTRE</dt><dd>Altered dominants, tritone subs, side-slips</dd>
+        <dt>ROOTS</dt><dd>Off, Some, All. Off while Walker is in the row</dd>
+      </dl></div>
+      <div class="group"><h4>RHYTHM</h4><dl>
+        <dt>GROOVE</dt><dd>Swing, Bossa, Ballad, Soul, House, Reggae</dd>
+        <dt>DENSITY, SWING</dt><dd>How many chords; swing amount (0 follows tempo)</dd>
+        <dt>REPEAT, PUSH</dt><dd>Keep the two-bar figure; upbeats take the next chord</dd>
+        <dt>LISTEN</dt><dd>Leave room for the soloist and answer in the gaps</dd>
+      </dl></div>
+      <div class="group"><h4>HANDS AND BAND</h4><dl>
+        <dt>LOOSE</dt><dd>0 machine, 1 a good player, 2.5 drunk. TIMING, ROLL, WEIGHT and SLOP trims scale it</dd>
+        <dt>LENGTH, PEDAL</dt><dd>Short to legato; pedal depth</dd>
+        <dt>OCTAVE</dt><dd>−3 to +3 on the chord outputs</dd>
+        <dt>PRESET</dt><dd>Turn to load one of 12 factory presets</dd>
+        <dt>TEMPO, RUN</dt><dd>Used when CLOCK is unpatched</dd>
+      </dl></div>
+    </div>
+    <p class="caption">Inputs: CLOCK, RESET, RUN, KEY, chord ROOT/QUAL CV or a poly CHORD with gates, SOLO gate or audio and SOLO V/OCT, plus CV for DENSITY, AUTRE, LOOSE, LISTEN and REGISTER. Outputs: poly V/OCT, GATE and VEL, PEDAL, SCALE, BASS V/OCT and GATE, CHANGE and end-of-chart triggers.</p>
+  </article>
+
+  <article class="inst" aria-labelledby="walker">
+    <div class="inst-head"><h3 id="walker">Walker: upright bass</h3><span class="hp">36 HP · audio and notes out</span></div>
+    <p>Walker plays bass lines that lean into each chord: walking, two-feel, ballad, bossa, soul and house. It plays them on a modelled upright with a real pluck, a ringing wooden body and human hands.</p>
+    <div class="groups">
+      <div class="group"><h4>PLAYER</h4><dl>
+        <dt>FEEL</dt><dd>0 follows Comper's groove; or Walk, Two-feel, Ballad, Bossa, Soul, House</dd>
+        <dt>ACTIVITY</dt><dd>Skips, dead notes, triplet runs</dd>
+        <dt>REGISTER, ROAM</dt><dd>Middle of the line; how far it wanders</dd>
+        <dt>OUT, REPEAT</dt><dd>Chromatic approaches; keep the soul and house figures</dd>
+        <dt>OCTAVE</dt><dd>0, +1 or +2 on audio and V/OCT</dd>
+      </dl></div>
+      <div class="group"><h4>HANDS</h4><dl>
+        <dt>LOOSE, AHEAD</dt><dd>Human feel; how far in front of the beat</dd>
+        <dt>Trims</dt><dd>TIMING, WEIGHT, SLOP, PITCH (× LOOSE)</dd>
+        <dt>LENGTH, VARY</dt><dd>Note lengths; a mix of short and long</dd>
+      </dl></div>
+      <div class="group"><h4>SOUND</h4><dl>
+        <dt>ATTACK, PLUCK</dt><dd>The pluck burst; where it is plucked</dd>
+        <dt>BRIGHT, SUSTAIN</dt><dd>Gut to steel; ring time</dd>
+        <dt>GROWL, BODY</dt><dd>Fingerboard slap; the wooden box</dd>
+        <dt>PICKUP, THUMP, AGE</dt><dd>Mic or pickup; finger noise; old strings</dd>
+      </dl></div>
+    </div>
+    <p class="caption">Inputs: CLOCK, RESET, ROOT, QUAL, CHORD, LAY OUT gate, and V/OCT, GATE and VEL in to play it as a voice. CV for ACTIVITY, REGISTER, LOOSE and ATTACK. Outputs: OUT, V/OCT, GATE, VEL.</p>
+  </article>
+
+  <article class="inst" aria-labelledby="rider">
+    <div class="inst-head"><h3 id="rider">Rider: drums</h3><span class="hp">30 HP · stereo and triggers out</span></div>
+    <p>Rider is an improvising jazz drummer. It keeps time on the ride, comps on snare and bass drum, catches the pianist's pushes and sets up the ends of phrases. It plays a modelled kit with sticks, or with brushes on ballads.</p>
+    <div class="groups">
+      <div class="group"><h4>PLAYER</h4><dl>
+        <dt>FEEL</dt><dd>0 follows Comper; Swing, Bossa, Ballad (brushes), Soul, House</dd>
+        <dt>ENERGY</dt><dd>How hard the band plays: level, busyness, bombs, crashes</dd>
+        <dt>COMP, LISTEN</dt><dd>Snare and kick conversation; catch the piano's pushes</dd>
+        <dt>FILLS, FEATHER</dt><dd>Set-ups at phrase ends; quiet kick on all four</dd>
+        <dt>BAND</dt><dd>How far Comper and Walker follow ENERGY</dd>
+      </dl></div>
+      <div class="group"><h4>KIT</h4><dl>
+        <dt>Levels</dt><dd>Cymbals, hi-hats, snare, kick, toms</dd>
+        <dt>TUNE, DECAY</dt><dd>±5 semitones; how long cymbals ring</dd>
+        <dt>BRIGHT, WIDTH, AGE</dt><dd>Dark to bright; mono to full kit; an old kit</dd>
+        <dt>LOOSE, AHEAD</dt><dd>Human feel; lay back or play on top</dd>
+      </dl></div>
+    </div>
+    <p class="caption">Inputs: CLOCK, RESET, FILL trigger, LAY OUT gate, CV for ENERGY, COMP and FILLS. Outputs: L, R, triggers for kick, snare, hat, ride, crash and tom, a 6-channel VEL, and the ENERGY in use.</p>
+  </article>
+
+  <article class="inst" aria-labelledby="soloist">
+    <div class="inst-head"><h3 id="soloist">Soloist: horn</h3><span class="hp">30 HP · stereo and notes out · new in 2.5.0</span></div>
+    <p>Soloist makes the trio a quartet. It writes a head melody from the loaded chart: long guide tones, a two-bar rhythm motif, and a last note on the tonic. It solos in phrases that breathe and build, trades with the drums and the piano, plays the head out and ends with the band. The progression's genre colours the line: blues and gospel bend thirds, funk plays short sixteenths, swing tongues the off-beats.</p>
+    <div class="groups">
+      <div class="group"><h4>FORM</h4><dl>
+        <dt>FORM</dt><dd>Tune: head, solos, trading, head out, end. Solo: blows forever on a rising and falling arc. Cue: plays while PLAY is high</dd>
+        <dt>CHORUSES</dt><dd>Solo choruses in a Tune, 1 to 8</dd>
+        <dt>TRADE</dt><dd>Off, twos, fours or eights</dd>
+        <dt>WITH</dt><dd>Drums, piano, or both in turn</dd>
+        <dt>SECTION</dt><dd>With two Soloists: Horns or Turns</dd>
+      </dl></div>
+      <div class="group"><h4>LINE</h4><dl>
+        <dt>DENSITY, SPACE</dt><dd>How many notes; rests between phrases</dd>
+        <dt>MOTIF</dt><dd>Develop an idea: repeat, invert, sequence, play backwards</dd>
+        <dt>OUTSIDE</dt><dd>0 inside the changes. Up: altered tensions, side-slips, tritone subs. Past half: open intervals and a loose grid. At the top: free</dd>
+        <dt>ENERGY</dt><dd>How far the solo builds over its arc</dd>
+        <dt>LOOSE, LENGTH</dt><dd>Timing feel; shorter or longer notes</dd>
+      </dl></div>
+      <div class="group"><h4>HORN</h4><dl>
+        <dt>HORN</dt><dd>Tenor sax, trumpet, trombone, or Off for notes only</dd>
+        <dt>REGISTER</dt><dd>Low to high within the horn's range</dd>
+        <dt>OCTAVE</dt><dd>Moves the V/OCT output only</dd>
+        <dt>ROOM, LEVEL</dt><dd>Dry to a club; output level</dd>
+      </dl></div>
+    </div>
+    <p class="caption">The horns are physical models: a reed or the player's lips drive a real bore, with tonguing, slurs, scoops, falls, growl, breath noise and vibrato. Inputs: CLOCK, RESET, CHORD (poly), PLAY gate, TRADE trigger (start trading at the next bar line), CV for ENERGY, DENSITY and OUTSIDE. Outputs: L, R, V/OCT (with scoops and vibrato), GATE, VEL, BREATH envelope, PHRASE and FORM triggers.</p>
+  </article>
+</section>
+
+<section aria-labelledby="hear">
+  <h2 id="hear">Who hears what</h2>
+  <p>Each module tells the row a little about itself, and the others react. Nothing needs patching.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>From</th><th>Sends</th><th>Who reacts, and how</th></tr></thead>
+    <tbody>
+      <tr><td>Comper</td><td>Clock, reset, the chart with its key, the groove and swing, the progression's genre, and the comping figure it is about to play</td><td>Everyone runs on Comper's clock and chords. Walker and Rider follow the groove when FEEL is 0. Rider catches the piano's pushes. Soloist writes its head and lines over the chart, in the genre's style.</td></tr>
+      <tr><td>Walker</td><td>That a bassist is present, and where its planned notes fall off the beat</td><td>Comper stops playing roots (unless “Keep roots with Walker” is ticked in its menu). Rider locks its bass drum to the bass's off-beat notes.</td></tr>
+      <tr><td>Rider</td><td>How hard it is playing: BAND × ENERGY</td><td>Comper plays denser and louder. Walker plays busier and up to 3 dB louder, and both ease off when Rider plays softly.</td></tr>
+      <tr><td>Soloist</td><td>The note it is playing, its energy and OUTSIDE, its part of the form, where its phrase ends, the rhythm of its last phrase, and the trading plan</td><td>See the next section. Without a Soloist in the row, the other three play exactly as before.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="listen">
+  <h2 id="listen">How the band follows the Soloist</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Player</th><th>While the horn solos</th><th>On a trade</th><th>At the end</th></tr></thead>
+    <tbody>
+      <tr><td>Comper</td><td>Hears the horn with no SOLO cable, with LISTEN at least 60%. It leaves room and keeps chords under the horn's note. When the horn goes out, it comps further out too.</td><td>Lays out on the drums' turn. On its own turn it plays busier, higher and louder, with the top voice singing.</td><td>Plays the last chord, then stops.</td></tr>
+      <tr><td>Walker</td><td>Keeps it simpler under a hot solo and plays more chromatically when the horn goes out</td><td>Lays out on the drums' turn and keeps walking on the piano's turn</td><td>Stops after the last chord</td></tr>
+      <tr><td>Rider</td><td>Plays harder or softer with the horn's energy, catches the ends of phrases on snare and kick, and sets up each hand-over with a fill</td><td>Takes a drum solo that opens by quoting the rhythm of the horn's last phrase on snare and toms. Fills lead back to the horn.</td><td>Sets up the last chord, crashes on it, and lets it ring</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="formchart">
+  <h2 id="formchart">A tune from start to finish</h2>
+  <p>FORM at Tune, CHORUSES 2, TRADE twos, WITH both. Each block is one bar. The chorus here is kept to four bars so the whole tune fits; in Rack a chorus is the chart, repeated until it is at least 32 beats long. The last chord is held for a bar, then the band stops.</p>
+  <div class="form" role="img" aria-label="Four lanes over time: head, two solo choruses, trading fours with drums then piano, head out, end. The horn plays head, solos and its trade turns; piano and bass lay out on the drums' turns; everyone stops at the end.">
+    <div class="grid" id="grid"></div>
+    <div class="legend">
+      <span><i style="background:var(--amber)"></i>Horn plays</span>
+      <span><i style="background:var(--amber-hi)"></i>Band plays</span>
+      <span><i style="background:var(--drums)"></i>Drum solo</span>
+      <span><i style="background:var(--piano)"></i>Piano solo</span>
+      <span><i style="background:var(--rest)"></i>Lays out or rests</span>
+    </div>
+  </div>
+  <ul class="plain">
+    <li><b>Head</b>: the horn plays the melody it wrote from the chart. Same seed, same tune.</li>
+    <li><b>Solos</b>: phrases of one to four bars with rests between. Energy starts low, peaks about two thirds through and eases off.</li>
+    <li><b>Trading</b>: the horn and its partner alternate, always changing on a bar line. With WITH set to both, the partner alternates between drums and piano.</li>
+    <li><b>Head out</b>: the head again, ending on a held tonic over the last chord. A bar later the band stops.</li>
+    <li>The <span class="k">FORM</span> output fires at each change of part and <span class="k">PHRASE</span> at the start of each phrase, for driving lights, filters or other sequencers.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="two">
+  <h2 id="two">Two Soloists</h2>
+  <p>Put a second Soloist in the row. The one further left leads: its FORM, CHORUSES and TRADE settings run the tune, and the second follows them. Set SECTION on the leader.</p>
+  <div class="recipes">
+    <div class="recipe"><h3>Horns</h3><p>A horn section. The second plays the head with the leader a third or sixth below, choosing notes that belong to the chord. They take solo choruses in turn.</p></div>
+    <div class="recipe"><h3>Turns</h3><p>Two soloists sharing the stand. The leader plays the head alone, they alternate solo choruses, and in the trading section they trade with each other and the drums: leader, partner, second, partner.</p></div>
+  </div>
+  <p class="caption">Tenor and trumpet make the classic front line. Tenor and trombone sit lower and darker. Give each a different SEED so their lines differ.</p>
+</section>
+
+<section aria-labelledby="recipes">
+  <h2 id="recipes">Starting points</h2>
+  <div class="recipes">
+    <div class="recipe"><h3>Blowing on the blues</h3><p>Comper on “Jazz blues in F”, Swing, about 160 bpm. Soloist on tenor, CHORUSES 2, TRADE fours WITH drums, OUTSIDE 0.1. Rider ENERGY 0.6, FILLS 0.5.</p></div>
+    <div class="recipe"><h3>Late-night ballad</h3><p>Comper on “Ballad”, Ballad groove, 66 bpm, DENSITY 0.4. Soloist on tenor, CHORUSES 1, TRADE off, ENERGY 0.4, SPACE 0.5, ROOM up. Rider switches to brushes.</p></div>
+    <div class="recipe"><h3>House with a trumpet</h3><p>Comper on “House: piano lift”, House groove, 122 bpm. Soloist on trumpet, TRADE eights WITH piano: Comper takes eight-bar piano breaks.</p></div>
+    <div class="recipe"><h3>Out</h3><p>Comper on “Modal two-chord”, fast swing. Soloist FORM Solo, OUTSIDE fully up, ENERGY 0.85. Comper and Walker follow the horn further out; Rider plays harder.</p></div>
+    <div class="recipe"><h3>Horn on cue</h3><p>Soloist FORM Cue with a gate into PLAY. The horn starts a solo when the gate rises and stops when it falls. Fire TRADE to start trading at the next bar.</p></div>
+    <div class="recipe"><h3>Notes for another voice</h3><p>Soloist HORN Off. Use V/OCT, GATE, VEL and BREATH to play a synth or a sampler; BREATH works well on a filter or a VCA.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="demos">
+  <h2 id="demos">Listening</h2>
+  <p>Ten full-band demos are in the project's <code>vcv-soloist/quartet-demos</code> folder, rendered offline with the same code that runs in Rack and Joanna on piano. They cover blues, major and minor jazz, bossa, ballad, house, soul, free playing, two horns in each SECTION mode, and reggae. Horn-only demos are in <code>vcv-soloist/horn-demos</code>.</p>
+</section>
+
+<footer>Comper Fable 2.5.0 · MIT licence · by Hær. Soloist has passed offline tests but has not been run in Rack yet.</footer>
+</main>
+
+<script>
+// the form chart, one block per bar: head 4, two solo choruses 8, trading twos 8, head out 3, the last chord 1
+(function () {
+  var parts = [["HEAD", 4], ["SOLO ×2", 8], ["TRADE", 8], ["HEAD OUT", 3], ["END", 1]];
+  var g = document.getElementById("grid");
+  function cell(cls) { var d = document.createElement("div"); d.className = "c " + cls; g.appendChild(d); }
+  function lab(t, cls) { var d = document.createElement("div"); d.className = cls || "lab"; d.textContent = t; return d; }
+  g.appendChild(lab(""));
+  parts.forEach(function (p) { var d = lab(p[0], "part"); d.style.gridColumn = "span " + p[1]; g.appendChild(d); });
+  // per bar: what the trade turn is (0 horn, 1 drums, 2 piano), bars 12..19
+  var turn = function (b) { if (b < 12 || b >= 20) return -1; return [0, 1, 0, 2][Math.floor((b - 12) / 2)]; };
+  var lanes = [
+    ["Soloist", function (b) { var t = turn(b); return t > 0 ? "" : "lead"; }],
+    ["Comper", function (b) { var t = turn(b); if (t === 1) return ""; if (t === 2) return "pn"; return "on"; }],
+    ["Walker", function (b) { var t = turn(b); return t === 1 ? "" : "on"; }],
+    ["Rider", function (b) { var t = turn(b); if (t === 1) return "dr"; return "on"; }]
+  ];
+  lanes.forEach(function (ln) {
+    g.appendChild(lab(ln[0]));
+    for (var b = 0; b < 24; b++) cell(ln[1](b));
+  });
+})();
+</script>
