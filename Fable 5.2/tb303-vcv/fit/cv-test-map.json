@@ -1,0 +1,331 @@
+{
+ "sample_rate": 48000,
+ "fs_volts": 10.0,
+ "channels": [
+  "pitch",
+  "gate",
+  "filter",
+  "accent",
+  "slide",
+  "marker"
+ ],
+ "length_s": 98.96,
+ "sections": [
+  {
+   "name": "marker",
+   "start_s": 1.0,
+   "pulses": 3,
+   "spacing_s": 0.25
+  },
+  {
+   "name": "pitch",
+   "start_s": 2.5,
+   "volts": [
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0
+   ],
+   "note_s": 1.5,
+   "step_s": 1.8
+  },
+  {
+   "name": "filter_steps",
+   "start_s": 15.6,
+   "volts": [
+    0.0,
+    0.5,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    4.5,
+    5.0
+   ],
+   "pitch_v": 1.0,
+   "note_s": 2.7,
+   "step_s": 3.0
+  },
+  {
+   "name": "env_short",
+   "start_s": 49.1,
+   "count": 4,
+   "note_s": 0.06,
+   "step_s": 1.0,
+   "pitch_v": 1.0
+  },
+  {
+   "name": "env_long",
+   "start_s": 53.1,
+   "count": 4,
+   "note_s": 0.5,
+   "step_s": 1.0,
+   "pitch_v": 1.0
+  },
+  {
+   "name": "accent_none",
+   "start_s": 57.6,
+   "count": 4,
+   "step_s": 0.25,
+   "note_s": 0.125,
+   "accents": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "pitch_v": 1.5
+  },
+  {
+   "name": "accent_all",
+   "start_s": 59.6,
+   "count": 4,
+   "step_s": 0.25,
+   "note_s": 0.125,
+   "accents": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "pitch_v": 1.5
+  },
+  {
+   "name": "accent_fast",
+   "start_s": 61.6,
+   "count": 8,
+   "step_s": 0.125,
+   "note_s": 0.0625,
+   "accents": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "pitch_v": 1.5
+  },
+  {
+   "name": "accent_alternate",
+   "start_s": 63.6,
+   "count": 8,
+   "step_s": 0.125,
+   "note_s": 0.0625,
+   "accents": [
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false
+   ],
+   "pitch_v": 1.5
+  },
+  {
+   "name": "slide_on",
+   "start_s": 65.6,
+   "volts": [
+    1.0,
+    2.0,
+    1.0,
+    1.25,
+    3.0,
+    1.0
+   ],
+   "step_s": 1.0
+  },
+  {
+   "name": "slide_off",
+   "start_s": 72.6,
+   "volts": [
+    1.0,
+    2.0,
+    1.0,
+    1.25,
+    3.0,
+    1.0
+   ],
+   "step_s": 1.0
+  },
+  {
+   "name": "pattern_plain",
+   "start_s": 79.6,
+   "bars": 4,
+   "step_s": 0.12,
+   "semitones": [
+    0,
+    0,
+    12,
+    0,
+    3,
+    0,
+    15,
+    12,
+    0,
+    7,
+    0,
+    10,
+    12,
+    0,
+    3,
+    5
+   ],
+   "accent": [
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "slide": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   "rest": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "base_v": 1.5,
+   "filter_ramp_v": null
+  },
+  {
+   "name": "pattern_filter_ramp",
+   "start_s": 88.28,
+   "bars": 4,
+   "step_s": 0.12,
+   "semitones": [
+    0,
+    0,
+    12,
+    0,
+    3,
+    0,
+    15,
+    12,
+    0,
+    7,
+    0,
+    10,
+    12,
+    0,
+    3,
+    5
+   ],
+   "accent": [
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "slide": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   "rest": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "base_v": 1.5,
+   "filter_ramp_v": [
+    0,
+    5
+   ]
+  },
+  {
+   "name": "marker_end",
+   "start_s": 96.96,
+   "pulses": 3,
+   "spacing_s": 0.25
+  }
+ ]
+}
